@@ -127,7 +127,7 @@ export default function SelectCompany() {
               </div>
 
               {/* Pinned Action Button at Bottom - Only 1 Button */}
-              {/* {!showCreateForm && (
+              {!showCreateForm && (
                 <div className="w-full border-t pt-4 bg-white sticky bottom-2 z-10 px-10 rounded-lg">
                   <Button
                     type="button"
@@ -138,7 +138,7 @@ export default function SelectCompany() {
                     Create Company
                   </Button>
                 </div>
-              )} */}
+              )}
             </div>
 
             {/* Right Side - Branding Banner Image */}
