@@ -1,30 +1,17 @@
-import { jwtDecode } from "jwt-decode";
 import axios from "./axios";
 
+// Backend token JWT nahi hai — plain random string hai (crypto.randomBytes).
+// Isliye sirf presence check karna hai, jwt-decode/exp check nahi.
 const isTokenValid = (authToken: string): boolean => {
-  try {
-    const decoded: { exp?: number } = jwtDecode(authToken);
-    if (!decoded.exp) {
-      console.error("Token does not contain an expiration time.");
-      return false;
-    }
-
-    const currentTime = Date.now() / 1000; // Current time in seconds since epoch
-    return decoded.exp > currentTime;
-  } catch (err) {
-    console.error("Failed to decode token:", err);
-    return false;
-  }
+  return typeof authToken === "string" && authToken.trim() !== "";
 };
 
 const setSession = (authToken?: string | null): void => {
   if (typeof authToken === "string" && authToken.trim() !== "") {
-    // Store token in local storage and set authorization header for axios
-    localStorage.setItem("authToken", authToken);
+    sessionStorage.setItem("authToken", authToken);
     axios.defaults.headers.common.Authorization = `Bearer ${authToken}`;
   } else {
-    // Remove token from local storage and delete authorization header from axios
-    localStorage.removeItem("authToken");
+    sessionStorage.removeItem("authToken");
     delete axios.defaults.headers.common.Authorization;
   }
 };
