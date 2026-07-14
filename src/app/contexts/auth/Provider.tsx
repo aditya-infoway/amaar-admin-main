@@ -1,32 +1,27 @@
-// Import Dependencies
 import { useEffect, useReducer, ReactNode } from "react";
-
-// Local Imports
 import { Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
-import { setCompanySession, getCompanySession, isCompanySessionValid } from "@/utils/session";
-import { clearSelectedCompany } from "@/utils/companyStorage";
+import { isTokenValid, setSession } from "@/utils/jwt";
 import { AuthProvider as AuthContext, AuthContextType } from "./context";
 import { User } from "@/@types/user";
 
-// ----------------------------------------------------------------------
-
 interface AuthAction {
-  type: "INITIALIZE" | "LOGIN_REQUEST" | "LOGIN_SUCCESS" | "LOGIN_ERROR" | "LOGOUT";
+  type: "INITIALIZE" | "LOGIN_REQUEST" | "LOGIN_SUCCESS" | "LOGIN_ERROR" | "LOGOUT" | "SESSION_ESTABLISHED";
   payload?: Partial<AuthContextType>;
 }
 
-// Initial state
 const initialState: AuthContextType = {
   isAuthenticated: false,
   isLoading: false,
   isInitialized: false,
   errorMessage: null,
   user: null,
+  pendingToken: null,
+  pendingEmail: null,
   login: async () => {},
+  completeAuth: () => {},
   logout: async () => {},
 };
 
-// Reducer handlers
 const reducerHandlers: Record<
   AuthAction["type"],
   (state: AuthContextType, action: AuthAction) => AuthContextType
@@ -44,33 +39,49 @@ const reducerHandlers: Record<
     errorMessage: null,
   }),
 
+  // ✅ CHANGE #1 — ab user bhi set hoga (pehle sirf pendingToken/pendingEmail set hote the)
   LOGIN_SUCCESS: (state, action) => ({
     ...state,
-    isAuthenticated: true,
+    isAuthenticated: false,
     isLoading: false,
     errorMessage: null,
+    pendingToken: action.payload?.pendingToken ?? null,
+    pendingEmail: action.payload?.pendingEmail ?? null,
     user: action.payload?.user ?? null,
   }),
 
   LOGIN_ERROR: (state, action) => ({
     ...state,
-    isAuthenticated: false,
-    isLoading: false,
     errorMessage: action.payload?.errorMessage ?? "An error occurred",
+    isLoading: false,
   }),
 
   LOGOUT: (state) => ({
     ...state,
     isAuthenticated: false,
     user: null,
+    pendingToken: null,
+    pendingEmail: null,
+  }),
+
+  SESSION_ESTABLISHED: (state, action) => ({
+    ...state,
+    isAuthenticated: true,
+    isLoading: false,
+    errorMessage: null,
+    user: action.payload?.user ?? state.user,
+    pendingToken: null,
   }),
 };
 
-// Reducer function
 const reducer = (state: AuthContextType, action: AuthAction): AuthContextType => {
   const handler = reducerHandlers[action.type];
   return handler ? handler(state, action) : state;
 };
+
+const PENDING_TOKEN_KEY = "pendingToken";
+const PENDING_EMAIL_KEY = "pendingEmail";
+const COMPANY_ID_KEY = "companyId";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -78,92 +89,100 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        if (isCompanySessionValid()) {
-          const { companyId } = getCompanySession();
+        const authToken = window.localStorage.getItem("authToken");
+        const companyId = window.localStorage.getItem(COMPANY_ID_KEY);
 
-          dispatch({
-            type: "INITIALIZE",
-            payload: {
-              isAuthenticated: true,
-              user: { companyId } as unknown as User,
-            },
-          });
+        if (authToken && isTokenValid(authToken) && companyId) {
+          setSession(authToken);
+          const userStr = window.sessionStorage.getItem("user");
+          const user = userStr ? JSON.parse(userStr) : null;
+          dispatch({ type: "INITIALIZE", payload: { isAuthenticated: true, user } });
         } else {
-          dispatch({
-            type: "INITIALIZE",
-            payload: { isAuthenticated: false, user: null },
-          });
+          dispatch({ type: "INITIALIZE", payload: { isAuthenticated: false, user: null } });
         }
       } catch (err) {
         console.error(err);
-        dispatch({
-          type: "INITIALIZE",
-          payload: { isAuthenticated: false, user: null },
-        });
+        dispatch({ type: "INITIALIZE", payload: { isAuthenticated: false, user: null } });
       }
     };
-
     init();
   }, []);
 
+  // STEP 1: login validate — OTP nahi
   const login = async (credentials: { email: string; password: string }) => {
     dispatch({ type: "LOGIN_REQUEST" });
-
     try {
-      // Post(fileName, data, useHeader) - useHeader=false => application/json
-      const response = await Post("superadmin/login", credentials, false);
-
+      const response = await Post(
+        "superadmin/login",
+        { email: credentials.email, password: credentials.password },
+        false,
+      );
       const result = response.data;
 
-      if (!result || result.status !== 200 || !result.data) {
-        const msg = result?.message || "Invalid Email or Password";
-        toasterrormsg(msg);
-        throw new Error(msg);
+      if (result.status !== 200) {
+        throw new Error(result.message || "Login failed");
       }
 
-      const { token, companyId } = result.data;
+      // ✅ CHANGE #2 — companyId/companyName bhi destructure kiya
+      const { token, email, companyId, companyName } = result.data;
 
-      if (!token || !companyId) {
-        throw new Error("Invalid response from server");
-      }
+      window.sessionStorage.setItem(PENDING_TOKEN_KEY, token);
+      window.sessionStorage.setItem(PENDING_EMAIL_KEY, email);
+      setSession(token); // axios Authorization header set karega
 
-      // Store token + companyId in session
-      setCompanySession(token, companyId);
+      toastsuccessmsg(result.message);
 
       dispatch({
         type: "LOGIN_SUCCESS",
-        payload: { user: result.data as unknown as User },
+        payload: {
+          pendingToken: token,
+          pendingEmail: email,
+          user: { companyId, companyName, email } as unknown as User,
+        },
       });
     } catch (err: any) {
-      const errorMessage =
-        err?.response?.data?.message || err?.message || "Login failed";
-
-      dispatch({
-        type: "LOGIN_ERROR",
-        payload: { errorMessage },
-      });
+      const message = err?.response?.data?.message || err.message || "Login failed";
+      toasterrormsg(message);
+      dispatch({ type: "LOGIN_ERROR", payload: { errorMessage: message } });
       throw err;
     }
   };
 
+  // STEP 2: company select/create hone ke baad final auth
+  const completeAuth = (companyId: string) => {
+    const token = state.pendingToken || window.sessionStorage.getItem(PENDING_TOKEN_KEY);
+
+    if (!token) {
+      toasterrormsg("Session expired. Please login again.");
+      return;
+    }
+
+    setSession(token);
+    window.localStorage.setItem("authToken", token);
+    window.localStorage.setItem(COMPANY_ID_KEY, companyId);
+    window.sessionStorage.setItem("authToken", token);
+    window.sessionStorage.setItem("user", JSON.stringify(state.user));
+    window.sessionStorage.removeItem(PENDING_TOKEN_KEY);
+    window.sessionStorage.removeItem(PENDING_EMAIL_KEY);
+
+    dispatch({ type: "SESSION_ESTABLISHED", payload: { user: state.user } });
+  };
+
   const logout = async () => {
-    clearSelectedCompany();
-    setCompanySession(null, null);
+    setSession(null);
+    window.localStorage.removeItem("authToken");
+    window.localStorage.removeItem(COMPANY_ID_KEY);
+    window.sessionStorage.removeItem("authToken");
+    window.sessionStorage.removeItem("user");
+    window.sessionStorage.removeItem(PENDING_TOKEN_KEY);
+    window.sessionStorage.removeItem(PENDING_EMAIL_KEY);
     dispatch({ type: "LOGOUT" });
   };
 
-  if (!children) {
-    return null;
-  }
+  if (!children) return null;
 
   return (
-    <AuthContext
-      value={{
-        ...state,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext value={{ ...state, login, completeAuth, logout }}>
       {children}
     </AuthContext>
   );

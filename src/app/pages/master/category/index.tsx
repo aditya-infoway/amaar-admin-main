@@ -7,25 +7,41 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Post, Put, Delete, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
 import { statusOptions } from "../shared/constants";
 import { CategoryDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
 import { Category, emptyCategory } from "./data";
 
+// ---- API response ka raw shape (backend se jo aata he) ----
+interface ApiCategory {
+  categoryId: number;
+  companyId: number;
+  code: string;
+  categoryName: string;
+  status: string;
+}
+
+// ---- backend ka data -> frontend ka Category type me convert ----
+const mapToCategory = (item: ApiCategory): Category => ({
+  id: String(item.categoryId),
+  code: item.code,
+  categoryName: item.categoryName,
+  status: item.status as Category["status"],
+});
+
 export default function CategoryPage() {
-  const [data, setData] = useState<Category[]>(() =>
-    masterStorage.getCategories(),
-  );
+  const [data, setData] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -35,6 +51,24 @@ export default function CategoryPage() {
   const [filterCode, setFilterCode] = useState("");
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+
+  // ---------------- LIST ----------------
+  const fetchList = async () => {
+    try {
+      setLoading(true);
+      const response = await Get("master/category/list", {}, false);
+      const list = (response.data?.data || []).map(mapToCategory);
+      setData(list);
+    } catch (err) {
+      toasterrormsg("Failed to load categories");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchList();
+  }, []);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -50,9 +84,62 @@ export default function CategoryPage() {
     });
   }, [data, filterCode, filterName, filterStatus]);
 
-  const persist = (next: Category[]) => {
-    setData(next);
-    masterStorage.saveCategories(next);
+  // ---------------- DELETE (single) ----------------
+  const handleDeleteRow = async (row: Category) => {
+    try {
+      await Delete("master/category/delete", { categoryId: Number(row.id) }, false);
+      toastsuccessmsg("Category deleted successfully");
+      fetchList();
+    } catch (err) {
+      toasterrormsg("Failed to delete category");
+    }
+  };
+
+  // ---------------- DELETE (bulk) ----------------
+  const handleDeleteRows = async (rows: { original: Category }[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) =>
+          Delete("master/category/delete", { categoryId: Number(r.original.id) }, false),
+        ),
+      );
+      toastsuccessmsg("Categories deleted successfully");
+      setRowSelection({});
+      fetchList();
+    } catch (err) {
+      toasterrormsg("Failed to delete categories");
+    }
+  };
+
+  // ---------------- CREATE / UPDATE ----------------
+  const handleSave = async (item: Category) => {
+    try {
+      if (item.id) {
+        await Put(
+          "master/category/update",
+          {
+            categoryId: Number(item.id),
+            categoryName: item.categoryName,
+            status: item.status,
+          },
+          false,
+        );
+        toastsuccessmsg("Category updated successfully");
+      } else {
+        await Post(
+          "master/category/create",
+          {
+            categoryName: item.categoryName,
+            status: item.status,
+          },
+          false,
+        );
+        toastsuccessmsg("Category created successfully");
+      }
+      fetchList();
+    } catch (err) {
+      toasterrormsg("Failed to save category");
+    }
   };
 
   const table = useReactTable({
@@ -66,14 +153,8 @@ export default function CategoryPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: handleDeleteRow,
+      deleteRows: handleDeleteRows,
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -109,12 +190,6 @@ export default function CategoryPage() {
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
-                label="Code"
-                value={filterCode}
-                onChange={(e) => setFilterCode(e.target.value)}
-                placeholder="Filter by code"
-              />
-              <Input
                 label="Category Name"
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
@@ -139,7 +214,11 @@ export default function CategoryPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No categories found. Click Create Category to add one."
+          emptyMessage={
+            loading
+              ? "Loading..."
+              : "No categories found. Click Create Category to add one."
+          }
         />
       </div>
 
@@ -147,14 +226,7 @@ export default function CategoryPage() {
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         category={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        onSave={handleSave}
       />
     </Page>
   );

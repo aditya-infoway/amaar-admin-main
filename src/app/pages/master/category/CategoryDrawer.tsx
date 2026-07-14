@@ -46,7 +46,7 @@ export function CategoryDrawer({
   const onSubmit = (data: Category) => {
     onSave({
       ...data,
-      id: category?.id || crypto.randomUUID(),
+      id: category?.id || "",
     });
     handleClose();
   };
@@ -94,12 +94,6 @@ export function CategoryDrawer({
             className="flex grow flex-col overflow-hidden"
           >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-              <Input
-                {...register("code", { required: "Code is required" })}
-                label="Code"
-                placeholder="Enter code"
-                error={errors.code?.message}
-              />
               <Input
                 {...register("categoryName", {
                   required: "Category name is required",

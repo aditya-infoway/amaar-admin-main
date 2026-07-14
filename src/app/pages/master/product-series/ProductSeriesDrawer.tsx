@@ -11,13 +11,13 @@ import { Fragment } from "react";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
 import { statusOptions } from "../shared/constants";
-import { masterStorage } from "../shared/storage";
 import { ProductSeries } from "./data";
 
 interface ProductSeriesDrawerProps {
   isOpen: boolean;
   close: () => void;
   series: ProductSeries | null;
+  categories: { id: string; label: string }[];
   onSave: (series: ProductSeries) => void;
 }
 
@@ -25,13 +25,10 @@ export function ProductSeriesDrawer({
   isOpen,
   close,
   series,
+  categories,
   onSave,
 }: ProductSeriesDrawerProps) {
   const isEdit = Boolean(series?.id);
-  const categories = masterStorage.getCategories().map((item) => ({
-    id: item.id,
-    label: item.categoryName,
-  }));
 
   const {
     register,
@@ -51,7 +48,7 @@ export function ProductSeriesDrawer({
   const onSubmit = (data: ProductSeries) => {
     onSave({
       ...data,
-      id: series?.id || crypto.randomUUID(),
+      id: series?.id || "",
     });
     handleClose();
   };
@@ -91,6 +88,9 @@ export function ProductSeriesDrawer({
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col overflow-hidden">
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+              {isEdit && (
+                <Input value={series?.seriesCode || ""} label="Series Code" disabled readOnly />
+              )}
               <Controller
                 control={control}
                 name="categoryId"
@@ -107,12 +107,6 @@ export function ProductSeriesDrawer({
                     {...rest}
                   />
                 )}
-              />
-              <Input
-                {...register("seriesCode", { required: "Series code is required" })}
-                label="Series Code"
-                placeholder="Enter series code"
-                error={errors.seriesCode?.message}
               />
               <Input
                 {...register("seriesName", { required: "Series name is required" })}

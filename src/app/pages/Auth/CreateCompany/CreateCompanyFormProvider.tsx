@@ -5,6 +5,15 @@ import {
   FormState,
 } from "./CreateCompanyFormContext";
 
+function getCurrentFinancialYearStart(): number {
+  const today = new Date();
+  const month = today.getMonth(); // April = 3
+  const year = today.getFullYear();
+  return month >= 3 ? year : year - 1;
+}
+
+const fyStart = getCurrentFinancialYearStart();
+
 const initialState: FormState = {
   formData: {
     companyInfo: {
@@ -39,15 +48,14 @@ const initialState: FormState = {
       dealsIn: "",
     },
     financialYear: {
-      startDate: "",
-      endDate: "",
+      startDate: `${fyStart}-04-01`,
+      endDate: `${fyStart + 1}-03-31`,
     },
     bankDetails: {
-      bankDetails: "",
-    },
-    superUser: {
-      username: "",
-      password: "",
+      bankHolderName: "",
+      bankAccountNo: "",
+      branchName: "",
+      ifscCode: "",
     },
   },
   stepStatus: {
@@ -57,7 +65,6 @@ const initialState: FormState = {
     licensing: { isDone: false },
     financialYear: { isDone: false },
     bankDetails: { isDone: false },
-    superUser: { isDone: false },
   },
 };
 

@@ -9,7 +9,6 @@ import { RegistrationDetails } from "./steps/RegistrationDetails";
 import { Licensing } from "./steps/Licensing";
 import { FinancialYear } from "./steps/FinancialYear";
 import { BankDetails } from "./steps/BankDetails";
-import { SuperUser } from "./steps/SuperUser";
 import { StepKey } from "./CreateCompanyFormContext";
 
 export interface CreateCompanyStep {
@@ -52,19 +51,13 @@ const steps: CreateCompanyStep[] = [
     key: "financialYear",
     component: FinancialYear,
     label: "Financial Year",
-    description: "Financial year start and end dates",
+    description: "Financial year (1st April to 31st March)",
   },
   {
     key: "bankDetails",
     component: BankDetails,
     label: "Bank Details",
     description: "Bank account information",
-  },
-  {
-    key: "superUser",
-    component: SuperUser,
-    label: "Super User",
-    description: "Super user login credentials",
   },
 ];
 
@@ -84,11 +77,9 @@ export function CreateCompanyForm({ onCancel, onSuccess }: CreateCompanyFormProp
           Create Company
         </h2>
 
-        {/* Mobile stepper: show only step circles, no labels — visible only on mobile */}
         <div className="mb-4 flex items-center sm:hidden">
           {steps.map((step, index) => (
             <div key={step.key} className="flex flex-1 items-center">
-              {/* Step circle */}
               <button
                 type="button"
                 onClick={() => setCurrentStep(index)}
@@ -104,7 +95,6 @@ export function CreateCompanyForm({ onCancel, onSuccess }: CreateCompanyFormProp
                 {index + 1}
               </button>
 
-              {/* Connector line between circles */}
               {index < steps.length - 1 && (
                 <div
                   className={clsx(
@@ -117,7 +107,6 @@ export function CreateCompanyForm({ onCancel, onSuccess }: CreateCompanyFormProp
           ))}
         </div>
 
-        {/* Mobile: current step label below the circles */}
         <div className="mb-4 sm:hidden">
           <p className="text-sm font-medium text-gray-800 dark:text-dark-100">
             Step {currentStep + 1} of {steps.length}: {steps[currentStep].label}
@@ -133,7 +122,6 @@ export function CreateCompanyForm({ onCancel, onSuccess }: CreateCompanyFormProp
             "grid-rows-[auto_1fr] sm:grid-rows-none",
           )}
         >
-          {/* Sidebar stepper — hidden on mobile, visible sm and above */}
           <div className="hidden sm:col-span-4 sm:block lg:col-span-3">
             <Stepper
               steps={steps}

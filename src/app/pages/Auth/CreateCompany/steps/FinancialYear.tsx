@@ -5,6 +5,20 @@ import { useCreateCompanyFormContext } from "../CreateCompanyFormContext";
 import { financialYearSchema, FinancialYearType } from "../schema";
 import { StepActions } from "../components/StepActions";
 
+function getCurrentFinancialYearStart(): number {
+  const today = new Date();
+  const month = today.getMonth(); // April = 3 (0-indexed)
+  const year = today.getFullYear();
+  return month >= 3 ? year : year - 1;
+}
+
+function buildFinancialYearDates(startYear: number) {
+  return {
+    startDate: `${startYear}-04-01`,
+    endDate: `${startYear + 1}-03-31`,
+  };
+}
+
 export function FinancialYear({
   setCurrentStep,
   onCancel,
@@ -14,14 +28,19 @@ export function FinancialYear({
   onSuccess: () => void;
 }) {
   const { state, dispatch } = useCreateCompanyFormContext();
+  const currentFyStart = getCurrentFinancialYearStart();
 
   const {
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<FinancialYearType>({
     resolver: yupResolver(financialYearSchema),
-    defaultValues: state.formData.financialYear,
+    defaultValues:
+      state.formData.financialYear.startDate && state.formData.financialYear.endDate
+        ? state.formData.financialYear
+        : buildFinancialYearDates(currentFyStart),
   });
 
   const onSubmit = (data: FinancialYearType) => {
@@ -47,10 +66,20 @@ export function FinancialYear({
             render={({ field: { value, onChange, ...rest } }) => (
               <DatePicker
                 value={value || ""}
-                onChange={(_, dateStr) => onChange(dateStr)}
-                options={{ dateFormat: "Y-m-d" }}
-                label="Start Date"
-                placeholder="Select start date"
+                onChange={(selectedDates: Date[]) => {
+                  // Only the year from user's pick is used —
+                  // month/day are always forced to 1st April.
+                  const pickedYear = selectedDates?.[0]?.getFullYear();
+                  if (!pickedYear) return;
+                  const { startDate, endDate } = buildFinancialYearDates(pickedYear);
+                  setValue("startDate", startDate, { shouldValidate: true });
+                  setValue("endDate", endDate, { shouldValidate: true });
+                }}
+                options={{
+                  dateFormat: "Y-m-d",
+                }}
+                label="Financial Year Start"
+                placeholder="Select financial year"
                 error={errors.startDate?.message}
                 {...rest}
               />
@@ -62,16 +91,23 @@ export function FinancialYear({
             render={({ field: { value, onChange, ...rest } }) => (
               <DatePicker
                 value={value || ""}
-                onChange={(_, dateStr) => onChange(dateStr)}
+                onChange={() => {
+                  // Read-only — end date is always derived
+                  // from start date (start year + 1, 31st March).
+                }}
                 options={{ dateFormat: "Y-m-d" }}
-                label="End Date"
-                placeholder="Select end date"
+                label="Financial Year End"
+                placeholder="Auto-set"
                 error={errors.endDate?.message}
+                inputProps={{ disabled: true }}
                 {...rest}
               />
             )}
           />
         </div>
+        <p className="text-xs text-gray-500 dark:text-dark-200">
+          Financial year hamesha 1st April se 31st March tak hota hai — sirf year change hoga.
+        </p>
       </div>
       <StepActions
         showPrevious

@@ -5,24 +5,32 @@ import { Button } from "@/components/ui";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { APP_LOGO } from "@/constants/app";
 import { CreateCompanyForm } from "./CreateCompany";
-import {
-  COMPANIES_STORAGE_KEY,
-  formatCompanyDateRange,
-  getCompanies,
-  setSelectedCompany,
-  StoredCompany,
-} from "@/utils/companyStorage";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { Get, toasterrormsg } from "@/ApiHelper";
+
+interface FinancialYearRow {
+  financialYearId: number;
+  companyDetailsId: number;
+  companyId: number;
+  startDate: string;
+  endDate: string;
+  companyName: string;
+}
+
+function formatCompanyDateRange(startDate: string, endDate: string) {
+  if (!startDate || !endDate) return "";
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const opts: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short", year: "numeric" };
+  return `${start.toLocaleDateString("en-GB", opts)} - ${end.toLocaleDateString("en-GB", opts)}`;
+}
 
 export default function SelectCompany() {
-  const { user } = useAuthContext();
+  const { user, completeAuth } = useAuthContext();   // 👈 completeAuth destructure karo
   const navigate = useNavigate();
-  const [companies, setCompanies] = useLocalStorage<StoredCompany[]>(
-    COMPANIES_STORAGE_KEY,
-    [],
-  );
+  const [financialYears, setFinancialYears] = useState<FinancialYearRow[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
@@ -30,20 +38,45 @@ export default function SelectCompany() {
     }
   }, [user, navigate]);
 
-  useEffect(() => {
-    setCompanies(getCompanies());
-  }, [setCompanies]);
+  const fetchFinancialYears = async () => {
+    setLoading(true);
+    try {
+      const response = await Get("superadmin/financial-years", {}, false);
+      if (response.data?.success) {
+        setFinancialYears(response.data.data || []);
+      } else {
+        toasterrormsg(response.data?.message || "Failed to fetch companies.");
+        setFinancialYears([]);
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching companies.");
+      setFinancialYears([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleCompanySelect = (company: StoredCompany) => {
-    setSelectedRowId(company.id);
-    setSelectedCompany(company);
-    navigate("/otp");
+  useEffect(() => {
+    fetchFinancialYears();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ FIX — completeAuth() call kiya + path sahi kiya
+  const handleCompanySelect = (row: FinancialYearRow) => {
+    setSelectedRowId(row.financialYearId);
+    sessionStorage.setItem("financialYearId", String(row.financialYearId));
+    sessionStorage.setItem("companyDetailsId", String(row.companyDetailsId));
+
+    completeAuth(String(row.companyId));   // 👈 isAuthenticated ko true karega
+    navigate("/dashboards/home");           // 👈 "dashboard" nahi, "dashboards" (route config ke mutabik)
   };
 
   const handleCreateSuccess = () => {
     setShowCreateForm(false);
-    setCompanies(getCompanies());
+    fetchFinancialYears();
   };
+
+  const hasCompanies = financialYears.length > 0;
 
   return (
     <Page title="Select Company">
@@ -61,7 +94,6 @@ export default function SelectCompany() {
                     alt="Autobook ERP"
                     className="h-11 w-auto object-contain"
                   />
-
                 </div>
 
                 {showCreateForm ? (
@@ -91,17 +123,21 @@ export default function SelectCompany() {
 
                       {/* Fixed Height Scrollable Rows */}
                       <div className="h-[320px] overflow-y-auto bg-white divide-y divide-gray-200">
-                        {companies.length === 0 ? (
+                        {loading ? (
+                          <div className="px-4 py-12 text-center text-sm text-gray-400 bg-white">
+                            Loading...
+                          </div>
+                        ) : financialYears.length === 0 ? (
                           <div className="px-4 py-12 text-center text-sm text-gray-400 bg-white">
                             No companies found. Create a new company to continue.
                           </div>
                         ) : (
-                          companies.map((company, index) => (
+                          financialYears.map((row, index) => (
                             <button
-                              key={company.id}
+                              key={row.financialYearId}
                               type="button"
-                              onClick={() => handleCompanySelect(company)}
-                              className={`grid w-full grid-cols-2 px-4 py-3.5 text-left text-xs font-medium transition-colors ${selectedRowId === company.id
+                              onClick={() => handleCompanySelect(row)}
+                              className={`grid w-full grid-cols-2 px-4 py-3.5 text-left text-xs font-medium transition-colors ${selectedRowId === row.financialYearId
                                   ? "bg-blue-50 text-blue-900 font-bold ring-1 ring-inset ring-blue-300"
                                   : index % 2 === 0
                                     ? "bg-white text-gray-800 hover:bg-gray-50"
@@ -109,13 +145,10 @@ export default function SelectCompany() {
                                 }`}
                             >
                               <span className="truncate pr-4 font-semibold text-gray-700">
-                                {company.companyName}
+                                {row.companyName}
                               </span>
                               <span className="text-right text-gray-500 font-medium whitespace-nowrap">
-                                {formatCompanyDateRange(
-                                  company.startDate,
-                                  company.endDate,
-                                )}
+                                {formatCompanyDateRange(row.startDate, row.endDate)}
                               </span>
                             </button>
                           ))
@@ -126,8 +159,8 @@ export default function SelectCompany() {
                 )}
               </div>
 
-              {/* Pinned Action Button at Bottom - Only 1 Button */}
-              {!showCreateForm && (
+              {/* Pinned Action Button at Bottom - only when no companies exist */}
+              {!showCreateForm && !loading && !hasCompanies && (
                 <div className="w-full border-t pt-4 bg-white sticky bottom-2 z-10 px-10 rounded-lg">
                   <Button
                     type="button"

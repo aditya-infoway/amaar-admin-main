@@ -109,6 +109,44 @@ const protectedRoutes: RouteObject = {
             },
           ],
         },
+
+
+        
+        {
+          path: "brand",
+          children: [
+            {
+              index: true,
+              element: <Navigate to="/master/brand/body-type" replace />,
+            },
+            {
+              path: "body-type",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+              }),
+            },
+            {
+              path: "axle-brand",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+              }),
+            },
+            {
+              path: "hydraulic-brand",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+              }),
+            },
+            {
+              path: "tyre-brand",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+              }),
+            },
+          ],
+        },
+
+
         {
           path: "item-master",
           children: [

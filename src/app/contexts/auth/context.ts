@@ -1,4 +1,3 @@
-// src/app/contexts/auth/context.ts
 import { createContext, useContext } from "react";
 import { User } from "@/@types/user";
 
@@ -8,8 +7,10 @@ export interface AuthContextType {
   isInitialized: boolean;
   errorMessage: string | null;
   user: User | null;
-  login: (credentials: { username: string; password: string }) => Promise<void>;
-  verifyOtp: (otp: string) => Promise<void>;
+  pendingToken: string | null;
+  pendingEmail: string | null;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
+  completeAuth: (companyId: string) => void;
   logout: () => Promise<void>;
 }
 

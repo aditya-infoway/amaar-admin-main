@@ -7,29 +7,51 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Post, Put, Delete, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { statusOptions } from "../shared/constants";
-import {
-  getCategoryLabel,
-  masterStorage,
-} from "../shared/storage";
 import { ProductSeriesDrawer } from "./ProductSeriesDrawer";
 import { createColumns, exportColumns } from "./columns";
 import { emptyProductSeries, ProductSeries } from "./data";
 
+// ---- API se jo category list aati hai ----
+interface ApiCategory {
+  categoryId: number;
+  categoryName: string;
+}
+
+// ---- API se jo product series aati hai ----
+interface ApiProductSeries {
+  productSeriesId: number;
+  companyId: number;
+  categoryId: number;
+  seriesCode: string;
+  seriesName: string;
+  capacity: string;
+  status: string;
+}
+
+const mapToProductSeries = (item: ApiProductSeries): ProductSeries => ({
+  id: String(item.productSeriesId),
+  categoryId: String(item.categoryId),
+  seriesCode: item.seriesCode,
+  seriesName: item.seriesName,
+  capacity: item.capacity,
+  status: item.status as ProductSeries["status"],
+});
+
 export default function ProductSeriesPage() {
-  const categories = masterStorage.getCategories();
-  const [data, setData] = useState<ProductSeries[]>(() =>
-    masterStorage.getProductSeries(),
-  );
+  const [data, setData] = useState<ProductSeries[]>([]);
+  const [categories, setCategories] = useState<{ id: string; label: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -40,7 +62,44 @@ export default function ProductSeriesPage() {
   const [filterCode, setFilterCode] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
-  const getCategoryName = (id: string) => getCategoryLabel(categories, id);
+  // ---------------- Category dropdown ke liye fetch ----------------
+  const fetchCategories = async () => {
+    try {
+      const response = await Get("master/category/list", {}, false);
+      const list: ApiCategory[] = response.data?.data || [];
+      setCategories(
+        list.map((item) => ({
+          id: String(item.categoryId),
+          label: item.categoryName,
+        })),
+      );
+    } catch (err) {
+      toasterrormsg("Failed to load categories");
+    }
+  };
+
+  // ---------------- LIST ----------------
+  const fetchList = async () => {
+    try {
+      setLoading(true);
+      const response = await Get("master/productseries/list", {}, false);
+      const list = (response.data?.data || []).map(mapToProductSeries);
+      setData(list);
+    } catch (err) {
+      toasterrormsg("Failed to load product series");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+    fetchList();
+  }, []);
+
+  const getCategoryName = (id: string) =>
+    categories.find((item) => item.id === id)?.label || "";
+
   const columns = useMemo(
     () => createColumns(getCategoryName),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,7 +109,10 @@ export default function ProductSeriesPage() {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       if (filterCategory && item.categoryId !== filterCategory) return false;
-      if (filterCode && !item.seriesCode.toLowerCase().includes(filterCode.toLowerCase()))
+      if (
+        filterCode &&
+        !item.seriesCode.toLowerCase().includes(filterCode.toLowerCase())
+      )
         return false;
       if (filterStatus && item.status !== filterStatus) return false;
       return true;
@@ -62,9 +124,74 @@ export default function ProductSeriesPage() {
     categoryName: getCategoryName(row.categoryId),
   }));
 
-  const persist = (next: ProductSeries[]) => {
-    setData(next);
-    masterStorage.saveProductSeries(next);
+  // ---------------- DELETE (single) ----------------
+  const handleDeleteRow = async (row: ProductSeries) => {
+    try {
+      await Delete(
+        "master/productseries/delete",
+        { productSeriesId: Number(row.id) },
+        false,
+      );
+      toastsuccessmsg("Product series deleted successfully");
+      fetchList();
+    } catch (err) {
+      toasterrormsg("Failed to delete product series");
+    }
+  };
+
+  // ---------------- DELETE (bulk) ----------------
+  const handleDeleteRows = async (rows: { original: ProductSeries }[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) =>
+          Delete(
+            "master/productseries/delete",
+            { productSeriesId: Number(r.original.id) },
+            false,
+          ),
+        ),
+      );
+      toastsuccessmsg("Product series deleted successfully");
+      setRowSelection({});
+      fetchList();
+    } catch (err) {
+      toasterrormsg("Failed to delete product series");
+    }
+  };
+
+  // ---------------- CREATE / UPDATE ----------------
+  const handleSave = async (item: ProductSeries) => {
+    try {
+      if (item.id) {
+        await Put(
+          "master/productseries/update",
+          {
+            productSeriesId: Number(item.id),
+            categoryId: Number(item.categoryId),
+            seriesName: item.seriesName,
+            capacity: item.capacity,
+            status: item.status,
+          },
+          false,
+        );
+        toastsuccessmsg("Product series updated successfully");
+      } else {
+        await Post(
+          "master/productseries/create",
+          {
+            categoryId: Number(item.categoryId),
+            seriesName: item.seriesName,
+            capacity: item.capacity,
+            status: item.status,
+          },
+          false,
+        );
+        toastsuccessmsg("Product series created successfully");
+      }
+      fetchList();
+    } catch (err) {
+      toasterrormsg("Failed to save product series");
+    }
   };
 
   const table = useReactTable({
@@ -78,14 +205,8 @@ export default function ProductSeriesPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: handleDeleteRow,
+      deleteRows: handleDeleteRows,
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -97,11 +218,6 @@ export default function ProductSeriesPage() {
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
-
-  const categoryOptions = categories.map((item) => ({
-    id: item.id,
-    label: item.categoryName,
-  }));
 
   return (
     <Page title="Product Series">
@@ -126,9 +242,9 @@ export default function ProductSeriesPage() {
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
               <Listbox
-                data={[{ id: "", label: "All" }, ...categoryOptions]}
+                data={[{ id: "", label: "All" }, ...categories]}
                 value={
-                  [{ id: "", label: "All" }, ...categoryOptions].find(
+                  [{ id: "", label: "All" }, ...categories].find(
                     (item) => item.id === filterCategory,
                   ) || { id: "", label: "All" }
                 }
@@ -162,7 +278,11 @@ export default function ProductSeriesPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No product series found. Click Create Product Series to add one."
+          emptyMessage={
+            loading
+              ? "Loading..."
+              : "No product series found. Click Create Product Series to add one."
+          }
         />
       </div>
 
@@ -170,14 +290,8 @@ export default function ProductSeriesPage() {
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         series={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        categories={categories}
+        onSave={handleSave}
       />
     </Page>
   );
