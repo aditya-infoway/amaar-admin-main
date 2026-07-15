@@ -6,10 +6,11 @@ import {
 } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Controller, useForm } from "react-hook-form";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
+import { Get } from "@/ApiHelper";
 import { statusOptions } from "../shared/constants";
 import { Profession } from "./data";
 
@@ -27,12 +28,15 @@ export function ProfessionDrawer({
   onSave,
 }: ProfessionDrawerProps) {
   const isEdit = Boolean(profession?.id);
+  const [checkingName, setCheckingName] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<Profession>({
     values: profession || undefined,
@@ -40,15 +44,47 @@ export function ProfessionDrawer({
 
   const handleClose = () => {
     reset();
+    clearErrors();
     close();
   };
 
-  const onSubmit = (data: Profession) => {
-    onSave({
-      ...data,
-      id: profession?.id || crypto.randomUUID(),
-      createdAt: profession?.createdAt || new Date().toISOString(),
-    });
+  // ---- Check professionName uniqueness against currently loaded list via list API ----
+  // (Lightweight client-side pre-check; server also enforces this on submit.)
+  const checkNameUnique = async (name: string) => {
+    if (!name) return true;
+    setCheckingName(true);
+    try {
+      const response = await Get("master/profession/list", {}, false);
+      if (response.data?.success) {
+        const allItems: any[] = response.data.data || [];
+        const isTaken = allItems.some(
+          (item) =>
+            item.professionName?.trim().toLowerCase() ===
+              name.trim().toLowerCase() &&
+            String(item.professionId) !== String(profession?.id || "")
+        );
+        return !isTaken;
+      }
+      return true;
+    } catch (error) {
+      return true; // fail-open on client check; server will still validate
+    } finally {
+      setCheckingName(false);
+    }
+  };
+
+  const onSubmit = async (data: Profession) => {
+    const isUnique = await checkNameUnique(data.professionName);
+
+    if (!isUnique) {
+      setError("professionName", {
+        type: "manual",
+        message: "Profession already exists. Please enter a different name.",
+      });
+      return;
+    }
+
+    onSave({ ...data, id: profession?.id || "" });
     handleClose();
   };
 
@@ -98,31 +134,16 @@ export function ProfessionDrawer({
             className="flex grow flex-col overflow-hidden"
           >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-
-             
               {/* Profession Name */}
               <Input
                 {...register("professionName", {
                   required: "Profession name is required",
+                  onChange: () => clearErrors("professionName"),
                 })}
                 label="Profession"
                 placeholder="Enter profession name"
                 error={errors.professionName?.message}
-              />
-
-              {/* Profession Slug */}
-              <Input
-                {...register("slug", {
-                  required: "Slug is required",
-                  pattern: {
-                    value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                    message:
-                      "Slug must be lowercase letters, numbers, and hyphens only",
-                  },
-                })}
-                label="Profession Slug"
-                placeholder="e.g. software-engineer"
-                error={errors.slug?.message}
+                disabled={checkingName}
               />
 
               {/* Status */}
@@ -152,8 +173,8 @@ export function ProfessionDrawer({
               <Button type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" color="primary">
-                {isEdit ? "Update" : "Create"}
+              <Button type="submit" color="primary" disabled={checkingName}>
+                {checkingName ? "Checking..." : isEdit ? "Update" : "Create"}
               </Button>
             </div>
           </form>

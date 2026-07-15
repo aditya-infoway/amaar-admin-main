@@ -198,12 +198,6 @@ export function ModelDrawer({
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
-                  {...register("axleType", { required: "Axle type is required" })}
-                  label="Axle Type"
-                  placeholder="Enter axle type"
-                  error={errors.axleType?.message}
-                />
-                <Input
                   {...register("capacity", { required: "Capacity is required" })}
                   label="Capacity"
                   placeholder="Enter capacity"
