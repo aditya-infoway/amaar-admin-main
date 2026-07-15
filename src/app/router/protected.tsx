@@ -111,9 +111,9 @@ const protectedRoutes: RouteObject = {
         },
 
 
-        
+
         {
-          path: "brand",
+          path: "master/brand",
           children: [
             {
               index: true,
@@ -122,25 +122,25 @@ const protectedRoutes: RouteObject = {
             {
               path: "body-type",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/body-type")).default,
               }),
             },
             {
               path: "axle-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/axle-brand")).default,
               }),
             },
             {
               path: "hydraulic-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/hydraulic-brand")).default,
               }),
             },
             {
               path: "tyre-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/tyre-brand")).default,
               }),
             },
           ],
@@ -171,63 +171,48 @@ const protectedRoutes: RouteObject = {
           ],
         },
         {
-          path: "enquiry-master",
+          path: "item-master",
           children: [
             {
               index: true,
-              element: <Navigate to="/enquiry-master/enquiry-type" replace />,
+              element: <Navigate to="/item-master/item-list" replace />,
             },
 
             {
-              path: "enquiry-type",
+              path: "item-list",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/item-master")).default,
+              }),
+            },
+
+            {
+              path: "create",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/item-master/form")).default,
+              }),
+            },
+
+            {
+              path: "edit/:id",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/item-master/form")).default,
+              }),
+            },
+
+            {
+              path: "item-category",
               lazy: async () => ({
                 Component: (
-                  await import("@/app/pages/enquiry-master/enquiry-type/index")
+                  await import("@/app/pages/item-master/iteam-category")
                 ).default,
               }),
             },
 
             {
-              path: "enquiry-source",
+              path: "item-group",
               lazy: async () => ({
                 Component: (
-                  await import("@/app/pages/enquiry-master/enquiry-source")
-                ).default,
-              }),
-            },
-
-            {
-              path: "profession",
-              lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/enquiry-master/profession")
-                ).default,
-              }),
-            },
-
-            {
-              path: "enquiry-status",
-              lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/enquiry-master/enquiry-status")
-                ).default,
-              }),
-            },
-
-            {
-              path: "banker",
-              lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/enquiry-master/banker")
-                ).default,
-              }),
-            },
-
-            {
-              path: "finance",
-              lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/enquiry-master/finance")
+                  await import("@/app/pages/item-master/iteam-group")
                 ).default,
               }),
             },

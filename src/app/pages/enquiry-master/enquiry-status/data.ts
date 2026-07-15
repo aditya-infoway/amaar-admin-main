@@ -1,12 +1,20 @@
-import { EnquiryStatus } from "../shared/types";
-
-export type { EnquiryStatus };
+export interface EnquiryStatus {
+  id: string;
+  statusName: string;
+  status: string;
+  createdAt?: string;
+}
 
 export const emptyEnquiryStatus = (): EnquiryStatus => ({
   id: "",
-  code: "",
   statusName: "",
-  slug: "",
-  createdAt: new Date().toISOString(),
   status: "active",
+});
+
+// API se aane wale raw row ko frontend Type me map karta hai
+export const mapApiEnquiryStatusToEnquiryStatus = (item: any): EnquiryStatus => ({
+  id: String(item.enquiryStatusId),
+  statusName: item.statusName,
+  status: item.status,
+  createdAt: item.created,
 });

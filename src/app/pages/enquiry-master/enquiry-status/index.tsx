@@ -7,42 +7,58 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Post, Put, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
 import { statusOptions } from "../shared/constants";
 import { EnquiryStatusDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
-import { EnquiryStatus, emptyEnquiryStatus } from "./data";
+import { emptyEnquiryStatus, mapApiEnquiryStatusToEnquiryStatus, EnquiryStatus } from "./data";
 
 export default function EnquiryStatusPage() {
-  const [data, setData] = useState<EnquiryStatus[]>(() =>
-    masterStorage.getEnquiryStatuses(),
-  );
+  const [data, setData] = useState<EnquiryStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<EnquiryStatus | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [filterCode, setFilterCode] = useState("");
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
+  // ---- Fetch enquiry statuses ----
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const response = await Get("master/enquirystatus/list", {}, false);
+      if (response.data?.success) {
+        setData((response.data.data || []).map(mapApiEnquiryStatusToEnquiryStatus));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to fetch enquiry statuses.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching enquiry status data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      if (
-        filterCode &&
-        !item.code.toLowerCase().includes(filterCode.toLowerCase())
-      )
-        return false;
       if (
         filterName &&
         !item.statusName.toLowerCase().includes(filterName.toLowerCase())
@@ -51,11 +67,78 @@ export default function EnquiryStatusPage() {
       if (filterStatus && item.status !== filterStatus) return false;
       return true;
     });
-  }, [data, filterCode, filterName, filterStatus]);
+  }, [data, filterName, filterStatus]);
 
-  const persist = (next: EnquiryStatus[]) => {
-    setData(next);
-    masterStorage.saveEnquiryStatuses(next);
+  // ---- Save (create or update) via API ----
+  const handleSave = async (item: EnquiryStatus) => {
+    const payload = {
+      statusName: item.statusName,
+      status: item.status,
+    };
+
+    try {
+      if (item.id) {
+        const response = await Put(
+          "master/enquirystatus/update",
+          { enquiryStatusId: Number(item.id), ...payload },
+          false
+        );
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Enquiry status updated successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to update enquiry status.");
+        }
+      } else {
+        const response = await Post("master/enquirystatus/create", payload, false);
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Enquiry status created successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to create enquiry status.");
+        }
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while saving the enquiry status.");
+    }
+  };
+
+  const handleDeleteOne = async (row: EnquiryStatus) => {
+    try {
+      const response = await Delete(
+        "master/enquirystatus/delete",
+        { enquiryStatusId: Number(row.id) },
+        false
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Enquiry status deleted successfully.");
+        setData((prev) => prev.filter((item) => item.id !== row.id));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to delete enquiry status.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting the enquiry status.");
+    }
+  };
+
+  const handleDeleteMany = async (rows: { original: EnquiryStatus }[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) =>
+          Delete(
+            "master/enquirystatus/delete",
+            { enquiryStatusId: Number(r.original.id) },
+            false
+          )
+        )
+      );
+      const ids = new Set(rows.map((r) => r.original.id));
+      setData((prev) => prev.filter((item) => !ids.has(item.id)));
+      setRowSelection({});
+      toastsuccessmsg("Selected enquiry statuses deleted successfully.");
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting enquiry statuses.");
+    }
   };
 
   const table = useReactTable({
@@ -69,14 +152,8 @@ export default function EnquiryStatusPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: (row) => handleDeleteOne(row.original),
+      deleteRows: (rows) => handleDeleteMany(rows),
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -117,12 +194,6 @@ export default function EnquiryStatusPage() {
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
-                label="Code"
-                value={filterCode}
-                onChange={(e) => setFilterCode(e.target.value)}
-                placeholder="Filter by code"
-              />
-              <Input
                 label="Enquiry Status Name"
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
@@ -147,7 +218,11 @@ export default function EnquiryStatusPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No enquiry statuses found. Click Create Enquiry Status to add one."
+          emptyMessage={
+            loading
+              ? "Loading enquiry statuses..."
+              : "No enquiry statuses found. Click Create Enquiry Status to add one."
+          }
         />
       </div>
 
@@ -155,14 +230,7 @@ export default function EnquiryStatusPage() {
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         enquiryStatus={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        onSave={handleSave}
       />
     </Page>
   );

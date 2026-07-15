@@ -1,11 +1,12 @@
 import { ChevronLeftIcon } from "@heroicons/react/20/solid";
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { Page } from "@/components/shared/Page";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Listbox } from "@/components/shared/form/StyledListbox";
-import { Button, Card, Input, Switch } from "@/components/ui";
+import { Button, Card, Input, Radio, Switch } from "@/components/ui";
 import {
   groupOptions,
   itemCategoryOptions,
@@ -16,6 +17,12 @@ import {
 } from "../../master/shared/constants";
 import { masterStorage } from "../../master/shared/storage";
 import { emptyItem, ItemMaster } from "../data";
+
+// Extends ItemMaster type with local UI properties safely
+interface ExtendedItemMaster extends ItemMaster {
+  itemLocation?: string;
+  barcodeType?: "manual" | "generate";
+}
 
 export default function ItemMasterFormPage() {
   const { id } = useParams();
@@ -30,25 +37,45 @@ export default function ItemMasterFormPage() {
     handleSubmit,
     control,
     setValue,
-    watch,                          // ← destructure watch from useForm
+    watch,
     formState: { errors },
-  } = useForm<ItemMaster>({
-    defaultValues: existing || emptyItem(),
+  } = useForm<ExtendedItemMaster>({
+    defaultValues: {
+      ...(existing || emptyItem()),
+      barcodeType: "manual", // Default type
+    },
   });
 
-  const stockMapping = watch("stockMapping"); // ← use watch() not Watch()
+  const stockMapping = watch("stockMapping");
+  const barcodeType = watch("barcodeType");
+  const currentBarcode = watch("barcode");
 
-  const generateBarcode = () => {
-    const code = `AB${Date.now().toString().slice(-10)}`;
-    setValue("barcode", code);
-  };
+  // Automatically generate unique barcode when switching to 'generate' if it doesn't exist
+  useEffect(() => {
+    if (barcodeType === "generate" && !currentBarcode) {
+      const code = `AB${Date.now().toString().slice(-10)}`;
+      setValue("barcode", code);
+    }
+  }, [barcodeType, currentBarcode, setValue]);
 
-  const onSubmit = (data: ItemMaster) => {
+  const onSubmit = (data: ExtendedItemMaster) => {
     const items = masterStorage.getItems();
+
+    // Ensure generate mode has a barcode before saving
+    let finalBarcode = data.barcode;
+    if (data.barcodeType === "generate" && !finalBarcode) {
+      finalBarcode = `AB${Date.now().toString().slice(-10)}`;
+    }
+
+    // Clean UI-only keys before saving
+    const { barcodeType: _, ...savedData } = data;
+
     const item: ItemMaster = {
-      ...data,
+      ...savedData,
+      barcode: finalBarcode,
       id: existing?.id || crypto.randomUUID(),
-    };
+    } as ItemMaster;
+
     const next = existing
       ? items.map((row) => (row.id === item.id ? item : row))
       : [item, ...items];
@@ -95,6 +122,12 @@ export default function ItemMasterFormPage() {
                   label="Short Name"
                   placeholder="Enter short name"
                   error={errors.shortName?.message}
+                />
+                <Input
+                  {...register("itemLocation")}
+                  label="Item Location"
+                  placeholder="Enter item location"
+                  error={errors.itemLocation?.message}
                 />
                 <Controller
                   control={control}
@@ -211,23 +244,7 @@ export default function ItemMasterFormPage() {
                 Classification & Supplier
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Controller
-                  control={control}
-                  name="itemType"
-                  rules={{ required: "Item type is required" }}
-                  render={({ field: { value, onChange, ...rest } }) => (
-                    <Listbox
-                      data={itemTypeOptions}
-                      value={itemTypeOptions.find((item) => item.id === value) || null}
-                      onChange={(item) => onChange(item.id)}
-                      label="Item Type"
-                      placeholder="Select item type"
-                      displayField="label"
-                      error={errors.itemType?.message}
-                      {...rest}
-                    />
-                  )}
-                />
+
                 <Controller
                   control={control}
                   name="suppliers"
@@ -292,19 +309,53 @@ export default function ItemMasterFormPage() {
 
             <section>
               <h3 className="dark:text-dark-100 mb-4 text-lg font-medium text-gray-800">
-                Barcode
+                Barcode Setup
               </h3>
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="min-w-[240px] grow">
-                  <Input
-                    {...register("barcode")}
-                    label="Barcode"
-                    placeholder="Enter or generate barcode"
-                  />
+              <div className="space-y-4">
+                {/* Radio Buttons */}
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Radio
+                      value="manual"
+                      {...register("barcodeType")}
+                      className="size-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-dark-400"
+                    />
+                    Manually
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Radio
+
+                      value="generate"
+                      {...register("barcodeType")}
+                      className="size-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-dark-400"
+                      onChange={(e) => {
+                        register("barcodeType").onChange(e);
+                        setValue("barcode", "");
+                      }}
+                    />
+                    Generate Automatically
+                  </label>
                 </div>
-                <Button type="button" variant="outlined" onClick={generateBarcode}>
-                  Generate Barcode
-                </Button>
+
+                {/* Conditional Rendering */}
+                {barcodeType === "manual" ? (
+                  <div className="max-w-md">
+                    <Input
+                      {...register("barcode")}
+                      label="Barcode Number"
+                      placeholder="Enter barcode manually"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-dashed border-gray-300 bg-gray-50/50 p-4 dark:border-dark-400 dark:bg-dark-700/50 max-w-md">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                      System Generated Unique Barcode
+                    </span>
+                    <p className="mt-1 font-mono text-lg font-bold text-gray-900 dark:text-dark-50">
+                      {currentBarcode || "Generating..."}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 

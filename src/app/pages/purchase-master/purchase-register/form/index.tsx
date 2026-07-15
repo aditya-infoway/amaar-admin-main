@@ -227,7 +227,17 @@ const INIT_ITEMS = [
 ───────────────────────────────────────────── */
 const EMPTY_ROW = { itemCode: "", itemName: "", hsnCode: "", uom: "", qty: "", rate: "", discount: "0", gstPct: "", _codeQ: "", _nameQ: "", _filled: false };
 
-function InlineSearchRow({ onAdd, initialRow, onClearPreview }: { onAdd: (item: any) => void; initialRow?: any; onClearPreview?: () => void }) {
+function InlineSearchRow({
+  onAdd,
+  initialRow,
+  onClearPreview,
+  onOpenVehicleDrawer,
+}: {
+  onAdd: (item: any) => void;
+  initialRow?: any;
+  onClearPreview?: () => void;
+  onOpenVehicleDrawer: () => void;
+}) {
   const [row, setRow] = useState({ ...EMPTY_ROW });
   const [codeSug, setCodeSug] = useState<typeof ITEM_MASTER>([]);
   const [nameSug, setNameSug] = useState<typeof ITEM_MASTER>([]);
@@ -314,7 +324,13 @@ function InlineSearchRow({ onAdd, initialRow, onClearPreview }: { onAdd: (item: 
     <tr className="border-b-2 border-primary/30 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 dark:from-blue-900/20 dark:to-indigo-900/10">
       {/* # */}
       <td className="px-2 py-2.5 text-center">
-        <span className="inline-flex items-center justify-center text-[9px] font-extrabold text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5 tracking-wide">NEW</span>
+        <Button
+          color="primary"
+          onClick={onOpenVehicleDrawer}
+          className="gap-1.5"
+        >
+          <Icon.Plus />
+        </Button>
       </td>
 
       {/* Item Code */}
@@ -852,20 +868,43 @@ export default function VehiclePurchaseBill() {
 
         {/* ITEM DETAILS */}
         <Card title="Item Details" className="mb-5">
-          <div className="flex items-center gap-2 flex-wrap mb-3">
-            <Button color="primary" onClick={() => setVehicleDrawerOpen(true)} className="gap-1.5">
-              <Icon.Plus /> Add Item
-            </Button>
-            <Button variant="outlined" color="secondary" className="gap-1.5">
-              <Icon.Upload /> Import Items
-            </Button>
-            <Button color="error" className="gap-1.5">
-              <Icon.Trash /> Remove Item
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3 w-full">
+            {/* Left Side: Actions */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outlined" color="secondary" className="gap-1.5">
+                <Icon.Upload /> Import Items
+              </Button>
+              <Button color="error" className="gap-1.5">
+                <Icon.Trash /> Remove Item
+              </Button>
+            </div>
+
+            {/* Right Side: Barcode Scan (Opposite) */}
+            <Button
+              variant="outlined"
+              color="primary"
+              className="gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 6v12M7 6v12M10 6v12M14 6v12M17 6v12M20 6v12"
+                />
+              </svg>
+
+              Scan Barcode
             </Button>
           </div>
 
           <div className="flex items-center gap-2 mb-3 px-0.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 flex-shrink-0" />
             <p className="text-xs text-gray-400">
               Type in <span className="font-semibold text-primary">Item Code</span> or <span className="font-semibold text-primary">Item Name</span> in the search row below to find and add items directly.
             </p>
@@ -880,7 +919,7 @@ export default function VehiclePurchaseBill() {
                   ))}
                 </tr>
                 {/* ── INLINE SEARCH ROW ── */}
-                <InlineSearchRow onAdd={addItemFromPreview} initialRow={pendingItem} onClearPreview={() => setPendingItem(null)} />
+                <InlineSearchRow onAdd={addItemFromPreview} initialRow={pendingItem} onClearPreview={() => setPendingItem(null)} onOpenVehicleDrawer={() => setVehicleDrawerOpen(true)} />
               </thead>
               <tbody>
                 {items.map((item: any, idx: number) => (

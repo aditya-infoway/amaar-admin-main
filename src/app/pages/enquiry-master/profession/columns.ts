@@ -25,12 +25,6 @@ export const columns: ColumnDef<Profession>[] = [
     cell: TextCell,
   },
   {
-    id: "slug",
-    accessorKey: "slug",
-    header: "Profession Slug",
-    cell: TextCell,
-  },
-  {
     id: "createdAt",
     accessorKey: "createdAt",
     header: "Created On",
@@ -55,7 +49,6 @@ export const columns: ColumnDef<Profession>[] = [
 
 export const exportColumns: ExportColumn<Profession>[] = [
   { key: "professionName", header: "Profession" },
-  { key: "slug", header: "Profession Slug" },
   {
     key: "createdAt",
     header: "Created On",
@@ -65,7 +58,6 @@ export const exportColumns: ExportColumn<Profession>[] = [
   {
     key: "status",
     header: "Status",
-    format: (value: unknown) =>
-      value === "active" ? "Active" : "Inactive",
+    format: (value: unknown) => (value === "active" ? "Active" : "Inactive"),
   },
 ];

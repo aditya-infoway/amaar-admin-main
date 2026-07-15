@@ -13,6 +13,29 @@ export type StepKey =
   | "identifyDocument"
   | "declaration";
 
+// ─── Variant Summary (readonly auto-fill) ──────────────────────────────────────
+
+export interface VariantSummary {
+  variantCode: string;
+  categoryCode: string;
+  categoryName: string;
+  seriesCode: string;
+  seriesName: string;
+  modelCode: string;
+  modelName: string;
+  capacity: string;
+  bodyLength: string;
+  bodyWidth: string;
+  bodyHeight: string;
+  standardWeight: string;
+  bodyType: string;
+  axleBrand: string;
+  hydraulicBrand: string;
+  tyreBrand: string;
+  targetCost: string;
+  sellingMarkup: string;
+}
+
 // ─── Form Data Types ──────────────────────────────────────────────────────────
 
 export type TechnicalSpecType = {
@@ -33,44 +56,29 @@ export type TechnicalSpecType = {
   etc?: string;
 };
 
-export type AddressType = {
-  country: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  zipCode: string;
-};
-
-export type AddressInfoType = {
-  permanentAddress: AddressType;
-  isSameCorrespondenceAddress: boolean;
-  correspondenceAddress: AddressType;
-};
-
-export type IdentifyDocumentType = {
-  type: "passport" | "id_card" | "driving_license";
-  imageFront: File | null;
-  imageBack: File | null;
-  passportPage: File | null;
-};
+export type StandardFeaturesType = Record<string, boolean>;
+export type OptionalAccessoriesType = Record<string, boolean>;
 
 export type DeclarationType = {
-  agreed: boolean;
-  fullName: string;
-  dateSigned: Date | null;
+  productImage?: File | null;
+  brochurePdf?: File | null;
+  drawingPdf?: File | null;
+  specSheet?: File | null;
 };
 
 export type FormDataType = {
   personalInfo: TechnicalSpecType;
-  addressInfo: AddressInfoType;
-  identifyDocument: IdentifyDocumentType;
+  addressInfo: StandardFeaturesType;
+  identifyDocument: OptionalAccessoriesType;
   declaration: DeclarationType;
 };
 
 // ─── State & Actions ──────────────────────────────────────────────────────────
 
 export interface FormState {
+  readonly variantStructureId?: string;
+  readonly variantId: string;
+  readonly variantSummary: VariantSummary | null;
   readonly formData: FormDataType;
   readonly stepStatus: {
     [key in StepKey]: StepStatus;
@@ -78,8 +86,9 @@ export interface FormState {
 }
 
 export type FormAction =
-  | { type: "SET_FORM_DATA";   payload: Partial<FormDataType> }
-  | { type: "SET_STEP_STATUS"; payload: Partial<FormState["stepStatus"]> };
+  | { type: "SET_FORM_DATA"; payload: Partial<FormDataType> }
+  | { type: "SET_STEP_STATUS"; payload: Partial<FormState["stepStatus"]> }
+  | { type: "SET_VARIANT"; payload: { variantId: string; variantSummary: VariantSummary } };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 

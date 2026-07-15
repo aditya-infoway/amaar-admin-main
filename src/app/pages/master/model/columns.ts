@@ -30,7 +30,6 @@ export function createColumns(
     },
     { id: "modelCode", accessorKey: "modelCode", header: "Model Code", cell: TextCell },
     { id: "modelName", accessorKey: "modelName", header: "Model Name", cell: TextCell },
-    { id: "axleType", accessorKey: "axleType", header: "Axle Type", cell: TextCell },
     { id: "capacity", accessorKey: "capacity", header: "Capacity", cell: TextCell },
     { id: "status", accessorKey: "status", header: "Status", cell: StatusCell },
     { id: "actions", header: "Actions", cell: RowActions, enableSorting: false },
@@ -42,7 +41,6 @@ export const exportColumns = [
   { key: "seriesName" as const, header: "Series" },
   { key: "modelCode" as const, header: "Model Code" },
   { key: "modelName" as const, header: "Model Name" },
-  { key: "axleType" as const, header: "Axle Type" },
   { key: "capacity" as const, header: "Capacity" },
   {
     key: "status" as const,

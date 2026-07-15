@@ -128,7 +128,6 @@ export default function ModelPage() {
       seriesId: Number(item.seriesId),
       modelCode: item.modelCode,
       modelName: item.modelName,
-      axleType: item.axleType,
       capacity: item.capacity,
       length: item.length,
       width: item.width,
