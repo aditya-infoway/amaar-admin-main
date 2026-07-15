@@ -239,7 +239,7 @@ export default function ItemMasterFormPage() {
               </div>
             </section>
 
-            <section>
+            {/* <section>
               <h3 className="dark:text-dark-100 mb-4 text-lg font-medium text-gray-800">
                 Classification & Supplier
               </h3>
@@ -267,7 +267,7 @@ export default function ItemMasterFormPage() {
                   )}
                 />
               </div>
-            </section>
+            </section> */}
 
             <section>
               <h3 className="dark:text-dark-100 mb-4 text-lg font-medium text-gray-800">
