@@ -1,4 +1,4 @@
-type ExportColumn<T> = {
+export  type ExportColumn<T> = {
   key: keyof T;
   header: string;
   format?: (value: unknown, row: T) => string;

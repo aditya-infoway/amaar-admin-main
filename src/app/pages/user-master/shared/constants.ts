@@ -109,15 +109,71 @@ export const statusOptions = [
   { id: "inactive", label: "Inactive" },
 ];
 
+
+
 export const groupOptions = [
-  { id: "sundry-debtors", label: "Sundry Debtors" },
-  { id: "cash-in-hand", label: "Cash in Hand" },
-  { id: "bank-accounts", label: "Bank Accounts" },
-  { id: "creditors", label: "Creditors" },
-  { id: "expenses", label: "Expenses" },
-  { id: "income", label: "Income" },
-  { id: "assets", label: "Assets" },
-  { id: "liabilities", label: "Liabilities" },
+  {
+    label: "Bank Accounts (Bank)",
+    value: "Bank Accounts",
+    effect: "Balance Sheet",
+  },
+  { label: "Bank OCC A/C", value: "Bank OCC A/C", effect: "Balance Sheet" },
+  {
+    label: "Capital Account",
+    value: "Capital Account",
+    effect: "Balance Sheet",
+  },
+  { label: "Cash-in-Hand", value: "Cash-in-Hand", effect: "Balance Sheet" },
+  {
+    label: "Currant Assets",
+    value: "Currant Assets",
+    effect: "Balance Sheet",
+  },
+  {
+    label: "Duites & Taxes",
+    value: "Duites & Taxes",
+    effect: "Balance Sheet",
+  },
+  {
+    label: "Expense Account",
+    value: "Expense Account",
+    effect: "Profit & Loss",
+  },
+  { label: "Purchase Account", value: "Purchase Account", effect: "Trading" },
+  { label: "Sales Account", value: "Sales Account", effect: "Trading" },
+  { label: "Stock in Hand", value: "Stock in Hand", effect: "Balance Sheet" },
+  {
+    label: "Sundry Creditors",
+    value: "Sundry Creditors",
+    effect: "Balance Sheet",
+  },
+  {
+    label: "Sundry Debitors",
+    value: "Sundry Debtors",
+    effect: "Balance Sheet",
+  },
+  { label: "Supplier", value: "Supplier", effect: "Balance Sheet" },
+  { label: "Customer", value: "Customer", effect: "Balance Sheet" },
+  {
+    label: "Sundry Debitor (finance)",
+    value: "Sundry Debitor (finance)",
+    effect: "Balance Sheet",
+  },
+  {
+    label: "Sundry Credito (finance)",
+    value: "Sundry Credito (finance)",
+    effect: "Balance Sheet",
+  },
+  {
+    label: "Sundry Debitor (internal)",
+    value: "Sundry Debitor (internal)",
+    effect: "Balance Sheet",
+  },
+  {
+    label: "Sundry Creditor (internal)",
+    value: "Sundry Creditor (internal)",
+    effect: "Balance Sheet",
+  },
 ];
 
 export const countryOptions = [
