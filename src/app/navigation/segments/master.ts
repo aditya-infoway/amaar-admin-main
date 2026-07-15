@@ -51,5 +51,43 @@ export const master: NavigationTree = {
       title: "BOM",
       icon: "master.bom",
     },
+    {
+      id: "master.brand",
+      type: "collapse",
+      path: "/master/brand",
+      title: "Brand",
+      transKey: "Brand",
+      icon: "master.brand",
+      childs: [
+        {
+          id: "master.brand.bodyType",
+          type: "item",
+          path: "/master/brand/body-type",
+          title: "Body Type",
+          transKey: "Body Type",
+        },
+        {
+          id: "master.brand.axleBrand",
+          type: "item",
+          path: "/master/brand/axle-brand",
+          title: "Axle Brand",
+          transKey: "Axle Brand",
+        },
+        {
+          id: "master.brand.hydraulicBrand",
+          type: "item",
+          path: "/master/brand/hydraulic-brand",
+          title: "Hydraulic Brand",
+          transKey: "Hydraulic Brand",
+        },
+        {
+          id: "master.brand.tyreBrand",
+          type: "item",
+          path: "/master/brand/tyre-brand",
+          title: "Tyre Brand",
+          transKey: "Tyre Brand",
+        },
+      ],
+    },
   ],
 };

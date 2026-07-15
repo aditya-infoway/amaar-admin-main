@@ -8,12 +8,10 @@ import {
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { useCreateCompanyFormContext } from "../CreateCompanyFormContext";
-import {
-  countries,
-  dateFormats,
-  districtsByState,
-  statesByCountry,
-} from "../constants";
+import { dateFormats } from "../constants";
+
+import { Country, State, City } from "country-state-city";
+import { useMemo } from "react";
 import { basicDetailsSchema, BasicDetailsType } from "../schema";
 import { StepActions } from "../components/StepActions";
 
@@ -39,10 +37,46 @@ export function BasicDetails({
     defaultValues: state.formData.basicDetails,
   });
 
-  const selectedCountry = watch("country");
-  const selectedState = watch("state");
-  const states = statesByCountry[selectedCountry] || [];
-  const districts = districtsByState[selectedState] || [];
+const selectedCountry = watch("country");
+const selectedState = watch("state");
+
+const countryList = useMemo(() => {
+  return Country.getAllCountries().map((country) => ({
+    id: country.name,
+    label: country.name,
+    isoCode: country.isoCode,
+  }));
+}, []);
+
+const selectedCountryObj = Country.getAllCountries().find(
+  (country) => country.name === selectedCountry
+);
+
+const stateList = useMemo(() => {
+  if (!selectedCountryObj) return [];
+
+  return State.getStatesOfCountry(selectedCountryObj.isoCode).map((state) => ({
+    id: state.name,
+    label: state.name,
+    isoCode: state.isoCode,
+  }));
+}, [selectedCountry]);
+
+const selectedStateObj = State.getStatesOfCountry(
+  selectedCountryObj?.isoCode || ""
+).find((state) => state.name === selectedState);
+
+const districtList = useMemo(() => {
+  if (!selectedCountryObj || !selectedStateObj) return [];
+
+  return City.getCitiesOfState(
+    selectedCountryObj.isoCode,
+    selectedStateObj.isoCode
+  ).map((city) => ({
+    id: city.name,
+    label: city.name,
+  }));
+}, [selectedCountry, selectedState]);
 
   const onSubmit = (data: BasicDetailsType) => {
     dispatch({ type: "SET_FORM_DATA", payload: { basicDetails: data } });
@@ -92,12 +126,13 @@ export function BasicDetails({
             name="country"
             render={({ field: { value, onChange, ...rest } }) => (
               <Listbox
-                data={countries}
-                value={countries.find((item) => item.id === value) || null}
+                data={countryList}
+                value={countryList.find((item) => item.id === value) || null}
                 onChange={(item) => {
-                  onChange(item.id);
-                  setValue("state", "");
-                  setValue("district", "");
+                    onChange(item.id);
+
+                    setValue("state", "");
+                    setValue("district", "");
                 }}
                 label="Country"
                 placeholder="Select country"
@@ -112,11 +147,14 @@ export function BasicDetails({
             name="state"
             render={({ field: { value, onChange, ...rest } }) => (
               <Listbox
-                data={states}
-                value={states.find((item) => item.id === value) || null}
+                data={stateList}
+                value={stateList.find((item) => item.id === value) || null}
                 onChange={(item) => {
-                  onChange(item.id);
-                  setValue("district", "");
+                    onChange(item.label);
+
+                    setValue("district", "");
+
+                    setValue("stateCode", item.isoCode);
                 }}
                 label="State"
                 placeholder="Select state"
@@ -134,15 +172,18 @@ export function BasicDetails({
             label="State Code"
             placeholder="Enter state code"
             error={errors.stateCode?.message}
+            readOnly
           />
           <Controller
             control={control}
             name="district"
             render={({ field: { value, onChange, ...rest } }) => (
               <Listbox
-                data={districts}
-                value={districts.find((item) => item.id === value) || null}
-                onChange={(item) => onChange(item.id)}
+                data={districtList}
+                value={districtList.find((item)=>item.id===value)||null}
+                onChange={(item)=>{
+                    onChange(item.label);
+                }}
                 label="District"
                 placeholder="Select district"
                 displayField="label"

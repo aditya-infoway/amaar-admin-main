@@ -7,29 +7,34 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Post, Put, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { statusOptions } from "../shared/constants";
-import {
-  getCategoryLabel,
-  getSeriesLabel,
-  masterStorage,
-} from "../shared/storage";
 import { ModelDrawer } from "./ModelDrawer";
 import { createColumns, exportColumns } from "./columns";
-import { emptyModel, Model } from "./data";
+import { emptyModel, mapApiModelToModel, Model } from "./data";
+
+interface OptionItem {
+  id: string;
+  label: string;
+}
 
 export default function ModelPage() {
-  const categories = masterStorage.getCategories();
-  const series = masterStorage.getProductSeries();
-  const [data, setData] = useState<Model[]>(() => masterStorage.getModels());
+  const [data, setData] = useState<Model[]>([]);
+  const [categories, setCategories] = useState<OptionItem[]>([]);
+  const [series, setSeries] = useState<
+    { id: string; label: string; categoryId: string }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -40,8 +45,57 @@ export default function ModelPage() {
   const [filterCode, setFilterCode] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
-  const getCategoryName = (id: string) => getCategoryLabel(categories, id);
-  const getSeriesName = (id: string) => getSeriesLabel(series, id);
+  // ---- Fetch categories, series and models ----
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [categoryRes, seriesRes, modelRes] = await Promise.all([
+        Get("master/category/list", {}, false),
+        Get("master/productseries/list", {}, false),
+        Get("master/model/list", {}, false),
+      ]);
+
+      if (categoryRes.data?.success) {
+        setCategories(
+          (categoryRes.data.data || []).map((item: any) => ({
+            id: String(item.categoryId),
+            label: item.categoryName,
+          }))
+        );
+      }
+
+      if (seriesRes.data?.success) {
+        setSeries(
+          (seriesRes.data.data || []).map((item: any) => ({
+            id: String(item.productSeriesId),
+            label: item.seriesName,
+            categoryId: String(item.categoryId),
+          }))
+        );
+      }
+
+      if (modelRes.data?.success) {
+        setData((modelRes.data.data || []).map(mapApiModelToModel));
+      } else {
+        toasterrormsg(modelRes.data?.message || "Failed to fetch models.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching model data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getCategoryName = (id: string) =>
+    categories.find((item) => item.id === id)?.label || "";
+  const getSeriesName = (id: string) =>
+    series.find((item) => item.id === id)?.label || "";
+
   const columns = useMemo(
     () => createColumns(getCategoryName, getSeriesName),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,7 +105,10 @@ export default function ModelPage() {
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       if (filterCategory && item.categoryId !== filterCategory) return false;
-      if (filterCode && !item.modelCode.toLowerCase().includes(filterCode.toLowerCase()))
+      if (
+        filterCode &&
+        !item.modelCode.toLowerCase().includes(filterCode.toLowerCase())
+      )
         return false;
       if (filterStatus && item.status !== filterStatus) return false;
       return true;
@@ -64,9 +121,81 @@ export default function ModelPage() {
     seriesName: getSeriesName(row.seriesId),
   }));
 
-  const persist = (next: Model[]) => {
-    setData(next);
-    masterStorage.saveModels(next);
+  // ---- Save (create or update) via API ----
+  const handleSave = async (item: Model) => {
+    const payload = {
+      categoryId: Number(item.categoryId),
+      seriesId: Number(item.seriesId),
+      modelCode: item.modelCode,
+      modelName: item.modelName,
+      axleType: item.axleType,
+      capacity: item.capacity,
+      length: item.length,
+      width: item.width,
+      height: item.height,
+      standardWeight: item.standardWeight,
+      status: item.status,
+    };
+
+    try {
+      if (item.id) {
+        const response = await Put(
+          "master/model/update",
+          { modelId: Number(item.id), ...payload },
+          false
+        );
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Model updated successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to update model.");
+        }
+      } else {
+        const response = await Post("master/model/create", payload, false);
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Model created successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to create model.");
+        }
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while saving the model.");
+    }
+  };
+
+  const handleDeleteOne = async (row: Model) => {
+    try {
+      const response = await Delete(
+        "master/model/delete",
+        { modelId: Number(row.id) },
+        false
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Model deleted successfully.");
+        setData((prev) => prev.filter((item) => item.id !== row.id));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to delete model.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting the model.");
+    }
+  };
+
+  const handleDeleteMany = async (rows: { original: Model }[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) =>
+          Delete("master/model/delete", { modelId: Number(r.original.id) }, false)
+        )
+      );
+      const ids = new Set(rows.map((r) => r.original.id));
+      setData((prev) => prev.filter((item) => !ids.has(item.id)));
+      setRowSelection({});
+      toastsuccessmsg("Selected models deleted successfully.");
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting models.");
+    }
   };
 
   const table = useReactTable({
@@ -80,12 +209,8 @@ export default function ModelPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => persist(data.filter((item) => item.id !== row.original.id)),
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: (row) => handleDeleteOne(row.original),
+      deleteRows: (rows) => handleDeleteMany(rows),
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -97,11 +222,6 @@ export default function ModelPage() {
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
-
-  const categoryOptions = categories.map((item) => ({
-    id: item.id,
-    label: item.categoryName,
-  }));
 
   return (
     <Page title="Model">
@@ -118,13 +238,15 @@ export default function ModelPage() {
             setDrawerOpen(true);
           }}
           onExportExcel={() => exportToExcel(exportRows, exportColumns, "models")}
-          onExportPdf={() => exportToPdf(exportRows, exportColumns, "Model List", "models")}
+          onExportPdf={() =>
+            exportToPdf(exportRows, exportColumns, "Model List", "models")
+          }
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
               <Listbox
-                data={[{ id: "", label: "All" }, ...categoryOptions]}
+                data={[{ id: "", label: "All" }, ...categories]}
                 value={
-                  [{ id: "", label: "All" }, ...categoryOptions].find(
+                  [{ id: "", label: "All" }, ...categories].find(
                     (item) => item.id === filterCategory,
                   ) || { id: "", label: "All" }
                 }
@@ -133,7 +255,12 @@ export default function ModelPage() {
                 placeholder="All categories"
                 displayField="label"
               />
-              <Input label="Model Code" value={filterCode} onChange={(e) => setFilterCode(e.target.value)} placeholder="Filter by code" />
+              <Input
+                label="Model Code"
+                value={filterCode}
+                onChange={(e) => setFilterCode(e.target.value)}
+                placeholder="Filter by code"
+              />
               <Listbox
                 data={[{ id: "", label: "All" }, ...statusOptions]}
                 value={
@@ -149,16 +276,23 @@ export default function ModelPage() {
             </div>
           }
         />
-        <MasterTable table={table} columnCount={columns.length} emptyMessage="No models found. Click Create Model to add one." />
+        <MasterTable
+          table={table}
+          columnCount={columns.length}
+          emptyMessage={
+            loading
+              ? "Loading models..."
+              : "No models found. Click Create Model to add one."
+          }
+        />
       </div>
       <ModelDrawer
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         model={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(exists ? data.map((row) => (row.id === item.id ? item : row)) : [item, ...data]);
-        }}
+        categories={categories}
+        series={series}
+        onSave={handleSave}
       />
     </Page>
   );

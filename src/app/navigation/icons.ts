@@ -53,7 +53,8 @@ export const navigationIcons: Record<string, ElementType> = {
   "master.model": CubeIcon,
   "master.variant": CubeIcon,
   "master.variantStructure": RectangleStackIcon,
-"master.bom": CubeTransparentIcon,
+  "master.bom": CubeTransparentIcon,
+  "master.brand": BuildingLibraryIcon,
 
   itemMaster: CubeIcon,
   "itemMaster.list": CubeIcon,

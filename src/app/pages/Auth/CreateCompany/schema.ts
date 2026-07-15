@@ -43,30 +43,55 @@ export const licensingSchema = Yup.object().shape({
   dealsIn: optionalString,
 });
 
+// Financial year strictly runs 01-April to 31-March.
+// Only the year part is allowed to change.
 export const financialYearSchema = Yup.object().shape({
-  startDate: Yup.string().required("Start date is required"),
+  startDate: Yup.string()
+    .required("Start date is required")
+    .test("is-april-first", "Start date must always be 1st April", (value) => {
+      if (!value) return false;
+      const d = new Date(value);
+      return d.getMonth() === 3 && d.getDate() === 1;
+    }),
   endDate: Yup.string()
     .required("End date is required")
+    .test("is-march-last", "End date must always be 31st March", (value) => {
+      if (!value) return false;
+      const d = new Date(value);
+      return d.getMonth() === 2 && d.getDate() === 31;
+    })
     .test(
-      "is-after-start",
-      "End date must be after start date",
+      "is-next-year",
+      "End year must be exactly one year after start year",
       function (value) {
         const { startDate } = this.parent;
         if (!value || !startDate) return true;
-        return new Date(value) >= new Date(startDate);
+        const startYear = new Date(startDate).getFullYear();
+        const endYear = new Date(value).getFullYear();
+        return endYear === startYear + 1;
       },
     ),
 });
 
+// Matches the actual fields used in BankDetails.tsx
+// All fields optional — but format validation applies if a value is entered.
 export const bankDetailsSchema = Yup.object().shape({
-  bankDetails: Yup.string().trim().required("Bank details are required"),
-});
-
-export const superUserSchema = Yup.object().shape({
-  username: Yup.string().trim().required("Username is required"),
-  password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .required("Password is required"),
+  bankHolderName: optionalString,
+  bankAccountNo: Yup.string()
+    .trim()
+    .matches(/^\d{9,18}$/, {
+      message: "Enter a valid bank account number",
+      excludeEmptyString: true,
+    })
+    .default(""),
+  branchName: optionalString,
+  ifscCode: Yup.string()
+    .trim()
+    .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, {
+      message: "Enter a valid IFSC code",
+      excludeEmptyString: true,
+    })
+    .default(""),
 });
 
 export type CompanyInfoType = Yup.InferType<typeof companyInfoSchema>;
@@ -75,4 +100,12 @@ export type RegistrationDetailsType = Yup.InferType<typeof registrationDetailsSc
 export type LicensingType = Yup.InferType<typeof licensingSchema>;
 export type FinancialYearType = Yup.InferType<typeof financialYearSchema>;
 export type BankDetailsType = Yup.InferType<typeof bankDetailsSchema>;
-export type SuperUserType = Yup.InferType<typeof superUserSchema>;
+
+// Combined schema for the one-time Company Profile edit page (General settings)
+export const companyProfileSchema = companyInfoSchema
+  .concat(basicDetailsSchema)
+  .concat(registrationDetailsSchema)
+  .concat(licensingSchema)
+  .concat(bankDetailsSchema);
+
+export type CompanyProfileType = Yup.InferType<typeof companyProfileSchema>;

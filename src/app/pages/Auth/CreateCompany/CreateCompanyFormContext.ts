@@ -7,7 +7,6 @@ import {
   FinancialYearType,
   LicensingType,
   RegistrationDetailsType,
-  SuperUserType,
 } from "./schema";
 
 export interface StepStatus {
@@ -20,8 +19,7 @@ export type StepKey =
   | "registrationDetails"
   | "licensing"
   | "financialYear"
-  | "bankDetails"
-  | "superUser";
+  | "bankDetails";
 
 export interface FormState {
   readonly formData: {
@@ -31,7 +29,6 @@ export interface FormState {
     licensing: LicensingType;
     financialYear: FinancialYearType;
     bankDetails: BankDetailsType;
-    superUser: SuperUserType;
   };
   readonly stepStatus: {
     [key in StepKey]: StepStatus;
