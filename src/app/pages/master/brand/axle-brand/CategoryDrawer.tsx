@@ -6,55 +6,92 @@ import {
 } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Controller, useForm } from "react-hook-form";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
+import { Get } from "@/ApiHelper";
 import { statusOptions } from "../../shared/constants";
-import { Category } from "./data";
+import { AxleBrand } from "./data";
 
-interface CategoryDrawerProps {
+interface AxleBrandDrawerProps {
   isOpen: boolean;
   close: () => void;
-  category: Category | null;
-  onSave: (category: Category) => void;
+  axleBrand: AxleBrand | null;
+  onSave: (axleBrand: AxleBrand) => void;
 }
 
-export function CategoryDrawer({
+export function AxleBrandDrawer({
   isOpen,
   close,
-  category,
+  axleBrand,
   onSave,
-}: CategoryDrawerProps) {
-  const isEdit = Boolean(category?.id);
+}: AxleBrandDrawerProps) {
+  const isEdit = Boolean(axleBrand?.id);
+  const [checkingName, setCheckingName] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
-  } = useForm<Category>({
-    values: category || undefined,
+  } = useForm<AxleBrand>({
+    values: axleBrand || undefined,
   });
 
   const handleClose = () => {
     reset();
+    clearErrors();
     close();
   };
 
-  const onSubmit = (data: Category) => {
-    onSave({
-      ...data,
-      id: category?.id || crypto.randomUUID(),
-      createdAt: category?.createdAt || new Date().toISOString(),
-    });
+  // ---- Check axleBrandName uniqueness against currently loaded list via list API ----
+  // (Lightweight client-side pre-check; server also enforces this on submit.)
+  const checkNameUnique = async (name: string) => {
+    if (!name) return true;
+    setCheckingName(true);
+    try {
+      const response = await Get("master/axlebrand/list", {}, false);
+      if (response.data?.success) {
+        const allItems: any[] = response.data.data || [];
+        const isTaken = allItems.some(
+          (item) =>
+            item.axleBrandName?.trim().toLowerCase() ===
+              name.trim().toLowerCase() &&
+            String(item.axleBrandId) !== String(axleBrand?.id || "")
+        );
+        return !isTaken;
+      }
+      return true;
+    } catch (error) {
+      return true; // fail-open on client check; server will still validate
+    } finally {
+      setCheckingName(false);
+    }
+  };
+
+  const onSubmit = async (data: AxleBrand) => {
+    const isUnique = await checkNameUnique(data.axleBrandName);
+
+    if (!isUnique) {
+      setError("axleBrandName", {
+        type: "manual",
+        message: "Axle brand already exists. Please enter a different name.",
+      });
+      return;
+    }
+
+    onSave({ ...data, id: axleBrand?.id || "" });
     handleClose();
   };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-100" onClose={handleClose}>
+        {/* Backdrop */}
         <TransitionChild
           as="div"
           enter="ease-out duration-300"
@@ -66,6 +103,7 @@ export function CategoryDrawer({
           className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40"
         />
 
+        {/* Drawer Panel */}
         <TransitionChild
           as={DialogPanel}
           enter="ease-out transform-gpu transition-transform duration-200"
@@ -78,7 +116,7 @@ export function CategoryDrawer({
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
-            <h3 className="dark:text-dark-50 text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold text-white">
               {isEdit ? "Edit Axle Brand" : "Create Axle Brand"}
             </h3>
             <Button
@@ -96,33 +134,16 @@ export function CategoryDrawer({
             className="flex grow flex-col overflow-hidden"
           >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-
-              {/* Code */}
-         
-
               {/* Axle Brand Name */}
               <Input
-                {...register("categoryName", {
+                {...register("axleBrandName", {
                   required: "Axle Brand Name is required",
+                  onChange: () => clearErrors("axleBrandName"),
                 })}
                 label="Axle Brand Name"
                 placeholder="Enter Axle Brand name"
-                error={errors.categoryName?.message}
-              />
-
-              {/* Category Slug */}
-              <Input
-                {...register("slug", {
-                  required: "Slug is required",
-                  pattern: {
-                    value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                    message:
-                      "Slug must be lowercase letters, numbers, and hyphens only",
-                  },
-                })}
-                label="Category Slug"
-                placeholder="e.g. commercial-vehicles"
-                error={errors.slug?.message}
+                error={errors.axleBrandName?.message}
+                disabled={checkingName}
               />
 
               {/* Status */}
@@ -152,8 +173,8 @@ export function CategoryDrawer({
               <Button type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" color="primary">
-                {isEdit ? "Update" : "Create"}
+              <Button type="submit" color="primary" disabled={checkingName}>
+                {checkingName ? "Checking..." : isEdit ? "Update" : "Create"}
               </Button>
             </div>
           </form>

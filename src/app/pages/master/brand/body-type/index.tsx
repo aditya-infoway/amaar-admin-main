@@ -7,55 +7,138 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Post, Put, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../../shared/export";
 import { MasterTable } from "../../shared/MasterTable";
 import { MasterToolbar } from "../../shared/MasterToolbar";
-import { masterStorage } from "../../shared/storage";
 import { statusOptions } from "../../shared/constants";
-import { CategoryDrawer } from "./CategoryDrawer";
+import { BodyTypeDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
-import { Category, emptyCategory } from "./data";
+import { emptyBodyType, mapApiBodyTypeToBodyType, BodyType } from "./data";
 
-export default function EnquiryTypePage() {
-  const [data, setData] = useState<Category[]>(() =>
-    masterStorage.getCategories(),
-  );
+export default function BodyTypePage() {
+  const [data, setData] = useState<BodyType[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<Category | null>(null);
+  const [editing, setEditing] = useState<BodyType | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [filterCode, setFilterCode] = useState("");
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+
+  // ---- Fetch body types ----
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const response = await Get("master/bodytype/list", {}, false);
+      if (response.data?.success) {
+        setData((response.data.data || []).map(mapApiBodyTypeToBodyType));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to fetch body types.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching body type data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       if (
-        filterCode &&
-        !item.code.toLowerCase().includes(filterCode.toLowerCase())
-      )
-        return false;
-      if (
         filterName &&
-        !item.categoryName.toLowerCase().includes(filterName.toLowerCase())
+        !item.bodyTypeName.toLowerCase().includes(filterName.toLowerCase())
       )
         return false;
       if (filterStatus && item.status !== filterStatus) return false;
       return true;
     });
-  }, [data, filterCode, filterName, filterStatus]);
+  }, [data, filterName, filterStatus]);
 
-  const persist = (next: Category[]) => {
-    setData(next);
-    masterStorage.saveCategories(next);
+  // ---- Save (create or update) via API ----
+  const handleSave = async (item: BodyType) => {
+    const payload = {
+      bodyTypeName: item.bodyTypeName,
+      status: item.status,
+    };
+
+    try {
+      if (item.id) {
+        const response = await Put(
+          "master/bodytype/update",
+          { bodyTypeId: Number(item.id), ...payload },
+          false
+        );
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Body type updated successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to update body type.");
+        }
+      } else {
+        const response = await Post("master/bodytype/create", payload, false);
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Body type created successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to create body type.");
+        }
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while saving the body type.");
+    }
+  };
+
+  const handleDeleteOne = async (row: BodyType) => {
+    try {
+      const response = await Delete(
+        "master/bodytype/delete",
+        { bodyTypeId: Number(row.id) },
+        false
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Body type deleted successfully.");
+        setData((prev) => prev.filter((item) => item.id !== row.id));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to delete body type.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting the body type.");
+    }
+  };
+
+  const handleDeleteMany = async (rows: { original: BodyType }[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) =>
+          Delete(
+            "master/bodytype/delete",
+            { bodyTypeId: Number(r.original.id) },
+            false
+          )
+        )
+      );
+      const ids = new Set(rows.map((r) => r.original.id));
+      setData((prev) => prev.filter((item) => !ids.has(item.id)));
+      setRowSelection({});
+      toastsuccessmsg("Selected body types deleted successfully.");
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting body types.");
+    }
   };
 
   const table = useReactTable({
@@ -65,18 +148,12 @@ export default function EnquiryTypePage() {
     enableRowSelection: true,
     getRowId: (row) => row.id,
     meta: {
-      openEditDrawer: (row: Category) => {
+      openEditDrawer: (row: BodyType) => {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: (row) => handleDeleteOne(row.original),
+      deleteRows: (rows) => handleDeleteMany(rows),
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -95,33 +172,27 @@ export default function EnquiryTypePage() {
         <MasterToolbar
           title="Body Type"
           createLabel="Create Body Type"
-          searchPlaceholder="Search Body Types..."
+          searchPlaceholder="Search body types..."
           table={table}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
           onCreate={() => {
-            setEditing(emptyCategory());
+            setEditing(emptyBodyType());
             setDrawerOpen(true);
           }}
           onExportExcel={() =>
-            exportToExcel(filteredData, exportColumns, "enquiry-types")
+            exportToExcel(filteredData, exportColumns, "body-types")
           }
           onExportPdf={() =>
             exportToPdf(
               filteredData,
               exportColumns,
               "Body Type List",
-              "enquiry-types",
+              "body-types",
             )
           }
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Code"
-                value={filterCode}
-                onChange={(e) => setFilterCode(e.target.value)}
-                placeholder="Filter by code"
-              />
               <Input
                 label="Body Type Name"
                 value={filterName}
@@ -147,22 +218,19 @@ export default function EnquiryTypePage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No Body Types found. Click Create Body Type to add one."
+          emptyMessage={
+            loading
+              ? "Loading body types..."
+              : "No body types found. Click Create Body Type to add one."
+          }
         />
       </div>
 
-      <CategoryDrawer
+      <BodyTypeDrawer
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
-        category={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        bodyType={editing}
+        onSave={handleSave}
       />
     </Page>
   );

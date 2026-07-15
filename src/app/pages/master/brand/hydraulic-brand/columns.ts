@@ -6,12 +6,12 @@ import {
 } from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../../shared/createRowActions";
 import { StatusCell, TextCell } from "../../shared/tableCells";
-import { Category } from "./data";
-import { ExportColumn } from "../../shared/export"; // import your ExportColumn type
+import { ExportColumn } from "../../shared/export";
+import { HydraulicBrand } from "./data";
 
-const RowActions = createRowActions<Category>("category");
+const RowActions = createRowActions<HydraulicBrand>("hydraulicbrand");
 
-export const columns: ColumnDef<Category>[] = [
+export const columns: ColumnDef<HydraulicBrand>[] = [
   {
     id: "select",
     header: SelectHeader,
@@ -19,12 +19,11 @@ export const columns: ColumnDef<Category>[] = [
     enableSorting: false,
   },
   {
-    id: "categoryName",
-    accessorKey: "categoryName",
+    id: "hydraulicBrandName",
+    accessorKey: "hydraulicBrandName",
     header: "Hydraulic Brand Name",
     cell: TextCell,
   },
-
   {
     id: "createdAt",
     accessorKey: "createdAt",
@@ -48,9 +47,8 @@ export const columns: ColumnDef<Category>[] = [
   },
 ];
 
-export const exportColumns: ExportColumn<Category>[] = [
-  { key: "categoryName", header: "Hydraulic Brand Name" },
-  { key: "slug", header: "Category Slug" },
+export const exportColumns: ExportColumn<HydraulicBrand>[] = [
+  { key: "hydraulicBrandName", header: "Hydraulic Brand Name" },
   {
     key: "createdAt",
     header: "Created On",
@@ -60,7 +58,6 @@ export const exportColumns: ExportColumn<Category>[] = [
   {
     key: "status",
     header: "Status",
-    format: (value: unknown) =>
-      value === "active" ? "Active" : "Inactive",
+    format: (value: unknown) => (value === "active" ? "Active" : "Inactive"),
   },
 ];

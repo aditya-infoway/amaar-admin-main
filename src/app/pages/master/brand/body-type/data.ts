@@ -1,12 +1,20 @@
-import { Category } from "../../shared/types";
+export interface BodyType {
+  id: string;
+  bodyTypeName: string;
+  status: string;
+  createdAt?: string;
+}
 
-export type { Category };
-
-export const emptyCategory = (): Category => ({
+export const emptyBodyType = (): BodyType => ({
   id: "",
-  code: "",
-  categoryName: "",
-  createdAt: new Date().toISOString(),
+  bodyTypeName: "",
   status: "active",
-  slug: ""
+});
+
+// API se aane wale raw row ko frontend Type me map karta hai
+export const mapApiBodyTypeToBodyType = (item: any): BodyType => ({
+  id: String(item.bodyTypeId),
+  bodyTypeName: item.bodyTypeName,
+  status: item.status,
+  createdAt: item.created,
 });

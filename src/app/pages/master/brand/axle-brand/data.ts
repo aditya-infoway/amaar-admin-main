@@ -1,12 +1,20 @@
-import { Category } from "../../shared/types";
+export interface AxleBrand {
+  id: string;
+  axleBrandName: string;
+  status: string;
+  createdAt?: string;
+}
 
-export type { Category };
-
-export const emptyCategory = (): Category => ({
+export const emptyAxleBrand = (): AxleBrand => ({
   id: "",
-  code: "",
-  categoryName: "",
-  createdAt: new Date().toISOString(),
+  axleBrandName: "",
   status: "active",
-  slug: ""
+});
+
+// API se aane wale raw row ko frontend Type me map karta hai
+export const mapApiAxleBrandToAxleBrand = (item: any): AxleBrand => ({
+  id: String(item.axleBrandId),
+  axleBrandName: item.axleBrandName,
+  status: item.status,
+  createdAt: item.created,
 });

@@ -61,7 +61,7 @@ export function PersonalInfo({
 }) {
   const kycFormCtx = useKYCFormContext();
 
-  const { register, handleSubmit, control } = useForm<TechnicalSpecType>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<TechnicalSpecType>({
     defaultValues: kycFormCtx.state.formData.personalInfo,
   });
 
@@ -76,14 +76,19 @@ export function PersonalInfo({
     });
     setCurrentStep(1);
   };
+  
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
       <div className="mt-4 h-[420px] overflow-y-auto rounded-lg border border-gray-200 px-4 dark:border-dark-500">
 
         <TableRow label="Body Length">
-          <Input {...register("bodyLength")} placeholder="e.g. 7200 mm" />
-        </TableRow>
+        <Input
+          {...register("bodyLength", { required: "Body Length is required" })}
+          placeholder="e.g. 7200 mm"
+          error={errors.bodyLength?.message}
+        />
+      </TableRow>
 
         <TableRow label="Body Width">
           <Input {...register("bodyWidth")} placeholder="e.g. 2400 mm" />
