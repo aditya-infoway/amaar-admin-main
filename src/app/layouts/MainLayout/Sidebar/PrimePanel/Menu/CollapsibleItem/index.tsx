@@ -26,7 +26,7 @@ export function CollapsibleItem({ data }: { data: NavigationTree }) {
   if (!childs) {
     throw "The collapsible item must have childs";
   }
-
+ 
   return (
     <AccordionItem value={path ?? id}>
       {({ open }: { open: boolean }) => (

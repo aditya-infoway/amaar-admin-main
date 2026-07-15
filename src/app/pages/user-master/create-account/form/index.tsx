@@ -17,6 +17,7 @@ import {
 } from "../../shared/constants";
 import { masterStorage } from "../../shared/storage";
 import { DatePicker } from "@/components/shared/form/Datepicker";
+import { GroupCombobox } from "../groupCombobox";
 
 interface AccountFormValues {
   accountName: string;
@@ -25,7 +26,7 @@ interface AccountFormValues {
   drCr: string;
   country: string;
   state: string;
-  stateCode: string;  
+  stateCode: string;
   district: string;
   taluka: string;
   city: string;
@@ -98,6 +99,8 @@ export function AccountForm() {
   } = useForm<AccountFormValues>({
     defaultValues: emptyFormValues,
   });
+
+
 
   useEffect(() => {
     if (isEdit && id) {
@@ -214,25 +217,24 @@ export function AccountForm() {
               />
 
               <Controller
-                control={control}
                 name="group"
+                control={control}
                 rules={{ required: "Group is required" }}
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Listbox
+                render={({ field }) => (
+                  <GroupCombobox
                     data={groupOptions}
-                    value={
-                      groupOptions.find((item) => item.id === value) || null
-                    }
-                    onChange={(item) => onChange(item.id)}
-                    label="Group"
-                    placeholder="Select Group"
                     displayField="label"
-                    error={errors.group?.message}
-                    {...rest}
+                    searchFields={["label", "effect"]}
+                    value={
+                      groupOptions.find((item) => item.value === field.value) ||
+                      null
+                    }
+                    onChange={(val: any) => field.onChange(val?.value || "")}
+                    label="Group"
+                    placeholder="Search Group"
                   />
                 )}
               />
-
               <Input
                 {...register("openingBalance")}
                 label="Opening Balance"
