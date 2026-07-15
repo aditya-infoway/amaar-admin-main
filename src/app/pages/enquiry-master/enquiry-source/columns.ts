@@ -9,7 +9,7 @@ import { StatusCell, TextCell } from "../shared/tableCells";
 import { ExportColumn } from "../shared/export";
 import { EnquirySource } from "./data";
 
-const RowActions = createRowActions<EnquirySource>("enquirySource");
+const RowActions = createRowActions<EnquirySource>("enquirysource");
 
 export const columns: ColumnDef<EnquirySource>[] = [
   {
@@ -22,12 +22,6 @@ export const columns: ColumnDef<EnquirySource>[] = [
     id: "sourceName",
     accessorKey: "sourceName",
     header: "Source",
-    cell: TextCell,
-  },
-  {
-    id: "slug",
-    accessorKey: "slug",
-    header: "Source Slug",
     cell: TextCell,
   },
   {
@@ -55,7 +49,6 @@ export const columns: ColumnDef<EnquirySource>[] = [
 
 export const exportColumns: ExportColumn<EnquirySource>[] = [
   { key: "sourceName", header: "Source" },
-  { key: "slug", header: "Source Slug" },
   {
     key: "createdAt",
     header: "Created On",
@@ -65,7 +58,6 @@ export const exportColumns: ExportColumn<EnquirySource>[] = [
   {
     key: "status",
     header: "Status",
-    format: (value: unknown) =>
-      value === "active" ? "Active" : "Inactive",
+    format: (value: unknown) => (value === "active" ? "Active" : "Inactive"),
   },
 ];
