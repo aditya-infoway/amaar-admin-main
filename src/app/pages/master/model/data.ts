@@ -4,7 +4,6 @@ export interface Model {
   seriesId: string;
   modelCode: string;
   modelName: string;
-  axleType: string;
   capacity: string;
   length: string;
   width: string;
@@ -19,7 +18,6 @@ export const emptyModel = (): Model => ({
   seriesId: "",
   modelCode: "",
   modelName: "",
-  axleType: "",
   capacity: "",
   length: "",
   width: "",
@@ -36,7 +34,6 @@ export function mapApiModelToModel(apiModel: any): Model {
     seriesId: String(apiModel.seriesId),
     modelCode: apiModel.modelCode ?? "",
     modelName: apiModel.modelName ?? "",
-    axleType: apiModel.axleType ?? "",
     capacity: apiModel.capacity ?? "",
     length: apiModel.length ?? "",
     width: apiModel.width ?? "",
