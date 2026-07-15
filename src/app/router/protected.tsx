@@ -111,9 +111,9 @@ const protectedRoutes: RouteObject = {
         },
 
 
-        
+
         {
-          path: "brand",
+          path: "master/brand",
           children: [
             {
               index: true,
@@ -122,25 +122,25 @@ const protectedRoutes: RouteObject = {
             {
               path: "body-type",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/body-type")).default,
               }),
             },
             {
               path: "axle-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/axle-brand")).default,
               }),
             },
             {
               path: "hydraulic-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/hydraulic-brand")).default,
               }),
             },
             {
               path: "tyre-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/variant-structure/form")).default,
+                Component: (await import("@/app/pages/master/brand/tyre-brand")).default,
               }),
             },
           ],
