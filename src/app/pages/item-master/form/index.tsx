@@ -4,14 +4,11 @@ import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { Page } from "@/components/shared/Page";
-import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Card, Input, Radio, Switch } from "@/components/ui";
 import {
   groupOptions,
   itemCategoryOptions,
-  itemTypeOptions,
-  supplierOptions,
   taxSlabOptions,
   uomOptions,
 } from "../../master/shared/constants";
@@ -122,6 +119,18 @@ export default function ItemMasterFormPage() {
                   label="Short Name"
                   placeholder="Enter short name"
                   error={errors.shortName?.message}
+                />
+                <Input
+                  {...register("hsnCode", {
+                    required: "HSN Code is required",
+                    pattern: {
+                      value: /^\d{4,8}$/,
+                      message: "HSN Code must be 4 to 8 digits",
+                    },
+                  })}
+                  label="HSN Code"
+                  placeholder="Enter HSN Code"
+                  error={errors.hsnCode?.message}
                 />
                 <Input
                   {...register("itemLocation")}

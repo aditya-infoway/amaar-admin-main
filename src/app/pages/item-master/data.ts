@@ -7,6 +7,7 @@ export const emptyItem = (): ItemMaster => ({
   itemCode: "",
   itemName: "",
   shortName: "",
+  hsnCode: "",
   itemCategory: "",
   group: "",
   unit: "",
