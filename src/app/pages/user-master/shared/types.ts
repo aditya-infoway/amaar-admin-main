@@ -138,35 +138,52 @@ export interface ItemMaster {
 export interface Account {
   id: string;
   accountName: string;
-  printName: string;
-  openingBalance: string;
-  country: string;
-  state: string;
-  stateCode: string;
-  taluka: string;
-  area: string;
-  addressLine1: string;
-  addressLine2: string;
-  phone: string;
-  email: string;
-  contactPerson: string;
-  mobile: string;
-  group: string;
-  ifscCode: string;
-  branchName: string;
-  gstNo: string;
-  panCard: string;
-  addressCardNo: string;
-  createdAt: string;
-  status: "active" | "inactive";
-  // add to Account interface
-drCr: string;
-district: string;
-city: string;
-pincode: string;
-birthdayOn: string;
-anniversary: string;
-bankAccountNo: string;
-bankName: string;
-aadharCardNo: string;
+  printName?: string;
+  groupId?: string | number;
+  groupName?: string;
+  openingBalance?: string;
+  drOrCr?: string;
+  currentBalance?: string;
+  currentDrOrCr?: string;
+  countryName?: string;
+  stateName?: string;
+  cityName?: string;
+  districtName?: string;
+  talukaName?: string;
+  area?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  pincode?: string;
+  phoneNo?: string;
+  mobileNo?: string;
+  email?: string;
+  status: string;
+  createdAt?: string;
 }
+
+// API se aane wale raw row ko frontend Type me map karta hai (EnquiryType jaisa hi pattern)
+export const mapApiAccountToAccount = (item: any): Account => ({
+  id: String(item.id),
+  accountName: item.accountName,
+  printName: item.printName,
+  groupId: item.groupId,
+  groupName: item.groupName,
+  openingBalance: item.openingBalance,
+  drOrCr: item.drOrCr,
+  currentBalance: item.currentBalance,
+  currentDrOrCr: item.currentDrOrCr,
+  countryName: item.countryName,
+  stateName: item.stateName,
+  cityName: item.cityName,
+  districtName: item.districtName,
+  talukaName: item.talukaName,
+  area: item.area,
+  addressLine1: item.addressLine1,
+  addressLine2: item.addressLine2,
+  pincode: item.pincode,
+  phoneNo: item.phoneNo,
+  mobileNo: item.mobileNo,
+  email: item.email,
+  status: item.status,
+  createdAt: item.created,
+});
