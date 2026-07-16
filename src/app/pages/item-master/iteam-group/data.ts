@@ -1,12 +1,20 @@
-import { Category } from "../shared/types";
+export interface ItemGroup {
+  id: string;
+  groupName: string;
+  status: string;
+  createdAt?: string;
+}
 
-export type { Category };
-
-export const emptyCategory = (): Category => ({
+export const emptyItemGroup = (): ItemGroup => ({
   id: "",
-  code: "",
-  categoryName: "",
-  slug: "",
-  createdAt: new Date().toISOString(),
+  groupName: "",
   status: "active",
+});
+
+// API se aane wale raw row ko frontend Type me map karta hai
+export const mapApiItemGroupToItemGroup = (item: any): ItemGroup => ({
+  id: String(item.itemGroupId),
+  groupName: item.groupName,
+  status: item.status,
+  createdAt: item.created,
 });

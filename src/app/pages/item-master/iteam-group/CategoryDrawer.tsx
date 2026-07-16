@@ -6,49 +6,84 @@ import {
 } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Controller, useForm } from "react-hook-form";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
+import { Get } from "@/ApiHelper";
 import { statusOptions } from "../shared/constants";
-import { Category } from "./data";
+import { ItemGroup } from "./data";
 
-interface CategoryDrawerProps {
+interface ItemGroupDrawerProps {
   isOpen: boolean;
   close: () => void;
-  category: Category | null;
-  onSave: (category: Category) => void;
+  itemGroup: ItemGroup | null;
+  onSave: (itemGroup: ItemGroup) => void;
 }
 
-export function CategoryDrawer({
+export function ItemGroupDrawer({
   isOpen,
   close,
-  category,
+  itemGroup,
   onSave,
-}: CategoryDrawerProps) {
-  const isEdit = Boolean(category?.id);
+}: ItemGroupDrawerProps) {
+  const isEdit = Boolean(itemGroup?.id);
+  const [checkingName, setCheckingName] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
-  } = useForm<Category>({
-    values: category || undefined,
+  } = useForm<ItemGroup>({
+    values: itemGroup || undefined,
   });
 
   const handleClose = () => {
     reset();
+    clearErrors();
     close();
   };
 
-  const onSubmit = (data: Category) => {
-    onSave({
-      ...data,
-      id: category?.id || crypto.randomUUID(),
-      createdAt: category?.createdAt || new Date().toISOString(),
-    });
+  // ---- Check groupName uniqueness against currently loaded list via list API ----
+  const checkNameUnique = async (name: string) => {
+    if (!name) return true;
+    setCheckingName(true);
+    try {
+      const response = await Get("master/itemgroup/list", {}, false);
+      if (response.data?.success) {
+        const allItems: any[] = response.data.data || [];
+        const isTaken = allItems.some(
+          (item) =>
+            item.groupName?.trim().toLowerCase() ===
+              name.trim().toLowerCase() &&
+            String(item.itemGroupId) !== String(itemGroup?.id || "")
+        );
+        return !isTaken;
+      }
+      return true;
+    } catch (error) {
+      return true; // fail-open on client check; server will still validate
+    } finally {
+      setCheckingName(false);
+    }
+  };
+
+  const onSubmit = async (data: ItemGroup) => {
+    const isUnique = await checkNameUnique(data.groupName);
+
+    if (!isUnique) {
+      setError("groupName", {
+        type: "manual",
+        message: "Item group already exists. Please enter a different name.",
+      });
+      return;
+    }
+
+    onSave({ ...data, id: itemGroup?.id || "" });
     handleClose();
   };
 
@@ -96,33 +131,16 @@ export function CategoryDrawer({
             className="flex grow flex-col overflow-hidden"
           >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-
-              {/* Code */}
-
-
               {/* Item Group Name */}
               <Input
-                {...register("categoryName", {
+                {...register("groupName", {
                   required: "Item Group Name is required",
+                  onChange: () => clearErrors("groupName"),
                 })}
                 label="Item Group Name"
-                placeholder="Enter Item Group name"
-                error={errors.categoryName?.message}
-              />
-
-              {/* Category Slug */}
-              <Input
-                {...register("slug", {
-                  required: "Slug is required",
-                  pattern: {
-                    value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                    message:
-                      "Slug must be lowercase letters, numbers, and hyphens only",
-                  },
-                })}
-                label="Category Slug"
-                placeholder="e.g. commercial-vehicles"
-                error={errors.slug?.message}
+                placeholder="Enter item group name"
+                error={errors.groupName?.message}
+                disabled={checkingName}
               />
 
               {/* Status */}
@@ -152,8 +170,8 @@ export function CategoryDrawer({
               <Button type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" color="primary">
-                {isEdit ? "Update" : "Create"}
+              <Button type="submit" color="primary" disabled={checkingName}>
+                {checkingName ? "Checking..." : isEdit ? "Update" : "Create"}
               </Button>
             </div>
           </form>
