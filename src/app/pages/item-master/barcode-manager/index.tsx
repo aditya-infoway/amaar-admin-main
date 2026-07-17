@@ -1,23 +1,36 @@
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  RowSelectionState,
+  useReactTable,
+} from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
+
 import { Page } from "@/components/shared/Page";
-import { Table, THead, TBody, Th, Tr, Td, Card, Button, Input, Badge } from "@/components/ui";
+import { Table, THead, TBody, Th, Tr, Td, Card, Button, Input } from "@/components/ui";
 import { Get, Put, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
 import { BarcodeItem, mapApiToBarcodeItem } from "./data";
-import { BarcodePreview } from "./BarcodePreview";
+import { createPendingColumns, createGeneratedColumns } from "./columns";
 import { PrintLabelModal } from "./PrintLabelModal";
 
 export default function BarcodeManagerPage() {
   const [items, setItems] = useState<BarcodeItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [globalFilter, setGlobalFilter] = useState("");
   const [activeTab, setActiveTab] = useState<"pending" | "generated">("pending");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const [pendingRowSelection, setPendingRowSelection] = useState<RowSelectionState>({});
+  const [generatedRowSelection, setGeneratedRowSelection] = useState<RowSelectionState>({});
+
   const [copies, setCopies] = useState<Record<string, number>>({});
   const [manualDraft, setManualDraft] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [bulkGenerating, setBulkGenerating] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [printSingleId, setPrintSingleId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -42,39 +55,16 @@ export default function BarcodeManagerPage() {
   const pendingItems = useMemo(() => items.filter((i) => !i.barcode), [items]);
   const generatedItems = useMemo(() => items.filter((i) => i.barcode), [items]);
 
-  const filteredPending = useMemo(
-    () => pendingItems.filter((i) => i.itemName.toLowerCase().includes(search.toLowerCase())),
-    [pendingItems, search],
-  );
-  const filteredGenerated = useMemo(
-    () => generatedItems.filter((i) => i.itemName.toLowerCase().includes(search.toLowerCase())),
-    [generatedItems, search],
-  );
-
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = (rows: BarcodeItem[]) => {
-    const allSelected = rows.every((r) => selected.has(r.id));
-    setSelected((prev) => {
-      const next = new Set(prev);
-      rows.forEach((r) => (allSelected ? next.delete(r.id) : next.add(r.id)));
-      return next;
-    });
-  };
-
   // ---- Manual barcode save ----
   const handleManualSave = async (itemId: string) => {
     const value = manualDraft[itemId] ?? "";
     setSavingId(itemId);
     try {
-      const res = await Put("master/itemmaster/set-barcode", { itemId: Number(itemId), barcode: value }, false);
+      const res = await Put(
+        "master/itemmaster/set-barcode",
+        { itemId: Number(itemId), barcode: value },
+        false,
+      );
       if (res.data?.success) {
         toastsuccessmsg("Barcode saved successfully.");
         fetchAll();
@@ -86,6 +76,10 @@ export default function BarcodeManagerPage() {
     } finally {
       setSavingId(null);
     }
+  };
+
+  const handleManualChange = (id: string, value: string) => {
+    setManualDraft((prev) => ({ ...prev, [id]: value }));
   };
 
   // ---- Auto generate single ----
@@ -108,21 +102,17 @@ export default function BarcodeManagerPage() {
 
   // ---- Bulk generate selected (Pending tab) ----
   const handleBulkGenerate = async () => {
-    const ids = Array.from(selected).filter((id) => pendingItems.some((i) => i.id === id));
+    const ids = Object.keys(pendingRowSelection).filter((id) => pendingRowSelection[id]);
     if (ids.length === 0) {
       toasterrormsg("Please select at least one pending item.");
       return;
     }
     setBulkGenerating(true);
     try {
-      const res = await Post(
-        "master/itemmaster/bulk-generate",
-        { itemIds: ids.map(Number) },
-        false,
-      );
+      const res = await Post("master/itemmaster/bulk-generate", { itemIds: ids.map(Number) }, false);
       if (res.data?.success) {
         toastsuccessmsg("Barcodes generated successfully.");
-        setSelected(new Set());
+        setPendingRowSelection({});
         fetchAll();
       } else {
         toasterrormsg(res.data?.message || "Failed to generate barcodes.");
@@ -134,13 +124,88 @@ export default function BarcodeManagerPage() {
     }
   };
 
-  const selectedGeneratedForPrint = useMemo(
+  const handleCopiesChange = (id: string, value: number) => {
+    setCopies((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handlePrintOne = (id: string) => {
+    setPrintSingleId(id);
+    setCopies((prev) => ({ ...prev, [id]: prev[id] || 1 }));
+    setPrintOpen(true);
+  };
+
+  const pendingColumns = useMemo(
     () =>
-      generatedItems
-        .filter((i) => selected.has(i.id))
-        .map((item) => ({ item, copies: copies[item.id] || 1 })),
-    [generatedItems, selected, copies],
+      createPendingColumns({
+        manualDraft,
+        onManualChange: handleManualChange,
+        onManualSave: handleManualSave,
+        savingId,
+        onAutoGenerate: handleAutoGenerate,
+        generatingId,
+      }),
+    [manualDraft, savingId, generatingId],
   );
+
+  const generatedColumns = useMemo(
+    () =>
+      createGeneratedColumns({
+        copies,
+        onCopiesChange: handleCopiesChange,
+        onPrintOne: handlePrintOne,
+        manualDraft,
+        onManualChange: handleManualChange,
+        onManualSave: handleManualSave,
+        savingId,
+      }),
+    [copies, manualDraft, savingId],
+  );
+
+  const pendingTable = useReactTable({
+    data: pendingItems,
+    columns: pendingColumns,
+    state: { globalFilter, rowSelection: pendingRowSelection },
+    enableRowSelection: true,
+    getRowId: (row) => row.id,
+    filterFns: { fuzzy: fuzzyFilter },
+    globalFilterFn: fuzzyFilter,
+    onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setPendingRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const generatedTable = useReactTable({
+    data: generatedItems,
+    columns: generatedColumns,
+    state: { globalFilter, rowSelection: generatedRowSelection },
+    enableRowSelection: true,
+    getRowId: (row) => row.id,
+    filterFns: { fuzzy: fuzzyFilter },
+    globalFilterFn: fuzzyFilter,
+    onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setGeneratedRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const activeTable = activeTab === "pending" ? pendingTable : generatedTable;
+
+  const selectedGeneratedForPrint = useMemo(() => {
+    if (printSingleId) {
+      const item = generatedItems.find((i) => i.id === printSingleId);
+      return item ? [{ item, copies: copies[item.id] || 1 }] : [];
+    }
+    const selectedIds = Object.keys(generatedRowSelection).filter((id) => generatedRowSelection[id]);
+    return generatedItems
+      .filter((i) => selectedIds.includes(i.id))
+      .map((item) => ({ item, copies: copies[item.id] || 1 }));
+  }, [generatedItems, generatedRowSelection, copies, printSingleId]);
+
+  const closePrintModal = () => {
+    setPrintOpen(false);
+    setPrintSingleId(null);
+  };
 
   return (
     <Page title="Barcode Manager">
@@ -185,256 +250,84 @@ export default function BarcodeManagerPage() {
           {/* Search + actions */}
           <div className="mb-4 flex items-center justify-between gap-3">
             <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
               placeholder="Search item name..."
               className="max-w-xs"
             />
             {activeTab === "pending" ? (
-              <Button
-                color="primary"
-                onClick={handleBulkGenerate}
-                disabled={bulkGenerating}
-              >
-                {bulkGenerating ? "Generating..." : `Generate (${selected.size})`}
+              <Button color="primary" onClick={handleBulkGenerate} disabled={bulkGenerating}>
+                {bulkGenerating
+                  ? "Generating..."
+                  : `Generate (${Object.keys(pendingRowSelection).filter((id) => pendingRowSelection[id]).length})`}
               </Button>
             ) : (
               <Button
                 color="primary"
-                onClick={() => setPrintOpen(true)}
-                disabled={selectedGeneratedForPrint.length === 0}
+                onClick={() => {
+                  setPrintSingleId(null);
+                  setPrintOpen(true);
+                }}
+                disabled={Object.keys(generatedRowSelection).filter((id) => generatedRowSelection[id]).length === 0}
               >
                 Print
               </Button>
             )}
           </div>
 
-          {/* Pending Table */}
-          {activeTab === "pending" && (
-            <div className="table-wrapper overflow-x-auto">
-              <Table hoverable className="w-full text-left">
-                <THead>
-                  <Tr>
-                    <Th>
-                      <input
-                        type="checkbox"
-                        checked={filteredPending.length > 0 && filteredPending.every((r) => selected.has(r.id))}
-                        onChange={() => toggleSelectAll(filteredPending)}
-                      />
-                    </Th>
-                    <Th>#</Th>
-                    <Th>Item Name</Th>
-                    <Th>MRP</Th>
-                    <Th>Stock</Th>
-                    <Th>Manual Barcode</Th>
-                    <Th>Generated Barcode</Th>
-                    <Th>Action</Th>
+          {/* Table — theme datatable pattern */}
+          <div className="table-wrapper min-w-full grow overflow-x-auto">
+            <Table hoverable className="w-full text-left rtl:text-right">
+              <THead>
+                {activeTable.getHeaderGroups().map((headerGroup) => (
+                  <Tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <Th
+                        key={header.id}
+                        className="dark:bg-dark-800 dark:text-dark-100 bg-gray-200 font-semibold text-gray-800 uppercase first:ltr:rounded-tl-lg last:ltr:rounded-tr-lg first:rtl:rounded-tr-lg last:rtl:rounded-tl-lg"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </Th>
+                    ))}
                   </Tr>
-                </THead>
-                <TBody>
-                  {loading ? (
-                    <Tr><Td colSpan={8} className="text-center py-6">Loading...</Td></Tr>
-                  ) : filteredPending.length === 0 ? (
-                    <Tr><Td colSpan={8} className="text-center py-6">No pending items found.</Td></Tr>
-                  ) : (
-                    filteredPending.map((item, idx) => (
-                      <Tr key={item.id}>
-                        <Td>
-                          <input
-                            type="checkbox"
-                            checked={selected.has(item.id)}
-                            onChange={() => toggleSelect(item.id)}
-                          />
-                        </Td>
-                        <Td>{idx + 1}</Td>
-                        <Td className="font-medium">{item.itemName}</Td>
-                        <Td>₹{item.mrp}</Td>
-                        <Td>
-                          <Badge color={item.stock > 0 ? "success" : "error"}>
-                            {item.stock > 0 ? `✓ ${item.stock}` : "Out"}
-                          </Badge>
-                        </Td>
-                        <Td>
-                          <div className="flex gap-1.5">
-                            <Input
-                              value={manualDraft[item.id] ?? ""}
-                              onChange={(e) =>
-                                setManualDraft((prev) => ({ ...prev, [item.id]: e.target.value }))
-                              }
-                              placeholder="Manual..."
-                              className="w-32"
-                            />
-                            <Button
-                              onClick={() => handleManualSave(item.id)}
-                              disabled={savingId === item.id || !manualDraft[item.id]}
-                              className="px-2 text-xs"
-                            >
-                              {savingId === item.id ? "..." : "Save"}
-                            </Button>
-                          </div>
-                        </Td>
-                        <Td>
-                          <span className="text-xs italic text-orange-500">Not generated</span>
-                        </Td>
-                        <Td>
-                          <Button
-                            color="primary"
-                            onClick={() => handleAutoGenerate(item.id)}
-                            disabled={generatingId === item.id}
-                            className="text-xs"
-                          >
-                            {generatingId === item.id ? "..." : "Auto"}
-                          </Button>
-                        </Td>
-                      </Tr>
-                    ))
-                  )}
-                </TBody>
-              </Table>
-            </div>
-          )}
-
-          {/* Generated Table */}
-          {activeTab === "generated" && (
-            <div className="table-wrapper overflow-x-auto">
-              <Table hoverable className="w-full text-left">
-                <THead>
+                ))}
+              </THead>
+              <TBody>
+                {loading ? (
                   <Tr>
-                    <Th>
-                      <input
-                        type="checkbox"
-                        checked={filteredGenerated.length > 0 && filteredGenerated.every((r) => selected.has(r.id))}
-                        onChange={() => toggleSelectAll(filteredGenerated)}
-                      />
-                    </Th>
-                    <Th>#</Th>
-                    <Th>Item Name</Th>
-                    <Th>Category</Th>
-                    <Th>MRP</Th>
-                    <Th>S.Price</Th>
-                    <Th>Stock</Th>
-                    <Th>Barcode</Th>
-                    <Th>Copies</Th>
-                    <Th>Preview</Th>
-                    <Th>Print</Th>
-                    <Th>Update</Th>
+                    <Td colSpan={activeTable.getAllColumns().length} className="py-6 text-center">
+                      Loading...
+                    </Td>
                   </Tr>
-                </THead>
-                <TBody>
-                  {loading ? (
-                    <Tr><Td colSpan={11} className="text-center py-6">Loading...</Td></Tr>
-                  ) : filteredGenerated.length === 0 ? (
-                    <Tr><Td colSpan={11} className="text-center py-6">No generated barcodes found.</Td></Tr>
-                  ) : (
-                    filteredGenerated.map((item, idx) => (
-                      <Tr key={item.id}>
-                        <Td>
-                          <input
-                            type="checkbox"
-                            checked={selected.has(item.id)}
-                            onChange={() => toggleSelect(item.id)}
-                          />
+                ) : activeTable.getRowModel().rows.length === 0 ? (
+                  <Tr>
+                    <Td colSpan={activeTable.getAllColumns().length} className="py-6 text-center">
+                      {activeTab === "pending" ? "No pending items found." : "No generated barcodes found."}
+                    </Td>
+                  </Tr>
+                ) : (
+                  activeTable.getRowModel().rows.map((row) => (
+                    <Tr
+                      key={row.id}
+                      className="dark:border-b-dark-500 relative border-y border-transparent border-b-gray-200"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <Td key={cell.id} className="dark:bg-dark-900 relative bg-white">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </Td>
-                        <Td>{idx + 1}</Td>
-                        <Td className="font-medium">{item.itemName}</Td>
-                        <Td>
-                          <Badge color="info">{item.categoryName || "—"}</Badge>
-                        </Td>
-                        <Td>₹{item.mrp}</Td>
-                        <Td>₹{item.salesPrice}</Td>
-                        <Td>
-                          <Badge color={item.stock > 0 ? "success" : "error"}>
-                            {item.stock > 0 ? `✓ ${item.stock}` : "Out"}
-                          </Badge>
-                        </Td>
-                        <Td className="font-mono text-xs">{item.barcode}</Td>
-                        <Td>
-                          <div className="flex items-center gap-1.5">
-                            <Button
-                              isIcon
-                              className="size-6"
-                              onClick={() =>
-                                setCopies((prev) => ({
-                                  ...prev,
-                                  [item.id]: Math.max(0, (prev[item.id] || 0) - 1),
-                                }))
-                              }
-                            >
-                              -
-                            </Button>
-                            <Input
-                              value={String(copies[item.id] ?? 0)}
-                              onChange={(e) =>
-                                setCopies((prev) => ({
-                                  ...prev,
-                                  [item.id]: Number(e.target.value) || 0,
-                                }))
-                              }
-                              className="w-14 text-center"
-                            />
-                            <Button
-                              isIcon
-                              className="size-6"
-                              onClick={() =>
-                                setCopies((prev) => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }))
-                              }
-                            >
-                              +
-                            </Button>
-                          </div>
-                        </Td>
-                        <Td>
-                          <BarcodePreview value={item.barcode} height={30} width={1} fontSize={8} />
-                        </Td>
-                        <Td>
-                          <Button
-                            variant="outlined"
-                            className="text-xs"
-                            onClick={() => {
-                              setSelected(new Set([item.id]));
-                              setCopies((prev) => ({ ...prev, [item.id]: prev[item.id] || 1 }));
-                              setPrintOpen(true);
-                            }}
-                          >
-                            Print
-                          </Button>
-                        </Td>
-                        <Td>
-                          <div className="flex items-center gap-1.5">
-                            <Input
-                              value={manualDraft[item.id] ?? item.barcode}
-                              onChange={(e) =>
-                                setManualDraft((prev) => ({ ...prev, [item.id]: e.target.value }))
-                              }
-                              disabled={item.barcodeType === "generate"}
-                              className="w-32 font-mono text-xs"
-                            />
-                            {item.barcodeType === "manual" && (
-                              <Button
-                                onClick={() => handleManualSave(item.id)}
-                                disabled={savingId === item.id}
-                                className="px-2 text-xs"
-                              >
-                                {savingId === item.id ? "..." : "Save"}
-                              </Button>
-                            )}
-                          </div>
-                        </Td>
-                      </Tr>
-                    ))
-                  )}
-                </TBody>
-              </Table>
-            </div>
-          )}
+                      ))}
+                    </Tr>
+                  ))
+                )}
+              </TBody>
+            </Table>
+          </div>
         </Card>
       </div>
 
-      <PrintLabelModal
-        isOpen={printOpen}
-        close={() => setPrintOpen(false)}
-        items={selectedGeneratedForPrint}
-      />
+      <PrintLabelModal isOpen={printOpen} close={closePrintModal} items={selectedGeneratedForPrint} />
     </Page>
   );
 }
