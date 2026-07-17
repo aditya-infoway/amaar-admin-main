@@ -6,12 +6,12 @@ import {
 } from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../shared/createRowActions";
 import { StatusCell, TextCell } from "../shared/tableCells";
-import { Category } from "./data";
-import { ExportColumn } from "../shared/export"; // import your ExportColumn type
+import { ItemCategory } from "./data";
+import { ExportColumn } from "../shared/export";
 
-const RowActions = createRowActions<Category>("category");
+const RowActions = createRowActions<ItemCategory>("itemcategory");
 
-export const columns: ColumnDef<Category>[] = [
+export const columns: ColumnDef<ItemCategory>[] = [
   {
     id: "select",
     header: SelectHeader,
@@ -22,12 +22,6 @@ export const columns: ColumnDef<Category>[] = [
     id: "categoryName",
     accessorKey: "categoryName",
     header: "Item Category Name",
-    cell: TextCell,
-  },
-  {
-    id: "slug",
-    accessorKey: "slug",
-    header: "Category Slug",
     cell: TextCell,
   },
   {
@@ -53,9 +47,8 @@ export const columns: ColumnDef<Category>[] = [
   },
 ];
 
-export const exportColumns: ExportColumn<Category>[] = [
+export const exportColumns: ExportColumn<ItemCategory>[] = [
   { key: "categoryName", header: "Item Category Name" },
-  { key: "slug", header: "Category Slug" },
   {
     key: "createdAt",
     header: "Created On",
@@ -65,7 +58,6 @@ export const exportColumns: ExportColumn<Category>[] = [
   {
     key: "status",
     header: "Status",
-    format: (value: unknown) =>
-      value === "active" ? "Active" : "Inactive",
+    format: (value: unknown) => (value === "active" ? "Active" : "Inactive"),
   },
 ];

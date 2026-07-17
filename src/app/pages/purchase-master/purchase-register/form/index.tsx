@@ -699,7 +699,7 @@ function CreateAccountDrawer({ open, onClose }: any) {
    MAIN PAGE
 ───────────────────────────────────────────── */
 export default function VehiclePurchaseBill() {
-  const [billType, setBillType] = useState("po");
+  const [billType, setBillType] = useState("manual");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vehicleDrawerOpen, setVehicleDrawerOpen] = useState(false);
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
@@ -761,15 +761,41 @@ export default function VehiclePurchaseBill() {
         {/* HEADER FORM */}
         <Card className="mb-5 shadow-none">
           <div className="flex gap-8 mb-5">
-            {[{ val: "manual", label: "Manual" }, { val: "po", label: "Purchase Order" }].map(({ val, label }) => (
+            {[
+              { val: "manual", label: "Manual" },
+              { val: "po", label: "Purchase Order" },
+            ].map(({ val, label }) => (
               <label key={val} className="flex items-center gap-2.5 cursor-pointer group">
                 <div className="relative flex items-center">
-                  <input type="radio" name="billType" value={val} checked={billType === val} onChange={() => setBillType(val)} className="sr-only" />
-                  <div className={"w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all " + (billType === val ? "border-primary bg-primary" : "border-gray-400 bg-white dark:bg-gray-700 group-hover:border-primary/60")}>
+                  <input
+                    type="radio"
+                    name="billType"
+                    value={val}
+                    checked={billType === val}
+                    onChange={() => setBillType(val)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all " +
+                      (billType === val
+                        ? "border-primary bg-primary"
+                        : "border-gray-400 bg-white dark:bg-gray-700 group-hover:border-primary/60")
+                    }
+                  >
                     {billType === val && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
                 </div>
-                <span className={"text-sm transition-colors " + (billType === val ? "text-primary font-medium" : "text-gray-600 dark:text-gray-300")}>{label}</span>
+                <span
+                  className={
+                    "text-sm transition-colors " +
+                    (billType === val
+                      ? "text-primary font-medium"
+                      : "text-gray-600 dark:text-gray-300")
+                  }
+                >
+                  {label}
+                </span>
               </label>
             ))}
           </div>
@@ -868,47 +894,18 @@ export default function VehiclePurchaseBill() {
 
         {/* ITEM DETAILS */}
         <Card title="Item Details" className="mb-5">
-          <div className="flex items-center justify-between gap-2 flex-wrap mb-3 w-full">
-            {/* Left Side: Actions */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outlined" color="secondary" className="gap-1.5">
-                <Icon.Upload /> Import Items
-              </Button>
-              <Button color="error" className="gap-1.5">
-                <Icon.Trash /> Remove Item
-              </Button>
-            </div>
-
-            {/* Right Side: Barcode Scan (Opposite) */}
-            <Button
-              variant="outlined"
-              color="primary"
-              className="gap-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 6v12M7 6v12M10 6v12M14 6v12M17 6v12M20 6v12"
-                />
-              </svg>
-
-              Scan Barcode
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2 mb-3 px-0.5">
-            <p className="text-xs text-gray-400">
+          <div className="flex items-center justify-end gap-2 flex-wrap mb-3 w-full">
+            {/* <p className="text-xs text-gray-400">
               Type in <span className="font-semibold text-primary">Item Code</span> or <span className="font-semibold text-primary">Item Name</span> in the search row below to find and add items directly.
-            </p>
+            </p> */}
+            {/* Right Side: Barcode Input */}
+            <Input
+              label="Scan Barcode"
+              placeholder="Scan or enter barcode"
+              className="w-72"
+            />
           </div>
+
 
           <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table className="w-full min-w-[1100px]">

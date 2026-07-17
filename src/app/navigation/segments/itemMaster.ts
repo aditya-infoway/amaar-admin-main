@@ -13,6 +13,13 @@ export const itemMaster: NavigationTree = {
       icon: "itemMaster.list",
     },
     {
+      id: "itemBarcode.list",
+      type: "item",
+      path: "/item-master/barcode-manager",
+      title: "Barcode Manager",
+      icon: "itemBarcode.list",
+    },
+    {
       id: "itemCategory.list",
       type: "item",
       path: "/item-master/item-category",

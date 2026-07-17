@@ -32,7 +32,7 @@ export const columns: ColumnDef<Account>[] = [
   },
   {
     id: "group",
-    accessorKey: "group",
+    accessorKey: "groupName",
     header: "Group",
     cell: TextCell,
   },
@@ -47,37 +47,36 @@ export const columns: ColumnDef<Account>[] = [
   },
   {
     id: "city",
-    accessorKey: "area",
+    accessorKey: "cityName",
     header: "City",
     cell: TextCell,
   },
   {
     id: "state",
-    accessorKey: "state",
+    accessorKey: "stateName",
     header: "State",
     cell: TextCell,
   },
   {
     id: "phone",
-    accessorKey: "phone",
+    accessorKey: "mobileNo",
     header: "Number",
     cell: TextCell,
   },
   {
     id: "openingBalance",
-    accessorKey: "openingBalance",
     header: "Opening Balance",
-    cell: ({ getValue }) => {
-      const value = parseFloat(getValue<string>() || "0");
-      return `${value.toFixed(2)} DR`;
+    cell: ({ row }) => {
+      const value = parseFloat(row.original.openingBalance || "0");
+      return `${value.toFixed(2)} ${row.original.drOrCr || "DR"}`;
     },
   },
   {
     id: "currentBalance",
     header: "Current Balance",
     cell: ({ row }) => {
-      const opening = parseFloat(row.original.openingBalance || "0");
-      return `${opening.toFixed(2)} DR`;
+      const value = parseFloat(row.original.currentBalance || "0");
+      return `${value.toFixed(2)} ${row.original.currentDrOrCr || "DR"}`;
     },
   },
   {
@@ -90,23 +89,22 @@ export const columns: ColumnDef<Account>[] = [
 
 export const exportColumns: ExportColumn<Account>[] = [
   { key: "accountName", header: "Account Name" },
-  { key: "group", header: "Group" },
+  { key: "groupName", header: "Group" },
   { key: "addressLine1", header: "Address" },
-  { key: "area", header: "City" },
-  { key: "state", header: "State" },
-  { key: "phone", header: "Number" },
+  { key: "cityName", header: "City" },
+  { key: "stateName", header: "State" },
+  { key: "mobileNo", header: "Number" },
   {
     key: "openingBalance",
     header: "Opening Balance",
-    format: (value: unknown) => {
-      const num = parseFloat(value as string || "0");
-      return `${num.toFixed(2)} DR`;
+    format: (value: unknown, row: any) => {
+      const num = parseFloat((value as string) || "0");
+      return `${num.toFixed(2)} ${row.drOrCr || "DR"}`;
     },
   },
   {
     key: "status",
     header: "Status",
-    format: (value: unknown) =>
-      value === "active" ? "Active" : "Inactive",
+    format: (value: unknown) => (value === "active" ? "Active" : "Inactive"),
   },
 ];
