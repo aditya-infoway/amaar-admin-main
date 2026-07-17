@@ -5,6 +5,7 @@ import { DatePicker } from "@/components/shared/form/Datepicker";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Link } from "react-router";
+import { Get, Post, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 
 /* ─────────────────────────────────────────────
    ICONS
@@ -79,6 +80,11 @@ const Icon = {
   UploadCloud: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    </svg>
+  ),
+  Bank: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M4 10h16M12 3L4 7v3h16V7l-8-4zM6 10v8m4-8v8m4-8v8m4-8v8" />
     </svg>
   ),
 };
@@ -169,15 +175,16 @@ function FDate({ label, required, value, onChange, placeholder }: any) {
 /* ─────────────────────────────────────────────
    DATA
 ───────────────────────────────────────────── */
-const PARTY_OPTIONS = [
-  { id: 1, name: "Tata Motors Ltd", mobile: "9876543210", balance: 1724000 },
-  { id: 2, name: "Ashok Leyland", mobile: "9123456780", balance: 628500 },
-  { id: 3, name: "Mahindra & Mahindra", mobile: "9012345678", balance: 520000 },
-  { id: 4, name: "Eicher Motors", mobile: "9988776655", balance: 423000 },
-];
+
 const PO_OPTIONS = [{ id: 1, name: "PO-2026-001" }, { id: 2, name: "PO-2026-002" }, { id: 3, name: "PO-2026-003" }];
-const LOCATION_OPTIONS = [{ id: 1, name: "Main Branch" }, { id: 2, name: "Sub Branch" }, { id: 3, name: "Warehouse" }];
-const TERMS_OPTIONS = [{ id: 1, name: "Credit" }, { id: 2, name: "Cash" }, { id: 3, name: "Advance" }];
+const LOCATION_OPTIONS = [{ id: 0, name: "Main Branch" }];
+
+const TERMS_OPTIONS = [
+  { id: "Credit", name: "Credit" },
+  { id: "Cash", name: "Cash" },
+  { id: "Bank", name: "Bank" },
+];
+
 const UOM_OPTIONS = [{ id: 1, name: "KG" }, { id: 2, name: "NOS" }, { id: 3, name: "MTR" }, { id: 4, name: "LTR" }, { id: 5, name: "PCS" }, { id: 6, name: "SET" }];
 const GST_OPTIONS = [{ id: 1, name: "28%" }, { id: 2, name: "18%" }, { id: 3, name: "12%" }, { id: 4, name: "5%" }, { id: 5, name: "0%" }];
 const ITEM_NAME_OPTIONS = [{ id: 1, name: "MS Plate 10 MM" }, { id: 2, name: "MS Channel 100 MM" }, { id: 3, name: "MS Beam 200 MM" }, { id: 4, name: "Hydraulic Cylinder 5 Ton" }, { id: 5, name: "13T Axle" }];
@@ -202,30 +209,12 @@ const ITEM_MASTER = [
   { itemCode: "RM-SQR-001", itemName: "MS Square Bar 25 MM", hsnCode: "72142000", uom: "KG", rate: 60, discount: 0, gstPct: 18 },
 ];
 
-const VEHICLE_CATALOG = [
-  { id: "V001", itemCode: "ACC-125", itemName: "ACCESS 125", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 75000, barcode: "8906000000001" },
-  { id: "V002", itemCode: "ACC-DRM", itemName: "ACCESS DRUM", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 78000, barcode: "8906000000002" },
-  { id: "V003", itemCode: "ACC-DRM2", itemName: "ACCESS DRUM", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 79000, barcode: "8906000000003" },
-  { id: "V004", itemCode: "ACC-DRMSE", itemName: "ACCESS DRUM SE", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 82000, barcode: "8906000000004" },
-  { id: "V005", itemCode: "ACC-DSCSE", itemName: "ACCESS DISC SE", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 85000, barcode: "8906000000005" },
-  { id: "V006", itemCode: "ACC-DSC2", itemName: "ACCESS DISC SE", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 86000, barcode: "8906000000006" },
-  { id: "V007", itemCode: "ACC-DSCBC", itemName: "ACCESS DISC BC", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 89000, barcode: "8906000000007" },
-  { id: "V008", itemCode: "ACC-DSCBC2", itemName: "ACCESS DISC BC", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 90000, barcode: "8906000000008" },
-  { id: "V009", itemCode: "ACC-DSCBC3", itemName: "ACCESS DISC BC", category: "Vehicles", group: "Two Wheeler", unit: "NOS", tax: "28%", salesPrice: 91000, barcode: "8906000000009" },
-];
-
-const INIT_ITEMS = [
-  { id: 1, itemCode: "RM-PLT-001", itemName: "MS Plate 10 MM", hsnCode: "72085100", uom: "KG", qty: 1000, rate: 65, discount: 0, gstPct: 18 },
-  { id: 2, itemCode: "RM-CHN-001", itemName: "MS Channel 100 MM", hsnCode: "72166100", uom: "KG", qty: 500, rate: 62, discount: 0, gstPct: 18 },
-  { id: 3, itemCode: "RM-BEM-001", itemName: "MS Beam 200 MM", hsnCode: "72166100", uom: "KG", qty: 750, rate: 61, discount: 0, gstPct: 18 },
-  { id: 4, itemCode: "PI-HYD-001", itemName: "Hydraulic Cylinder 5 Ton", hsnCode: "84122100", uom: "NOS", qty: 2, rate: 18500, discount: 0, gstPct: 18 },
-  { id: 5, itemCode: "PI-AXL-001", itemName: "13T Axle", hsnCode: "87169090", uom: "NOS", qty: 4, rate: 45000, discount: 0, gstPct: 18 },
-].map(calcItem);
+const INIT_ITEMS = [].map(calcItem);
 
 /* ─────────────────────────────────────────────
    INLINE SEARCH ROW
 ───────────────────────────────────────────── */
-const EMPTY_ROW = { itemCode: "", itemName: "", hsnCode: "", uom: "", qty: "", rate: "", discount: "0", gstPct: "", _codeQ: "", _nameQ: "", _filled: false };
+const EMPTY_ROW = { itemId: null, itemCode: "", itemName: "", hsnCode: "", uom: "", qty: "", rate: "", discount: "0", gstPct: "", _codeQ: "", _nameQ: "", _filled: false };
 
 function InlineSearchRow({
   onAdd,
@@ -435,25 +424,157 @@ function InlineSearchRow({
   );
 }
 
+function BankDetailsDrawer({ open, onClose, bankDetails, setBankDetails }: any) {
+  const sf = (k: string, v: any) => setBankDetails((b: any) => ({ ...b, [k]: v }));
+  const PAYMENT_MODES = ["UPI", "NEFT", "RTGS", "IMPS", "CHEQUE", "CARD"];
+  const [touched, setTouched] = useState(false);
+
+  const handleSave = () => {
+    setTouched(true);
+    if (!bankDetails.paymentMode) return;
+    if (bankDetails.paymentMode === "CHEQUE" && (!bankDetails.chequeNo.trim() || !bankDetails.chequeDate.trim())) return;
+    onClose();
+    setTouched(false);
+  };
+
+  return (
+    <>
+      {open && <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />}
+      <div className={"fixed top-0 right-0 h-full lg:w-[40%] bg-white dark:bg-gray-800 z-50 shadow-2xl flex flex-col transition-transform duration-300 " + (open ? "translate-x-0" : "translate-x-full")}>
+        <div className="flex items-center justify-between px-5 py-4 bg-primary text-white flex-shrink-0">
+          <h3 className="font-bold text-base">Bank Details</h3>
+          <Button variant="flat" onClick={onClose} className="!text-white hover:!bg-white/20"><Icon.Close /></Button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div>
+            <FieldLabel required>Payment Mode</FieldLabel>
+            <div className="grid grid-cols-3 gap-2">
+              {PAYMENT_MODES.map(mode => (
+                <label key={mode} className="flex items-center gap-2 text-sm cursor-pointer border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 hover:border-primary/50">
+                  <input type="radio" name="paymentMode" checked={bankDetails.paymentMode === mode} onChange={() => sf("paymentMode", mode)} />
+                  {mode}
+                </label>
+              ))}
+            </div>
+            {touched && !bankDetails.paymentMode && (
+              <p className="text-xs text-red-500 mt-1">Please select a payment mode.</p>
+            )}
+          </div>
+
+          {bankDetails.paymentMode === "CHEQUE" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Cheque No *" placeholder="Cheque No" value={bankDetails.chequeNo} onChange={(e: any) => sf("chequeNo", e.target.value)} />
+              <FDate label="Cheque Date *" value={bankDetails.chequeDate} onChange={(v: any) => sf("chequeDate", v)} />
+              <div className="col-span-2">
+                <FDate label="Clear Date" value={bankDetails.clearDate} onChange={(v: any) => sf("clearDate", v)} />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <FieldLabel>Narration</FieldLabel>
+            <textarea
+              rows={3}
+              value={bankDetails.narration}
+              onChange={e => sf("narration", e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary dark:text-gray-200 bg-white dark:bg-gray-800"
+            />
+          </div>
+        </div>
+        <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end bg-gray-50 dark:bg-gray-900 flex-shrink-0">
+          <Button variant="outlined" color="secondary" onClick={onClose}>Cancel</Button>
+          <Button color="primary" onClick={handleSave} className="gap-2"><Icon.Save /> Save Bank Details</Button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ─────────────────────────────────────────────
    VEHICLE ITEM DRAWER  (single-select)
 ───────────────────────────────────────────── */
+interface VehicleCatalogItem {
+  id: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  categoryName: string;
+  groupName: string;
+  unit: string;
+  taxSlab: string;
+  salesPrice: number;
+  barcode: string;
+  hsnCode: string;
+}
+
+const mapApiVehicleItem = (item: any): VehicleCatalogItem => ({
+  id: String(item.itemId),
+  itemId: item.itemId || "",
+  itemCode: item.itemCode || "",
+  itemName: item.itemName || "",
+  categoryName: item.categoryName || "",
+  groupName: item.groupName || "",
+  unit: item.unit || "",
+  taxSlab: item.taxSlab || "0",
+  salesPrice: Number(item.salesPrice) || 0,
+  barcode: item.barcode || "",
+  hsnCode: item.hsnCode || "",
+});
+
 function VehicleItemDrawer({ open, onClose, onSelect, onOpenAdd }: any) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<VehicleCatalogItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const filtered = VEHICLE_CATALOG.filter(v =>
+  // ---- Fetch vehicle items dynamically ----
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await Get("master/itemmaster/vehicle-list", {}, false);
+        if (res.data?.success) {
+          setCatalog((res.data.data || []).map(mapApiVehicleItem));
+        }
+      } catch (err) {
+        // fail silently, empty table shown
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [open]);
+
+  const filtered = catalog.filter(v =>
     v.itemName.toLowerCase().includes(search.toLowerCase()) ||
     v.itemCode.toLowerCase().includes(search.toLowerCase()) ||
-    v.category.toLowerCase().includes(search.toLowerCase()) ||
-    v.group.toLowerCase().includes(search.toLowerCase()) ||
+    v.categoryName.toLowerCase().includes(search.toLowerCase()) ||
+    v.groupName.toLowerCase().includes(search.toLowerCase()) ||
     v.barcode.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleConfirm = () => {
-    const v = VEHICLE_CATALOG.find(v => v.id === selectedId); if (!v) return;
-    onSelect(calcItem({ id: Date.now() + Math.random(), itemCode: v.itemCode, itemName: v.itemName, hsnCode: "87112090", uom: v.unit, qty: 1, rate: v.salesPrice, discount: 0, gstPct: parseInt(v.tax) || 28 }));
-    setSelectedId(null); onClose();
+    const v = catalog.find(v => v.id === selectedId);
+    if (!v) return;
+
+    // ---- Validation (jaisi purane InlineSearchRow/AddItemDrawer mein thi) ----
+    if (!v.itemCode || !v.itemName) return;
+    if (!v.salesPrice || v.salesPrice <= 0) return;
+
+    onSelect(calcItem({
+      id: Date.now() + Math.random(),
+      itemId: v.itemId,
+      itemCode: v.itemCode,
+      itemName: v.itemName,
+      hsnCode: v.hsnCode || "87112090",
+      uom: v.unit,
+      qty: 1,
+      rate: v.salesPrice,
+      discount: 0,
+      gstPct: parseFloat(v.taxSlab) || 0,
+    }));
+    setSelectedId(null);
+    onClose();
   };
 
   return (
@@ -479,7 +600,9 @@ function VehicleItemDrawer({ open, onClose, onSelect, onOpenAdd }: any) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(v => (
+              {loading ? (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">Loading...</td></tr>
+              ) : filtered.map(v => (
                 <tr key={v.id} onClick={() => setSelectedId(p => p === v.id ? null : v.id)}
                   className={"border-b border-gray-100 dark:border-gray-700 cursor-pointer transition-colors " + (selectedId === v.id ? "bg-primary/5" : "hover:bg-gray-50 dark:hover:bg-gray-700")}>
                   <td className="px-3 py-2.5">
@@ -489,15 +612,15 @@ function VehicleItemDrawer({ open, onClose, onSelect, onOpenAdd }: any) {
                   </td>
                   <td className="px-3 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">{v.itemCode}</td>
                   <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.itemName}</td>
-                  <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.category}</td>
-                  <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.group}</td>
+                  <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.categoryName}</td>
+                  <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.groupName}</td>
                   <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.unit}</td>
-                  <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.tax}</td>
-                  <td className="px-3 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">₹{(v.salesPrice || 0).toLocaleString()}</td>
+                  <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.taxSlab}%</td>
+                  <td className="px-3 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">₹{v.salesPrice.toLocaleString()}</td>
                   <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{v.barcode}</td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No items found.</td></tr>}
+              {!loading && filtered.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No items found.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -706,44 +829,321 @@ export default function VehiclePurchaseBill() {
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
   const [items, setItems] = useState(INIT_ITEMS);
   const [pendingItem, setPendingItem] = useState<any>(null);
-  const [remarks, setRemarks] = useState("Material as per specification and quality.\nPlease mention our PO no. on challan.");
+  const [remarks, setRemarks] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const barcodeRef = useRef<HTMLInputElement>(null);
 
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { name: "PO_25-26_0025.pdf", size: "120 KB" },
-    { name: "Material_Specification.pdf", size: "200 KB" },
-  ]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const [hdr, setHdr] = useState({
     poNo: [], poLocation: [{ id: 1, name: "Main Branch" }], orderDate: "",
-    date: "2026-06-12", terms: [{ id: 1, name: "Credit" }], partyName: [],
-    billNo: "/V/26-27/006", purchaseBillNo: "", purchaseDate: "",
+    date: "2026-06-12", terms: "Credit", partyName: [],
+    billNo: "", purchaseBillNo: "", purchaseDate: "",
     purchaseLocation: [{ id: 1, name: "Main Branch" }], dueDate: "", narration: "",
   });
+
+  // ---- Field-level errors (toaster ki jagah) ----
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string>("");
+  const clearError = (key: string) => setFormErrors((prev) => {
+    if (!prev[key]) return prev;
+    const next = { ...prev };
+    delete next[key];
+    return next;
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const financialYearId = sessionStorage.getItem("financialYearId");
+        const res = await Get("purchase/next-bill-no", { financialYearId }, false);
+        if (res.data?.success) {
+          setHdr((h) => ({ ...h, billNo: res.data.data?.billNo || "" }));
+        } else {
+          setGeneralError(res.data?.message || "Failed to generate Bill No.");
+        }
+      } catch (err) {
+        setGeneralError("Failed to generate Bill No.");
+      }
+    })();
+  }, []);
+
+  // ---- Dynamic Party (Supplier) list ----
+  const [partyOptions, setPartyOptions] = useState<any[]>([]);
+  const [loadingParty, setLoadingParty] = useState(true);
+
+  // ---- Dynamic Cash/Bank accounts ----
+  const [cashAccountOptions, setCashAccountOptions] = useState<any[]>([]);
+  const [bankAccountOptions, setBankAccountOptions] = useState<any[]>([]);
+  const [cashAccount, setCashAccount] = useState<any[]>([]);
+  const [bankAccount, setBankAccount] = useState<any[]>([]);
+
+  // ---- Company state (GST same-state check ke liye) — UNCHANGED ----
+  const [companyState, setCompanyState] = useState<string>("");
+
+  const [bankDetailsOpen, setBankDetailsOpen] = useState(false);
+  const [bankDetails, setBankDetails] = useState({
+    paymentMode: "UPI",
+    chequeNo: "",
+    chequeDate: "",
+    clearDate: "",
+    narration: "",
+  });
+
+  const termsValue = hdr.terms;
 
   const setH = useCallback((k: string) => (v: any) => setHdr(h => ({ ...h, [k]: v })), []);
   const setHInput = useCallback((k: string) => (e: any) => setHdr(h => ({ ...h, [k]: e.target.value })), []);
   const setHDate = useCallback((k: string) => (val: any) => setHdr(h => ({ ...h, [k]: val })), []);
 
-  const [charges, setCharges] = useState({ transport: 2500, loading: 1000, other: 550, discPct: 0, discAmt: 0, roundOff: -0.25 });
+  const [charges, setCharges] = useState({ transport: 0, loading: 0, other: 0, discPct: 0, discAmt: 0, roundOff: 0 });
   const setC = (k: string) => (e: any) => setCharges(c => ({ ...c, [k]: parseFloat(e.target.value) || 0 }));
+
+  // ---- Fetch dynamic Party (Supplier) list ----
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingParty(true);
+        const res = await Get("master/account/supplier/list", {}, false);
+        if (res.data?.success) {
+          setPartyOptions(
+            (res.data.data || []).map((a: any) => ({
+              id: a.id,
+              name: a.accountName,
+              mobile: a.mobileNo,
+              balance: Number(a.currentBalance) || 0,
+              drOrCr: a.currentDrOrCr,
+              stateName: a.stateName || "",
+            }))
+          );
+        } else {
+          setGeneralError(res.data?.message || "Failed to load supplier list.");
+        }
+      } catch (err) {
+        setGeneralError("Failed to load supplier list.");
+      } finally {
+        setLoadingParty(false);
+      }
+    })();
+  }, []);
+
+  // ---- Fetch dynamic Cash accounts ----
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await Get("master/account/cash/list", {}, false);
+        if (res.data?.success) {
+          setCashAccountOptions(
+            (res.data.data || []).map((a: any) => ({ id: a.id, name: a.accountName, balance: Number(a.currentBalance) || 0 }))
+          );
+        }
+      } catch (err) {}
+    })();
+  }, []);
+
+  // ---- Fetch dynamic Bank accounts ----
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await Get("master/account/bank/list", {}, false);
+        if (res.data?.success) {
+          setBankAccountOptions(
+            (res.data.data || []).map((a: any) => ({ id: a.id, name: a.accountName, balance: Number(a.currentBalance) || 0 }))
+          );
+        }
+      } catch (err) {}
+    })();
+  }, []);
+
+  // ---- Fetch Company's state (GST logic ke liye) — UNCHANGED ----
+  useEffect(() => {
+    (async () => {
+      try {
+        const companyDetailsId = sessionStorage.getItem("companyDetailsId");
+        const res = await Get("superadmin/company-details", { companyDetailsId }, false);
+        if (res.data?.success) {
+          setCompanyState(res.data.data?.state || "");
+        }
+      } catch (err) {}
+    })();
+  }, []);
+
+  // ---- GST same-state check — UNCHANGED ----
+  const selectedParty = (hdr.partyName as any[])[0];
+
+  const companyStateClean = companyState?.trim().toLowerCase() || "";
+  const partyStateClean = selectedParty?.stateName?.trim().toLowerCase() || "";
+
+  const isSameState = !!companyStateClean &&
+                      !!partyStateClean &&
+                      companyStateClean === partyStateClean;
 
   const totTaxable = items.reduce((s: number, i: any) => s + i.taxable, 0);
   const totGST = items.reduce((s: number, i: any) => s + i.gstAmt, 0);
   const totOther = charges.transport + charges.loading + charges.other;
   const grandTotal = totTaxable + totGST + totOther - charges.discAmt + charges.roundOff;
 
-  const taxGroups = items.reduce((acc: any, i: any) => { const k = String(i.gstPct); if (!acc[k]) acc[k] = { taxable: 0, gst: 0 }; acc[k].taxable += i.taxable; acc[k].gst += i.gstAmt; return acc; }, {});
+  // ---- CGST/SGST vs IGST — UNCHANGED ----
+  const cgstTotal = isSameState ? totGST / 2 : 0;
+  const sgstTotal = isSameState ? totGST / 2 : 0;
+  const igstTotal = isSameState ? 0 : totGST;
 
   const addItemFromPreview = (item: any) => {
     setItems(prev => [...prev, item]);
     setPendingItem(null);
+    clearError("items");
   };
   const removeItem = (id: any) => setItems(prev => prev.filter((i: any) => i.id !== id));
 
   const handleFileChange = (e: any) => {
     Array.from(e.target.files || []).forEach((f: any) => setUploadedFiles(prev => [...prev, { name: f.name, size: `${Math.round(f.size / 1024)} KB` }]));
     if (e.target) e.target.value = "";
+  };
+
+  // ---- Barcode scan handling ----
+  const [barcodeValue, setBarcodeValue] = useState("");
+  const [barcodeError, setBarcodeError] = useState("");
+
+  useEffect(() => {
+    barcodeRef.current?.focus();
+  }, []);
+
+  const handleBarcodeScan = async (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    setBarcodeError("");
+
+    try {
+      const res = await Get(`master/itemmaster/barcode/${encodeURIComponent(trimmed)}`, {}, false);
+      if (res.data?.success && res.data.data) {
+        const v = res.data.data;
+
+        if (!v.salesPrice || Number(v.salesPrice) <= 0) {
+          setBarcodeError("This item has no valid sales price.");
+          setBarcodeValue("");
+          return;
+        }
+
+        setItems(prev => [...prev, calcItem({
+          id: Date.now() + Math.random(),
+          itemId: v.itemId,
+          itemCode: v.itemCode,
+          itemName: v.itemName,
+          hsnCode: v.hsnCode || "",
+          uom: v.unit,
+          qty: 1,
+          rate: Number(v.salesPrice),
+          discount: 0,
+          gstPct: parseFloat(v.taxSlab) || 0,
+        })]);
+        clearError("items");
+      } else {
+        setBarcodeError(res.data?.message || "No item found for this barcode.");
+      }
+    } catch (err) {
+      setBarcodeError("Something went wrong while scanning barcode.");
+    } finally {
+      setBarcodeValue("");
+      setTimeout(() => barcodeRef.current?.focus(), 50);
+    }
+  };
+
+  const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleBarcodeScan(barcodeValue);
+    }
+  };
+
+  const [submitting, setSubmitting] = useState(false);
+
+  // ---- Ab errors object return karta hai (toast ki jagah field-level) ----
+  const validateBeforeSave = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+
+    if (!selectedParty) errors.partyName = "Please select Party Name.";
+    if (!hdr.purchaseBillNo?.trim()) errors.purchaseBillNo = "Purchase Bill No is required.";
+    if (!hdr.purchaseDate) errors.purchaseDate = "Purchase Date is required.";
+    if (items.length === 0) errors.items = "Please add at least one item.";
+    else if (items.some((i: any) => !i.itemId)) errors.items = "One or more items are missing item reference. Please re-add them.";
+
+    if (termsValue === "Credit" && !hdr.dueDate) errors.dueDate = "Due Date is required for Credit terms.";
+    if (termsValue === "Cash" && cashAccount.length === 0) errors.cashAccount = "Please select a Cash Account.";
+    if (termsValue === "Bank") {
+      if (bankAccount.length === 0) errors.bankAccount = "Please select a Bank Account.";
+      if (!bankDetails.paymentMode) errors.bankDetails = "Please add Bank Details (Payment Mode).";
+      if (bankDetails.paymentMode === "CHEQUE" && (!bankDetails.chequeNo.trim() || !bankDetails.chequeDate.trim())) {
+        errors.bankDetails = "Cheque No and Cheque Date are required.";
+      }
+    }
+
+    return errors;
+  };
+
+  const handleSaveBill = async () => {
+    const errors = validateBeforeSave();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setGeneralError("");
+      return;
+    }
+    setFormErrors({});
+    setGeneralError("");
+    setSubmitting(true);
+
+    try {
+      const payload = {
+        terms: termsValue,
+        accountId: selectedParty.id,
+        billNo: hdr.billNo,
+        purchaseBillNo: hdr.purchaseBillNo,
+        purchaseDate: hdr.purchaseDate,
+        branchId: hdr.purchaseLocation?.[0]?.id || null,
+        dueDate: termsValue === "Credit" ? hdr.dueDate : null,
+        narration: hdr.narration,
+
+        transportCharge: charges.transport,
+        loadingCharge: charges.loading,
+        otherCharge: charges.other,
+        discountPct: charges.discPct,
+        discountAmount: charges.discAmt,
+        roundAmount: charges.roundOff,
+
+        cashAccountId: termsValue === "Cash" ? cashAccount[0]?.id : null,
+        bankAccountId: termsValue === "Bank" ? bankAccount[0]?.id : null,
+        paymentMode: termsValue === "Bank" ? bankDetails.paymentMode : null,
+        chequeNo: bankDetails.paymentMode === "CHEQUE" ? bankDetails.chequeNo : null,
+        chequeDate: bankDetails.paymentMode === "CHEQUE" ? bankDetails.chequeDate : null,
+        chequeClearDate: bankDetails.paymentMode === "CHEQUE" ? bankDetails.clearDate : null,
+        bankNarration: termsValue === "Bank" ? bankDetails.narration : null,
+
+        items: items.map((i: any) => ({
+          itemId: i.itemId,
+          itemCode: i.itemCode,
+          itemName: i.itemName,
+          hsnCode: i.hsnCode,
+          uom: i.uom,
+          qty: i.qty,
+          rate: i.rate,
+          discount: i.discount,
+          taxable: i.taxable,
+          gstPct: i.gstPct,
+          gstAmt: i.gstAmt,
+          total: i.total,
+        })),
+      };
+
+      const res = await Post("purchase/create", payload, false);
+      if (res.data?.success) {
+        toastsuccessmsg(res.data?.message || "Purchase bill saved successfully.");
+      } else {
+        setGeneralError(res.data?.message || "Failed to save purchase bill.");
+      }
+    } catch (err: any) {
+      setGeneralError(err?.response?.data?.message || "Something went wrong while saving.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -757,6 +1157,16 @@ export default function VehiclePurchaseBill() {
             <Button variant="outlined" className="gap-2"><Icon.Back /> Back</Button>
           </Link>
         </div>
+
+        {/* General error banner — API/load failures (toaster ki jagah) */}
+        {generalError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-900 px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-red-600 dark:text-red-300">{generalError}</p>
+            <button type="button" onClick={() => setGeneralError("")} className="text-red-400 hover:text-red-600">
+              <Icon.Close />
+            </button>
+          </div>
+        )}
 
         {/* HEADER FORM */}
         <Card className="mb-5 shadow-none">
@@ -786,14 +1196,7 @@ export default function VehiclePurchaseBill() {
                     {billType === val && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
                 </div>
-                <span
-                  className={
-                    "text-sm transition-colors " +
-                    (billType === val
-                      ? "text-primary font-medium"
-                      : "text-gray-600 dark:text-gray-300")
-                  }
-                >
+                <span className={"text-sm transition-colors " + (billType === val ? "text-primary font-medium" : "text-gray-600 dark:text-gray-300")}>
                   {label}
                 </span>
               </label>
@@ -801,7 +1204,7 @@ export default function VehiclePurchaseBill() {
           </div>
 
           {billType === "po" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5 pb-5 border-b border-gray-100 dark:border-gray-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5 pb-5 border-b border-gray-100 dark:border-gray-700 opacity-50 pointer-events-none">
               <div>
                 <FieldLabel required>Purchase Order No</FieldLabel>
                 <Combobox data={PO_OPTIONS} displayField="name" value={hdr.poNo} onChange={setH("poNo")} placeholder="Select" searchFields={["name"]} />
@@ -819,37 +1222,58 @@ export default function VehiclePurchaseBill() {
 
             <div>
               <FieldLabel>Terms</FieldLabel>
-              <Listbox data={TERMS_OPTIONS} value={hdr.terms} onChange={setH("terms")} displayField="name" placeholder="Terms" />
+              <Listbox
+                data={TERMS_OPTIONS}
+                value={TERMS_OPTIONS.find(t => t.id === hdr.terms) || null}
+                onChange={(val: any) => setHdr(h => ({ ...h, terms: val?.id || "" }))}
+                displayField="name"
+                placeholder="Terms"
+              />
             </div>
 
-            {/* Party Name — full-width row spanning 2 cols on xl */}
+            {/* Party Name — ab dynamic + reference-safe selection (fix) */}
             <div className="sm:col-span-2">
-              <FieldLabel>Party Name</FieldLabel>
+              <FieldLabel required>Party Name</FieldLabel>
               <div className="flex items-center gap-2">
                 <div className="flex-1 min-w-0">
                   <Combobox
-                    data={PARTY_OPTIONS}
+                    data={partyOptions}
                     displayField="name"
                     value={hdr.partyName}
-                    onChange={setH("partyName")}
-                    placeholder="Select or search party"
+                    onChange={(selected: any) => {
+                      const chosen = Array.isArray(selected) ? selected[0] : selected;
+                      if (!chosen) {
+                        setHdr(h => ({ ...h, partyName: [] }));
+                        return;
+                      }
+                      // 👇 FIX: partyOptions array mein se hi exact matching object dhoondo
+                      // taaki Combobox ke andar selected-value comparison sahi se match ho
+                      // aur selected item UI mein turant dikhe.
+                      const matched = partyOptions.find((p) => p.id === chosen.id) || chosen;
+                      setHdr(h => ({ ...h, partyName: [matched] }));
+                      clearError("partyName");
+                    }}
+                    placeholder={loadingParty ? "Loading suppliers..." : "Select or search party"}
                     searchFields={["name"]}
                     renderItem={(item: any) => (
                       <div className="flex items-center justify-between gap-3">
                         <div className="truncate">
-                          <span className=" text-sm text-gray-600 dark:text-gray-300">{item.name}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-300">{item.name}</span>
                           <span className="text-sm font-medium ml-2">({item.mobile})</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                          ₹{item.balance?.toLocaleString() ?? "0"}
+                          ₹{item.balance?.toLocaleString() ?? "0"} {item.drOrCr}
                         </span>
                       </div>
                     )}
                   />
+                  {formErrors.partyName && (
+                    <p className="text-xs text-red-500 mt-1">{formErrors.partyName}</p>
+                  )}
                 </div>
-                {(hdr.partyName as any[]).length > 0 && (
+                {selectedParty && (
                   <span className="flex-shrink-0 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1.5 rounded-lg whitespace-nowrap border border-primary/20">
-                    Bal: ₹0
+                    Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"} {selectedParty.drOrCr}
                   </span>
                 )}
                 <button
@@ -864,8 +1288,29 @@ export default function VehiclePurchaseBill() {
             </div>
 
             <Input label="Bill No." value={hdr.billNo} onChange={setHInput("billNo")} />
-            <Input label="Purchase Bill No" placeholder="Enter Purchase Bill No." value={hdr.purchaseBillNo} onChange={setHInput("purchaseBillNo")} />
-            <FDate label="Purchase Date" value={hdr.purchaseDate} onChange={setHDate("purchaseDate")} />
+
+            <div>
+              <Input
+                label="Purchase Bill No"
+                placeholder="Enter Purchase Bill No."
+                value={hdr.purchaseBillNo}
+                onChange={(e: any) => { setHInput("purchaseBillNo")(e); clearError("purchaseBillNo"); }}
+              />
+              {formErrors.purchaseBillNo && (
+                <p className="text-xs text-red-500 mt-1">{formErrors.purchaseBillNo}</p>
+              )}
+            </div>
+
+            <div>
+              <FDate
+                label="Purchase Date"
+                value={hdr.purchaseDate}
+                onChange={(v: any) => { setHDate("purchaseDate")(v); clearError("purchaseDate"); }}
+              />
+              {formErrors.purchaseDate && (
+                <p className="text-xs text-red-500 mt-1">{formErrors.purchaseDate}</p>
+              )}
+            </div>
 
             <div>
               <FieldLabel>Purchase Bill Upload</FieldLabel>
@@ -884,7 +1329,76 @@ export default function VehiclePurchaseBill() {
               <Listbox data={LOCATION_OPTIONS} value={hdr.purchaseLocation} onChange={setH("purchaseLocation")} displayField="name" placeholder="Location" />
             </div>
 
-            <FDate label="Due Date" value={hdr.dueDate} onChange={setHDate("dueDate")} />
+            {termsValue === "Credit" && (
+              <div>
+                <FDate
+                  label="Due Date"
+                  value={hdr.dueDate}
+                  onChange={(v: any) => { setHDate("dueDate")(v); clearError("dueDate"); }}
+                />
+                {formErrors.dueDate && (
+                  <p className="text-xs text-red-500 mt-1">{formErrors.dueDate}</p>
+                )}
+              </div>
+            )}
+
+            {termsValue === "Cash" && (
+              <div>
+                <FieldLabel required>Cash Account</FieldLabel>
+                <Combobox
+                  data={cashAccountOptions}
+                  displayField="name"
+                  value={cashAccount}
+                  onChange={(selected: any) => {
+                    const chosen = Array.isArray(selected) ? selected[0] : selected;
+                    if (!chosen) { setCashAccount([]); return; }
+                    const matched = cashAccountOptions.find((c) => c.id === chosen.id) || chosen;
+                    setCashAccount([matched]);
+                    clearError("cashAccount");
+                  }}
+                  placeholder="Select Cash Account"
+                  searchFields={["name"]}
+                />
+                {formErrors.cashAccount && (
+                  <p className="text-xs text-red-500 mt-1">{formErrors.cashAccount}</p>
+                )}
+              </div>
+            )}
+
+            {termsValue === "Bank" && (
+              <div>
+                <FieldLabel required>Bank Account</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Combobox
+                      data={bankAccountOptions}
+                      displayField="name"
+                      value={bankAccount}
+                      onChange={(selected: any) => {
+                        const chosen = Array.isArray(selected) ? selected[0] : selected;
+                        if (!chosen) { setBankAccount([]); return; }
+                        const matched = bankAccountOptions.find((b) => b.id === chosen.id) || chosen;
+                        setBankAccount([matched]);
+                        clearError("bankAccount");
+                      }}
+                      placeholder="Select Bank Account"
+                      searchFields={["name"]}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBankDetailsOpen(true)}
+                    className="flex-shrink-0 w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 text-primary flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    title="Add Bank Details"
+                  >
+                    <Icon.Bank />
+                  </button>
+                </div>
+                {(formErrors.bankAccount || formErrors.bankDetails) && (
+                  <p className="text-xs text-red-500 mt-1">{formErrors.bankAccount || formErrors.bankDetails}</p>
+                )}
+              </div>
+            )}
 
             <div className="sm:col-span-2 xl:col-span-2">
               <Input label="Narration" placeholder="Enter narration" value={hdr.narration} onChange={setHInput("narration")} />
@@ -895,17 +1409,23 @@ export default function VehiclePurchaseBill() {
         {/* ITEM DETAILS */}
         <Card title="Item Details" className="mb-5">
           <div className="flex items-center justify-end gap-2 flex-wrap mb-3 w-full">
-            {/* <p className="text-xs text-gray-400">
-              Type in <span className="font-semibold text-primary">Item Code</span> or <span className="font-semibold text-primary">Item Name</span> in the search row below to find and add items directly.
-            </p> */}
-            {/* Right Side: Barcode Input */}
-            <Input
-              label="Scan Barcode"
-              placeholder="Scan or enter barcode"
-              className="w-72"
-            />
+            <div>
+              <Input
+                ref={barcodeRef}
+                label="Scan Barcode"
+                placeholder="Scan or enter barcode"
+                className="w-72"
+                value={barcodeValue}
+                onChange={(e: any) => setBarcodeValue(e.target.value)}
+                onKeyDown={handleBarcodeKeyDown}
+                error={barcodeError}
+              />
+            </div>
           </div>
 
+          {formErrors.items && (
+            <p className="text-xs text-red-500 mb-2">{formErrors.items}</p>
+          )}
 
           <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table className="w-full min-w-[1100px]">
@@ -915,7 +1435,6 @@ export default function VehiclePurchaseBill() {
                     <th key={h} className="px-3 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
-                {/* ── INLINE SEARCH ROW ── */}
                 <InlineSearchRow onAdd={addItemFromPreview} initialRow={pendingItem} onClearPreview={() => setPendingItem(null)} onOpenVehicleDrawer={() => setVehicleDrawerOpen(true)} />
               </thead>
               <tbody>
@@ -949,7 +1468,7 @@ export default function VehiclePurchaseBill() {
                   </tr>
                 ))}
                 {items.length === 0 && (
-                  <tr><td colSpan={13} className="px-4 py-10 text-center text-sm text-gray-400">No items added. Use the search row above or click "Add Item".</td></tr>
+                  <tr><td colSpan={13} className="px-4 py-10 text-center text-sm text-gray-400">No items added. Use the search row above or scan a barcode.</td></tr>
                 )}
               </tbody>
               <tfoot>
@@ -968,9 +1487,8 @@ export default function VehiclePurchaseBill() {
           </div>
         </Card>
 
-        {/* ── BOTTOM 3-COL: Charges / Tax / Summary ── */}
+        {/* ── BOTTOM 3-COL: Charges / Tax / Summary — GST logic UNCHANGED ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-          {/* Charges & Discounts */}
           <Card title="Charges & Discounts">
             <div className="space-y-3">
               {[
@@ -990,31 +1508,38 @@ export default function VehiclePurchaseBill() {
             </div>
           </Card>
 
-          {/* Tax Summary */}
           <Card title="Tax Summary">
             <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 mb-4">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                    <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">GST %</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">Taxable (₹)</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">GST Amt (₹)</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Tax Type</th>
+                    <th className="px-3 py-2.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wide">Amount (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(taxGroups).map(([pct, v]: any) => (
-                    <tr key={pct} className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">{pct}%</td>
-                      <td className="px-3 py-2 text-sm text-right text-gray-700 dark:text-gray-200">{FMT2(v.taxable)}</td>
-                      <td className="px-3 py-2 text-sm text-right text-gray-700 dark:text-gray-200">{FMT2(v.gst)}</td>
+                  {isSameState ? (
+                    <>
+                      <tr className="border-t border-gray-100 dark:border-gray-700">
+                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">CGST</td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-700 dark:text-gray-200">{FMT2(cgstTotal)}</td>
+                      </tr>
+                      <tr className="border-t border-gray-100 dark:border-gray-700">
+                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">SGST</td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-700 dark:text-gray-200">{FMT2(sgstTotal)}</td>
+                      </tr>
+                    </>
+                  ) : (
+                    <tr className="border-t border-gray-100 dark:border-gray-700">
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">IGST</td>
+                      <td className="px-3 py-2 text-sm text-right text-gray-700 dark:text-gray-200">{FMT2(igstTotal)}</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
                 <tfoot>
                   <tr className="bg-primary/5 border-t-2 border-primary/20 font-extrabold">
-                    <td className="px-3 py-2.5 text-sm text-primary">Total</td>
+                    <td className="px-3 py-2.5 text-sm text-primary">Taxable Total</td>
                     <td className="px-3 py-2.5 text-sm text-right text-primary">{FMT2(totTaxable)}</td>
-                    <td className="px-3 py-2.5 text-sm text-right text-primary">{FMT2(totGST)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -1024,7 +1549,6 @@ export default function VehiclePurchaseBill() {
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary dark:text-gray-200 bg-white dark:bg-gray-800" />
           </Card>
 
-          {/* Summary */}
           <Card title="Summary">
             <div className="space-y-0 mb-4">
               {[
@@ -1039,7 +1563,6 @@ export default function VehiclePurchaseBill() {
                 </div>
               ))}
             </div>
-            {/* Grand Total box — matches image (blue bg, large amount) */}
             <div className="rounded-xl border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/20 p-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Grand Total</span>
@@ -1052,10 +1575,8 @@ export default function VehiclePurchaseBill() {
           </Card>
         </div>
 
-        {/* ── BOTTOM: Attachments + Actions (matches image layout) ── */}
+        {/* ── Attachments + Actions — same as before, unchanged ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-          {/* Attachments — spans 2 cols */}
           <div className="lg:col-span-2">
             <Card
               title="Attachments"
@@ -1066,7 +1587,6 @@ export default function VehiclePurchaseBill() {
                 </button>
               }
             >
-              {/* Drop zone */}
               <div onClick={() => fileRef.current && fileRef.current.click()}
                 className="border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary dark:hover:border-primary rounded-xl p-6 text-center cursor-pointer transition-colors mb-4 group">
                 <div className="flex justify-center mb-2 text-gray-300 group-hover:text-primary/60 transition-colors">
@@ -1079,7 +1599,6 @@ export default function VehiclePurchaseBill() {
                 </p>
               </div>
 
-              {/* File cards — side-by-side grid like the image */}
               {uploadedFiles.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {uploadedFiles.map((f, i) => (
@@ -1103,21 +1622,17 @@ export default function VehiclePurchaseBill() {
             </Card>
           </div>
 
-          {/* Actions — 1 col, stacked full-width buttons like image */}
           <div className="lg:col-span-1">
             <Card title="Actions">
               <div className="flex flex-col gap-3">
-                {/* Save Bill — green */}
-                <button type="button"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-semibold text-sm transition-all shadow-sm hover:shadow-md">
-                  <Icon.Save /> Save Bill
+                <button type="button" onClick={handleSaveBill} disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-semibold text-sm transition-all shadow-sm hover:shadow-md disabled:opacity-50">
+                  <Icon.Save /> {submitting ? "Saving..." : "Save Bill"}
                 </button>
-                {/* Save & Print — primary/red */}
                 <button type="button"
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary hover:bg-primary/90 active:bg-primary/80 text-white font-semibold text-sm transition-all shadow-sm hover:shadow-md">
                   <Icon.Print /> Save & Print
                 </button>
-                {/* Cancel — outlined */}
                 <button type="button"
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-red-400 hover:text-red-500 dark:hover:border-red-500 dark:hover:text-red-400 text-gray-600 dark:text-gray-300 font-semibold text-sm transition-all bg-white dark:bg-transparent">
                   <Icon.Close /> Cancel
@@ -1125,16 +1640,20 @@ export default function VehiclePurchaseBill() {
               </div>
             </Card>
           </div>
-
         </div>
-
       </div>
 
-      {/* All Drawers */}
+      {/* All Drawers — UNCHANGED */}
       <AddItemDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onAdd={setPendingItem} />
       <VehicleItemDrawer open={vehicleDrawerOpen} onClose={() => setVehicleDrawerOpen(false)} onSelect={setPendingItem} onOpenAdd={() => setAddVehicleOpen(true)} />
       <AddVehicleItemDrawer open={addVehicleOpen} onClose={() => setAddVehicleOpen(false)} onAdd={setPendingItem} />
       <CreateAccountDrawer open={accountDrawerOpen} onClose={() => setAccountDrawerOpen(false)} />
+      <BankDetailsDrawer
+        open={bankDetailsOpen}
+        onClose={() => setBankDetailsOpen(false)}
+        bankDetails={bankDetails}
+        setBankDetails={setBankDetails}
+      />
     </div>
   );
 }

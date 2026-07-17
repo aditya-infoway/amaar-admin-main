@@ -108,90 +108,114 @@ export function PrintLabelModal({ isOpen, close, items }: PrintLabelModalProps) 
       <Dialog as="div" className="relative z-100" onClose={close}>
         <TransitionChild
           as="div"
-          enter="ease-out duration-200"
+          enter="ease-out duration-300"
           enterFrom="opacity-0"
           enterTo="opacity-100"
-          leave="ease-in duration-150"
+          leave="ease-in duration-200"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
-          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-black/40"
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40"
         />
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <TransitionChild
-            as={DialogPanel}
-            enter="ease-out duration-200"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
-            className="dark:bg-dark-700 w-full max-w-lg rounded-lg bg-white shadow-xl"
-          >
-            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-dark-500">
-              <h3 className="dark:text-dark-100 flex items-center gap-2 text-base font-semibold text-gray-800">
-                <PrinterIcon className="size-5" />
-                Print — {totalLabels} label{totalLabels !== 1 ? "s" : ""}
-              </h3>
-              <Button onClick={close} isIcon variant="flat" className="size-7 rounded-full">
-                <XMarkIcon className="size-4" />
-              </Button>
+
+        <TransitionChild
+          as={DialogPanel}
+          enter="ease-out transform-gpu transition-transform duration-200"
+          enterFrom="translate-x-full"
+          enterTo="translate-x-0"
+          leave="ease-in transform-gpu transition-transform duration-200"
+          leaveFrom="translate-x-0"
+          leaveTo="translate-x-full"
+          className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-md transform-gpu flex-col bg-white transition-transform duration-200"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
+            <h3 className="dark:text-dark-50 flex items-center gap-2 text-lg font-semibold text-white">
+              <PrinterIcon className="size-5" />
+              Print — {totalLabels} label{totalLabels !== 1 ? "s" : ""}
+            </h3>
+            <Button
+              onClick={close}
+              variant="flat"
+              isIcon
+              className="size-6 rounded-full text-white"
+            >
+              <XMarkIcon className="size-4.5" />
+            </Button>
+          </div>
+
+          {/* Body */}
+          <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+            <div>
+              <p className="dark:text-dark-100 mb-2 text-sm font-medium text-gray-700">
+                Select Label Size
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {LABEL_SIZES.map((size) => (
+                  <button
+                    key={size.id}
+                    type="button"
+                    onClick={() => setSelectedSizeId(size.id)}
+                    className={`rounded-md border px-3 py-2 text-left text-sm ${
+                      selectedSizeId === size.id
+                        ? "border-primary-600 bg-primary-600 text-white"
+                        : "dark:border-dark-450 border-gray-300"
+                    }`}
+                  >
+                    {size.label}
+                  </button>
+                ))}
+              </div>
+              <div className="bg-primary-50 dark:bg-dark-600 mt-2 rounded-md px-3 py-2 text-xs">
+                Page: <strong>{pageWidth}×{selectedSize.labelHeight}mm</strong>
+                {"  "}Label: <strong>{selectedSize.labelWidth}×{selectedSize.labelHeight}mm</strong>
+                {"  "}Cols: <strong>{selectedSize.cols}</strong>
+              </div>
             </div>
 
-            <div className="space-y-4 px-4 py-4">
+            {items[0] && (
               <div>
-                <p className="dark:text-dark-100 mb-2 text-sm font-medium text-gray-700">
-                  Select Label Size
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {LABEL_SIZES.map((size) => (
-                    <button
-                      key={size.id}
-                      type="button"
-                      onClick={() => setSelectedSizeId(size.id)}
-                      className={`rounded-md border px-3 py-2 text-left text-sm ${
-                        selectedSizeId === size.id
-                          ? "border-primary-600 bg-primary-600 text-white"
-                          : "dark:border-dark-450 border-gray-300"
-                      }`}
-                    >
-                      {size.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="bg-primary-50 dark:bg-dark-600 mt-2 rounded-md px-3 py-2 text-xs">
-                  Page: <strong>{pageWidth}×{selectedSize.labelHeight}mm</strong>
-                  {"  "}Label: <strong>{selectedSize.labelWidth}×{selectedSize.labelHeight}mm</strong>
-                  {"  "}Cols: <strong>{selectedSize.cols}</strong>
-                </div>
-              </div>
-
-              {items[0] && (
-                <div>
-                  <p className="mb-1 text-xs text-gray-400">Preview (screen approximation)</p>
-                  <div
-                    className="dark:border-dark-450 flex items-center justify-center border border-dashed border-gray-300 p-2 text-center"
-                    style={{ width: `${selectedSize.labelWidth * 3}px`, height: `${selectedSize.labelHeight * 3}px` }}
-                  >
-                    <div>
-                      <div className="text-xs font-bold">{items[0].item.itemName}</div>
-                      <div className="text-[10px]">
-                        ₹{items[0].item.salesPrice} MRP:₹{items[0].item.mrp}
-                      </div>
-                      <BarcodePreview value={items[0].item.barcode} height={30} width={1.2} fontSize={8} />
+                <p className="mb-1 text-xs text-gray-400">Preview (screen approximation)</p>
+                <div
+                  className="dark:border-dark-450 flex items-center justify-center border border-dashed border-gray-300 p-2 text-center"
+                  style={{ width: `${selectedSize.labelWidth * 3}px`, height: `${selectedSize.labelHeight * 3}px` }}
+                >
+                  <div>
+                    <div className="text-xs font-bold">{items[0].item.itemName}</div>
+                    <div className="text-[10px]">
+                      ₹{items[0].item.salesPrice} MRP:₹{items[0].item.mrp}
                     </div>
+                    <BarcodePreview value={items[0].item.barcode} height={30} width={1.2} fontSize={8} />
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div className="flex justify-end border-t border-gray-200 px-4 py-3 dark:border-dark-500">
-              <Button color="primary" onClick={handlePrint} className="gap-2">
-                <PrinterIcon className="size-4" />
-                Print Now
-              </Button>
-            </div>
-          </TransitionChild>
-        </div>
+            {items.length > 1 && (
+              <div>
+                <p className="mb-1 text-xs text-gray-400">All selected items ({items.length})</p>
+                <div className="dark:divide-dark-500 divide-y divide-gray-200">
+                  {items.map(({ item, copies }) => (
+                    <div key={item.id} className="flex items-center justify-between py-2 text-sm">
+                      <span className="dark:text-dark-100 truncate text-gray-800">{item.itemName}</span>
+                      <span className="text-xs text-gray-500">×{copies}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
+            <Button type="button" onClick={close}>
+              Cancel
+            </Button>
+            <Button type="button" color="primary" onClick={handlePrint} className="gap-2">
+              <PrinterIcon className="size-4" />
+              Print Now
+            </Button>
+          </div>
+        </TransitionChild>
       </Dialog>
     </Transition>
   );
