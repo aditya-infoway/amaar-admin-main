@@ -7,26 +7,27 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage"; // Fixed import
+import { statusOptions } from "../shared/constants";
 import { columns, exportColumns } from "./columns";
-import { Account } from "../shared/types";
-import { groupOptions, statusOptions } from "../shared/constants";
+import { Account, mapApiAccountToAccount } from "../shared/types";
 
 export default function AccountPage() {
   const navigate = useNavigate();
-  const [data, setData] = useState<Account[]>(() =>
-    masterStorage.getAccounts(),
-  );
+  const [data, setData] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [groupOptions, setGroupOptions] = useState<{ id: string; label: string }[]>([]);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -35,22 +36,88 @@ export default function AccountPage() {
   const [filterGroup, setFilterGroup] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const response = await Get("master/account/list", {}, false);
+      if (response.data?.success) {
+        const mapped = (response.data.data || []).map(mapApiAccountToAccount);
+        setData(mapped);
+
+        const uniqueGroups = Array.from(
+          new Map(
+            mapped
+              .filter((item) => item.groupName)
+              .map((item) => [item.groupName as string, { id: item.groupName as string, label: item.groupName as string }]),
+          ).values(),
+        );
+        setGroupOptions(uniqueGroups);
+      } else {
+        toasterrormsg(response.data?.message || "Failed to fetch accounts.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching account data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       if (
         filterAccountName &&
-        !item.accountName.toLowerCase().includes(filterAccountName.toLowerCase())
+        !item.accountName?.toLowerCase().includes(filterAccountName.toLowerCase())
       )
         return false;
-      if (filterGroup && item.group !== filterGroup) return false;
+      if (filterGroup && item.groupName !== filterGroup) return false;
       if (filterStatus && item.status !== filterStatus) return false;
       return true;
     });
   }, [data, filterAccountName, filterGroup, filterStatus]);
 
-  const persist = (next: Account[]) => {
-    setData(next);
-    masterStorage.saveAccounts(next);
+  // ---- Delete (single) ----
+  const handleDeleteOne = async (row: Account) => {
+    try {
+      const response = await Delete(
+        "master/account/delete",
+        { accountId: Number(row.id) },
+        false
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Account deleted successfully.");
+        setData((prev) => prev.filter((item) => item.id !== row.id));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to delete account.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting the account.");
+    }
+  };
+
+  // ---- Delete (bulk) ----
+  const handleDeleteMany = async (rows: { original: Account }[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) =>
+          Delete(
+            "master/account/delete",
+            { accountId: Number(r.original.id) },
+            false
+          )
+        )
+      );
+      const ids = new Set(rows.map((r) => r.original.id));
+      setData((prev) => prev.filter((item) => !ids.has(item.id)));
+      setRowSelection({});
+      toastsuccessmsg("Selected accounts deleted successfully.");
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting accounts.");
+    }
   };
 
   const table = useReactTable({
@@ -63,14 +130,8 @@ export default function AccountPage() {
       openEditDrawer: (row: Account) => {
         navigate(`/user-master/accounts/edit/${row.id}`);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: (row) => handleDeleteOne(row.original),
+      deleteRows: (rows) => handleDeleteMany(rows),
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -144,7 +205,11 @@ export default function AccountPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No accounts found. Click Create Account to add one."
+          emptyMessage={
+            loading
+              ? "Loading accounts..."
+              : "No accounts found. Click Create Account to add one."
+          }
         />
       </div>
     </Page>

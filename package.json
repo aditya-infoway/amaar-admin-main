@@ -52,6 +52,7 @@
     "quill-magic-url": "^4.2.0",
     "react": "^19.2.3",
     "react-apexcharts": "^1.9.0",
+    "react-barcode": "^1.6.1",
     "react-confetti": "^6.4.0",
     "react-dom": "^19.2.3",
     "react-dropzone": "^14.3.8",

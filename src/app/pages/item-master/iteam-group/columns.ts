@@ -6,12 +6,12 @@ import {
 } from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../shared/createRowActions";
 import { StatusCell, TextCell } from "../shared/tableCells";
-import { Category } from "./data";
-import { ExportColumn } from "../shared/export"; // import your ExportColumn type
+import { ItemGroup } from "./data";
+import { ExportColumn } from "../shared/export";
 
-const RowActions = createRowActions<Category>("category");
+const RowActions = createRowActions<ItemGroup>("itemgroup");
 
-export const columns: ColumnDef<Category>[] = [
+export const columns: ColumnDef<ItemGroup>[] = [
   {
     id: "select",
     header: SelectHeader,
@@ -19,15 +19,9 @@ export const columns: ColumnDef<Category>[] = [
     enableSorting: false,
   },
   {
-    id: "categoryName",
-    accessorKey: "categoryName",
+    id: "groupName",
+    accessorKey: "groupName",
     header: "Item Group Name",
-    cell: TextCell,
-  },
-  {
-    id: "slug",
-    accessorKey: "slug",
-    header: "Category Slug",
     cell: TextCell,
   },
   {
@@ -53,9 +47,8 @@ export const columns: ColumnDef<Category>[] = [
   },
 ];
 
-export const exportColumns: ExportColumn<Category>[] = [
-  { key: "categoryName", header: "Item Group Name" },
-  { key: "slug", header: "Category Slug" },
+export const exportColumns: ExportColumn<ItemGroup>[] = [
+  { key: "groupName", header: "Item Group Name" },
   {
     key: "createdAt",
     header: "Created On",
@@ -65,7 +58,6 @@ export const exportColumns: ExportColumn<Category>[] = [
   {
     key: "status",
     header: "Status",
-    format: (value: unknown) =>
-      value === "active" ? "Active" : "Inactive",
+    format: (value: unknown) => (value === "active" ? "Active" : "Inactive"),
   },
 ];

@@ -89,4 +89,6 @@ export interface ItemMaster {
   salesPrice: string;
   mrp: string;
   barcode: string;
+  hsnCode: string;
+
 }

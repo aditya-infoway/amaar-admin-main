@@ -146,6 +146,69 @@ const protectedRoutes: RouteObject = {
           ],
         },
 
+           {
+          path: "enquiry-master",
+          children: [
+            {
+              index: true,
+              element: <Navigate to="/enquiry-master/enquiry-type" replace />,
+            },
+
+            {
+              path: "enquiry-type",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/enquiry-master/enquiry-type/index")
+                ).default,
+              }),
+            },
+
+            {
+              path: "enquiry-source",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/enquiry-master/enquiry-source")
+                ).default,
+              }),
+            },
+
+            {
+              path: "profession",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/enquiry-master/profession")
+                ).default,
+              }),
+            },
+
+            {
+              path: "enquiry-status",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/enquiry-master/enquiry-status")
+                ).default,
+              }),
+            },
+
+            {
+              path: "banker",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/enquiry-master/banker")
+                ).default,
+              }),
+            },
+
+            {
+              path: "finance",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/enquiry-master/finance")
+                ).default,
+              }),
+            },
+          ],
+        },
 
         {
           path: "item-master",
@@ -196,6 +259,15 @@ const protectedRoutes: RouteObject = {
               path: "edit/:id",
               lazy: async () => ({
                 Component: (await import("@/app/pages/item-master/form")).default,
+              }),
+            },
+
+            {
+              path: "barcode-manager",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/item-master/barcode-manager")
+                ).default,
               }),
             },
 
