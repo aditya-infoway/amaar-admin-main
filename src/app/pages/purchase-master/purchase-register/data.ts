@@ -8,14 +8,11 @@ export interface PurchaseRegister {
   location: string;
   totalQuantity: string;
   totalAmount: string;
-  freightInsuranceOtherCharges: string;
+  transportLoadingOtherCharge: string;
   cgstAmount: string;
   sgstAmount: string;
   igstAmount: string;
   grandTotal: string;
-  transportName: string;
-  mobileNo: string;
-  vehicleNo: string;
   status: string;
 }
 
@@ -29,13 +26,10 @@ export const emptyPurchaseRegister = (): PurchaseRegister => ({
   location: "",
   totalQuantity: "",
   totalAmount: "",
-  freightInsuranceOtherCharges: "",
+  transportLoadingOtherCharge: "",
   cgstAmount: "",
   sgstAmount: "",
   igstAmount: "",
   grandTotal: "",
-  transportName: "",
-  mobileNo: "",
-  vehicleNo: "",
   status: "",
 });

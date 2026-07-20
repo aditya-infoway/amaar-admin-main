@@ -3,8 +3,6 @@ export interface Category {
   code: string;
   categoryName: string;
   status: string;
-  slug: string;
-  createdAt: string;
 }
 
 export interface ProductSeries {

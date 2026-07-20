@@ -7,25 +7,25 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
+import { Get, toasterrormsg } from "@/ApiHelper";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { columns, exportColumns } from "./columns";
 import { PurchaseRegister } from "./data";
-import { purchaseRegisterStorage } from "../shared/storage";
+import { PurchaseDetailsDrawer } from "./PurchaseDetailsDrawer"; // 👈 add
 
 export default function PurchaseRegisterPage() {
   const navigate = useNavigate();
-  const [data, setData] = useState<PurchaseRegister[]>(() =>
-    purchaseRegisterStorage.getPurchaseRegisters(),
-  );
+  const [data, setData] = useState<PurchaseRegister[]>([]);
+  const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -33,6 +33,31 @@ export default function PurchaseRegisterPage() {
   const [filterSupplier, setFilterSupplier] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+
+  // ---- Details drawer state ----
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+
+  const fetchPurchaseList = async () => {
+    try {
+      setLoading(true);
+      const financialYearId = sessionStorage.getItem("financialYearId");
+      const res = await Get("purchase/list", { financialYearId }, false);
+      if (res.data?.success) {
+        setData(res.data.data || []);
+      } else {
+        toasterrormsg(res.data?.message || "Failed to load purchase register list.");
+      }
+    } catch (err: any) {
+      toasterrormsg(err?.response?.data?.message || "Failed to load purchase register list.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPurchaseList();
+  }, []);
 
   const locationOptions = useMemo(
     () =>
@@ -63,9 +88,13 @@ export default function PurchaseRegisterPage() {
     });
   }, [data, filterSupplier, filterLocation, filterStatus]);
 
-  const persist = (next: PurchaseRegister[]) => {
-    setData(next);
-    purchaseRegisterStorage.savePurchaseRegisters(next);
+  const removeLocally = (ids: Set<string>) => {
+    setData((prev) => prev.filter((item) => !ids.has(item.id)));
+  };
+
+  const handleViewRow = (row: PurchaseRegister) => {
+    setSelectedPurchaseId(row.id);
+    setDetailsOpen(true);
   };
 
   const table = useReactTable({
@@ -77,11 +106,11 @@ export default function PurchaseRegisterPage() {
     meta: {
       openEditDrawer: (row: PurchaseRegister) =>
         navigate(`/purchase-master/purchase-register/edit/${row.id}`),
-      deleteRow: (row) =>
-        persist(data.filter((item) => item.id !== row.original.id)),
+      viewRow: handleViewRow, // 👈 add — RowActions component isko call kar sakti hai "View" ke liye
+      deleteRow: (row) => removeLocally(new Set([row.original.id])),
       deleteRows: (rows) => {
         const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
+        removeLocally(ids);
         setRowSelection({});
       },
     },
@@ -157,9 +186,19 @@ export default function PurchaseRegisterPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No purchase registers found. Click Create Purchase Register to add one."
+          emptyMessage={
+            loading
+              ? "Loading purchase registers..."
+              : "No purchase registers found. Click Create Purchase Register to add one."
+          }
         />
       </div>
+
+      <PurchaseDetailsDrawer
+        open={detailsOpen}
+        purchaseId={selectedPurchaseId}
+        onClose={() => setDetailsOpen(false)}
+      />
     </Page>
   );
 }

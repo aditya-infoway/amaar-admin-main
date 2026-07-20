@@ -66,9 +66,9 @@ export const columns: ColumnDef<PurchaseRegister>[] = [
     cell: TextCell,
   },
   {
-    id: "freightInsuranceOtherCharges",
-    accessorKey: "freightInsuranceOtherCharges",
-    header: "Freight + Insurance + Other",
+    id: "transportLoadingOtherCharge",
+    accessorKey: "transportLoadingOtherCharge",
+    header: "Transport + Loading + Other",
     cell: TextCell,
   },
   {
@@ -96,24 +96,6 @@ export const columns: ColumnDef<PurchaseRegister>[] = [
     cell: TextCell,
   },
   {
-    id: "transportName",
-    accessorKey: "transportName",
-    header: "Transport Name",
-    cell: TextCell,
-  },
-  {
-    id: "mobileNo",
-    accessorKey: "mobileNo",
-    header: "Mobile No.",
-    cell: TextCell,
-  },
-  {
-    id: "vehicleNo",
-    accessorKey: "vehicleNo",
-    header: "Vehicle No.",
-    cell: TextCell,
-  },
-  {
     id: "status",
     accessorKey: "status",
     header: "Status",
@@ -136,13 +118,10 @@ export const exportColumns = [
   { key: "location" as const, header: "Location" },
   { key: "totalQuantity" as const, header: "Total Quantity" },
   { key: "totalAmount" as const, header: "Total Amount" },
-  { key: "freightInsuranceOtherCharges" as const, header: "Freight + Insurance + Other Charges" },
+  { key: "transportLoadingOtherCharge" as const, header: "Transport + Loading + Other Charges" },
   { key: "cgstAmount" as const, header: "CGST Amount" },
   { key: "sgstAmount" as const, header: "SGST Amount" },
   { key: "igstAmount" as const, header: "IGST Amount" },
   { key: "grandTotal" as const, header: "Grand Total" },
-  { key: "transportName" as const, header: "Transport Name" },
-  { key: "mobileNo" as const, header: "Mobile No." },
-  { key: "vehicleNo" as const, header: "Vehicle No." },
   { key: "status" as const, header: "Status" },
 ];

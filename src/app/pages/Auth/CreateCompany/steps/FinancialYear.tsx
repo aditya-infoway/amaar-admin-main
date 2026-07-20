@@ -91,15 +91,14 @@ export function FinancialYear({
             render={({ field: { value, onChange, ...rest } }) => (
               <DatePicker
                 value={value || ""}
-                onChange={() => {
-                  // Read-only — end date is always derived
-                  // from start date (start year + 1, 31st March).
+                onChange={() => {}}
+                options={{
+                  dateFormat: "Y-m-d",
+                  clickOpens: false,
                 }}
-                options={{ dateFormat: "Y-m-d" }}
                 label="Financial Year End"
                 placeholder="Auto-set"
                 error={errors.endDate?.message}
-                inputProps={{ disabled: true }}
                 {...rest}
               />
             )}

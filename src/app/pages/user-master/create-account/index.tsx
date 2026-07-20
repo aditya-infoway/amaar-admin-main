@@ -41,7 +41,7 @@ export default function AccountPage() {
     try {
       const response = await Get("master/account/list", {}, false);
       if (response.data?.success) {
-        const mapped = (response.data.data || []).map(mapApiAccountToAccount);
+        const mapped: Account[] = (response.data.data || []).map(mapApiAccountToAccount);
         setData(mapped);
 
         const uniqueGroups = Array.from(

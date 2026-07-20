@@ -6,6 +6,7 @@ import {
   RowSelectionState,
   SortingState,
   useReactTable,
+  Row,
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -125,19 +126,22 @@ export default function ProductSeriesPage() {
   }));
 
   // ---------------- DELETE (single) ----------------
-  const handleDeleteRow = async (row: ProductSeries) => {
-    try {
-      await Delete(
-        "master/productseries/delete",
-        { productSeriesId: Number(row.id) },
-        false,
-      );
-      toastsuccessmsg("Product series deleted successfully");
-      fetchList();
-    } catch (err) {
-      toasterrormsg("Failed to delete product series");
-    }
-  };
+const handleDeleteRow = async (row: Row<ProductSeries>) => {
+  try {
+    await Delete(
+      "master/productseries/delete",
+      {
+        productSeriesId: Number(row.original.id),
+      },
+      false
+    );
+
+    toastsuccessmsg("Product series deleted successfully");
+    fetchList();
+  } catch {
+    toasterrormsg("Failed to delete product series");
+  }
+};
 
   // ---------------- DELETE (bulk) ----------------
   const handleDeleteRows = async (rows: { original: ProductSeries }[]) => {
