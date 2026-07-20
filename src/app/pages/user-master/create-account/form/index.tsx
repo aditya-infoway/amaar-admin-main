@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, Resolver } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useNavigate, useParams } from "react-router";
@@ -48,7 +48,7 @@ interface AccountFormValues {
   printName: string;
   groupId: string;
   openingBalance: string;
-  drOrCr: string;
+  drOrCr: "DR" | "CR";
   countryName: string;
   stateName: string;
   stateCode: string;
@@ -80,7 +80,7 @@ const schema = yup.object({
   accountName: yup.string().trim().required("Account Name is required"),
   printName: yup.string().trim().notRequired(),
   groupId: yup.string().required("Group is required"),
-  drOrCr: yup.string().oneOf(["DR", "CR"]).required("Dr./Cr. is required"),
+  drOrCr: yup.string().oneOf(["DR", "CR"] as const).required("Dr./Cr. is required"),
   openingBalance: yup.string().notRequired(),
 
   countryName: yup.string().trim().required("Country is required"),
@@ -94,70 +94,24 @@ const schema = yup.object({
   area: yup.string().trim().required("Area is required"),
   addressLine1: yup.string().trim().required("Address Line 1 is required"),
   addressLine2: yup.string().trim().notRequired(),
-  pincode: yup
-    .string()
-    .trim()
-    .required("Pincode is required")
-    .matches(/^[0-9]{6}$/, "Pincode must be 6 digits"),
+  pincode: yup.string().trim().required("Pincode is required").matches(/^[0-9]{6}$/, "Pincode must be 6 digits"),
 
-  phoneNo: yup
-    .string()
-    .trim()
-    .notRequired()
-    .matches(/^[0-9]{6,15}$/, {
-      message: "Please enter a valid phone number",
-      excludeEmptyString: true,
-    }),
-  mobileNo: yup
-    .string()
-    .trim()
-    .required("Mobile number is required")
-    .matches(/^[6-9][0-9]{9}$/, "Please enter a valid 10-digit mobile number"),
+  phoneNo: yup.string().trim().notRequired().matches(/^[0-9]{6,15}$/, { message: "Please enter a valid phone number", excludeEmptyString: true }),
+  mobileNo: yup.string().trim().required("Mobile number is required").matches(/^[6-9][0-9]{9}$/, "Please enter a valid 10-digit mobile number"),
 
-  email: yup
-    .string()
-    .trim()
-    .notRequired()
-    .email("Please enter a valid email address"),
-
+  email: yup.string().trim().notRequired().email("Please enter a valid email address"),
   contactPersonName: yup.string().notRequired(),
+  birthdayOn: yup.string().notRequired(),
+  anniversary: yup.string().notRequired(),
 
   bankAccountNo: yup.string().notRequired(),
   bankName: yup.string().notRequired(),
-  ifscCode: yup
-    .string()
-    .trim()
-    .notRequired()
-    .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, {
-      message: "Please enter a valid IFSC code",
-      excludeEmptyString: true,
-    }),
+  ifscCode: yup.string().trim().notRequired().matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, { message: "Please enter a valid IFSC code", excludeEmptyString: true }),
   branchName: yup.string().notRequired(),
 
-  gstNo: yup
-    .string()
-    .trim()
-    .notRequired()
-    .matches(/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1}$/, {
-      message: "Please enter a valid GST number",
-      excludeEmptyString: true,
-    }),
-  panCard: yup
-    .string()
-    .trim()
-    .notRequired()
-    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, {
-      message: "Please enter a valid PAN number (e.g. ABCDE1234F)",
-      excludeEmptyString: true,
-    }),
-  aadharCardNo: yup
-    .string()
-    .trim()
-    .notRequired()
-    .matches(/^\d{12}$/, {
-      message: "Aadhar number must be exactly 12 digits",
-      excludeEmptyString: true,
-    }),
+  gstNo: yup.string().trim().notRequired().matches(/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1}$/, { message: "Please enter a valid GST number", excludeEmptyString: true }),
+  panCard: yup.string().trim().notRequired().matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, { message: "Please enter a valid PAN number (e.g. ABCDE1234F)", excludeEmptyString: true }),
+  aadharCardNo: yup.string().trim().notRequired().matches(/^\d{12}$/, { message: "Aadhar number must be exactly 12 digits", excludeEmptyString: true }),
 
   status: yup.string().notRequired(),
 });
@@ -223,17 +177,17 @@ export function AccountForm() {
   const talukaListOptions = cityListOptions;
 
   const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<AccountFormValues>({
-    defaultValues: emptyFormValues,
-    resolver: yupResolver(schema),
-  });
+  register,
+  handleSubmit,
+  control,
+  reset,
+  watch,
+  setValue,
+  formState: { errors },
+} = useForm<AccountFormValues>({
+  defaultValues: emptyFormValues,
+  resolver: yupResolver(schema) as Resolver<AccountFormValues>,
+});
 
   const accountNameValue = watch("accountName");
 

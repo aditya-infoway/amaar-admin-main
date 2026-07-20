@@ -17,12 +17,6 @@ const ghostRoutes: RouteObject = {
         Component: (await import("@/app/pages/Auth/select-company")).default,
       }),
     },
-    {
-      path: "otp",
-      lazy: async () => ({
-        Component: (await import("@/app/pages/Auth/otp")).default,
-      }),
-    },
   ],
 };
 

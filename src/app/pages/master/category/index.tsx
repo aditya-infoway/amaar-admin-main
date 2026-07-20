@@ -6,6 +6,7 @@ import {
   RowSelectionState,
   SortingState,
   useReactTable,
+  Row,
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -36,7 +37,7 @@ const mapToCategory = (item: ApiCategory): Category => ({
   id: String(item.categoryId),
   code: item.code,
   categoryName: item.categoryName,
-  status: item.status as Category["status"],
+  status: item.status,
 });
 
 export default function CategoryPage() {
@@ -85,15 +86,22 @@ export default function CategoryPage() {
   }, [data, filterCode, filterName, filterStatus]);
 
   // ---------------- DELETE (single) ----------------
-  const handleDeleteRow = async (row: Category) => {
-    try {
-      await Delete("master/category/delete", { categoryId: Number(row.id) }, false);
-      toastsuccessmsg("Category deleted successfully");
-      fetchList();
-    } catch (err) {
-      toasterrormsg("Failed to delete category");
-    }
-  };
+  const handleDeleteRow = async (row: Row<Category>) => {
+  try {
+    await Delete(
+      "master/category/delete",
+      {
+        categoryId: Number(row.original.id),
+      },
+      false
+    );
+
+    toastsuccessmsg("Category deleted successfully");
+    fetchList();
+  } catch {
+    toasterrormsg("Failed to delete category");
+  }
+};
 
   // ---------------- DELETE (bulk) ----------------
   const handleDeleteRows = async (rows: { original: Category }[]) => {
