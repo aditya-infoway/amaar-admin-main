@@ -302,6 +302,7 @@ export const SEED_ITEMS: ItemMaster[] = [
     salesPrice: "15200",
     mrp: "16500",
     barcode: "8901234567001",
+    hsnCode: "84129090",
   },
   {
     id: "item-2",
@@ -322,6 +323,7 @@ export const SEED_ITEMS: ItemMaster[] = [
     salesPrice: "580",
     mrp: "650",
     barcode: "8901234567002",
+    hsnCode: "84129090",
   },
   {
     id: "item-3",
@@ -342,6 +344,7 @@ export const SEED_ITEMS: ItemMaster[] = [
     salesPrice: "82",
     mrp: "90",
     barcode: "8901234567003",
+    hsnCode: "84129090",
   },
   {
     id: "item-4",
@@ -362,6 +365,7 @@ export const SEED_ITEMS: ItemMaster[] = [
     salesPrice: "320000",
     mrp: "345000",
     barcode: "8901234567004",
+    hsnCode: "84129090",
   },
   {
     id: "item-5",
@@ -382,6 +386,7 @@ export const SEED_ITEMS: ItemMaster[] = [
     salesPrice: "1200",
     mrp: "1200",
     barcode: "8901234567005",
+    hsnCode: "84129090",
   },
   {
     id: "item-6",
@@ -402,6 +407,7 @@ export const SEED_ITEMS: ItemMaster[] = [
     salesPrice: "22500",
     mrp: "24000",
     barcode: "8901234567006",
+    hsnCode: "84129090",
   },
 ];
 

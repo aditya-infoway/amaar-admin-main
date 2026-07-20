@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/ui";
 import { DatePicker } from "@/components/shared/form/Datepicker";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Listbox } from "@/components/shared/form/StyledListbox";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Get, Post, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 
 /* ─────────────────────────────────────────────
@@ -209,27 +209,29 @@ const ITEM_MASTER = [
   { itemCode: "RM-SQR-001", itemName: "MS Square Bar 25 MM", hsnCode: "72142000", uom: "KG", rate: 60, discount: 0, gstPct: 18 },
 ];
 
-const INIT_ITEMS = [].map(calcItem);
+const INIT_ITEMS: any[] = [];
 
 /* ─────────────────────────────────────────────
    INLINE SEARCH ROW
 ───────────────────────────────────────────── */
-const EMPTY_ROW = { itemId: null, itemCode: "", itemName: "", hsnCode: "", uom: "", qty: "", rate: "", discount: "0", gstPct: "", _codeQ: "", _nameQ: "", _filled: false };
+const EMPTY_ROW = { itemId: null as number | null, itemCode: "", itemName: "", hsnCode: "", uom: "", qty: "", rate: "", discount: "0", gstPct: "", _codeQ: "", _nameQ: "", _filled: false };
 
 function InlineSearchRow({
   onAdd,
   initialRow,
   onClearPreview,
   onOpenVehicleDrawer,
+  itemCatalog, // 👈 parent se aata hai (real API data)
 }: {
   onAdd: (item: any) => void;
   initialRow?: any;
   onClearPreview?: () => void;
   onOpenVehicleDrawer: () => void;
+  itemCatalog: VehicleCatalogItem[]; // 👈 same type jo VehicleItemDrawer use karta hai
 }) {
   const [row, setRow] = useState({ ...EMPTY_ROW });
-  const [codeSug, setCodeSug] = useState<typeof ITEM_MASTER>([]);
-  const [nameSug, setNameSug] = useState<typeof ITEM_MASTER>([]);
+  const [codeSug, setCodeSug] = useState<VehicleCatalogItem[]>([]);
+  const [nameSug, setNameSug] = useState<VehicleCatalogItem[]>([]);
   const [showCode, setShowCode] = useState(false);
   const [showName, setShowName] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -245,8 +247,21 @@ function InlineSearchRow({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const fill = (m: typeof ITEM_MASTER[0]) => {
-    setRow({ itemCode: m.itemCode, itemName: m.itemName, hsnCode: m.hsnCode, uom: m.uom, qty: "", rate: String(m.rate), discount: String(m.discount), gstPct: String(m.gstPct), _codeQ: m.itemCode, _nameQ: m.itemName, _filled: true });
+  const fill = (m: VehicleCatalogItem) => {
+    setRow({
+      itemId: m.itemId,              // 👈 itemId bhi row mein store hota hai
+      itemCode: m.itemCode,
+      itemName: m.itemName,
+      hsnCode: m.hsnCode,
+      uom: m.unit,
+      qty: "",
+      rate: String(m.salesPrice),
+      discount: "0",
+      gstPct: String(m.taxSlab),
+      _codeQ: m.itemCode,
+      _nameQ: m.itemName,
+      _filled: true,
+    });
     setShowCode(false); setShowName(false); setTouched(false);
   };
 
@@ -258,22 +273,34 @@ function InlineSearchRow({
   }, [initialRow]);
 
   const onCode = (v: string) => {
-    setRow(r => ({ ...r, _codeQ: v, _filled: false, itemCode: v }));
+    setRow(r => ({ ...r, _codeQ: v, _filled: false, itemCode: v, itemId: null })); // 👈 typed manually to itemId reset
     const q = v.trim().toLowerCase();
-    if (q) { setCodeSug(ITEM_MASTER.filter(m => m.itemCode.toLowerCase().includes(q))); setShowCode(true); }
+    if (q) { setCodeSug(itemCatalog.filter(m => m.itemCode.toLowerCase().includes(q))); setShowCode(true); }
     else { setCodeSug([]); setShowCode(false); }
   };
   const onName = (v: string) => {
-    setRow(r => ({ ...r, _nameQ: v, _filled: false, itemName: v }));
+    setRow(r => ({ ...r, _nameQ: v, _filled: false, itemName: v, itemId: null }));
     const q = v.trim().toLowerCase();
-    if (q) { setNameSug(ITEM_MASTER.filter(m => m.itemName.toLowerCase().includes(q))); setShowName(true); }
+    if (q) { setNameSug(itemCatalog.filter(m => m.itemName.toLowerCase().includes(q))); setShowName(true); }
     else { setNameSug([]); setShowName(false); }
   };
 
   const handleAdd = () => {
     setTouched(true);
     if (!row.itemCode || !row.itemName || !row.qty) return;
-    onAdd(calcItem({ id: Date.now(), itemCode: row.itemCode, itemName: row.itemName, hsnCode: row.hsnCode, uom: row.uom, qty: parseFloat(row.qty) || 0, rate: parseFloat(row.rate) || 0, discount: parseFloat(row.discount) || 0, gstPct: parseFloat(row.gstPct) || 18 }));
+    if (!row.itemId) return; // 👈 itemId ke bina add hi nahi hone dena — validation ka core fix
+    onAdd(calcItem({
+      id: Date.now(),
+      itemId: row.itemId,   // 👈 item ke saath itemId bhi jaata hai
+      itemCode: row.itemCode,
+      itemName: row.itemName,
+      hsnCode: row.hsnCode,
+      uom: row.uom,
+      qty: parseFloat(row.qty) || 0,
+      rate: parseFloat(row.rate) || 0,
+      discount: parseFloat(row.discount) || 0,
+      gstPct: parseFloat(row.gstPct) || 0,
+    }));
     setRow({ ...EMPTY_ROW }); setTouched(false);
     if (onClearPreview) onClearPreview();
   };
@@ -287,22 +314,23 @@ function InlineSearchRow({
   const total = taxable + gstAmt;
 
   const qtyInvalid = touched && !row.qty;
+  const itemNotSelected = touched && (row.itemCode || row.itemName) && !row.itemId;
 
   const iCls = "w-full px-2 py-[7px] text-xs border rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder-gray-300 dark:placeholder-gray-600 transition-all";
   const roCls = "w-full px-2 py-[7px] text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed select-none";
 
-  const SugDrop = ({ items, onSel }: { items: typeof ITEM_MASTER, onSel: (m: typeof ITEM_MASTER[0]) => void }) => (
+  const SugDrop = ({ items, onSel }: { items: VehicleCatalogItem[], onSel: (m: VehicleCatalogItem) => void }) => (
     <div className="absolute top-full left-0 z-[100] w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-600 max-h-52 overflow-y-auto mt-1">
       {items.length === 0
         ? <p className="px-3 py-3 text-xs text-gray-400 text-center">No items found</p>
         : items.map(m => (
-          <div key={m.itemCode} onMouseDown={() => onSel(m)} className="px-3 py-2.5 cursor-pointer hover:bg-primary/8 dark:hover:bg-primary/20 border-b border-gray-50 dark:border-gray-700 last:border-0 group">
+          <div key={m.itemId} onMouseDown={() => onSel(m)} className="px-3 py-2.5 cursor-pointer hover:bg-primary/8 dark:hover:bg-primary/20 border-b border-gray-50 dark:border-gray-700 last:border-0 group">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-primary">{m.itemCode}</span>
-              <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full">{m.uom}</span>
+              <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full">{m.unit}</span>
             </div>
             <p className="text-xs text-gray-700 dark:text-gray-200 mt-0.5">{m.itemName}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">₹{m.rate.toLocaleString()} · GST {m.gstPct}%</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">₹{m.salesPrice.toLocaleString()} · GST {m.taxSlab}%</p>
           </div>
         ))
       }
@@ -311,18 +339,12 @@ function InlineSearchRow({
 
   return (
     <tr className="border-b-2 border-primary/30 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 dark:from-blue-900/20 dark:to-indigo-900/10">
-      {/* # */}
       <td className="px-2 py-2.5 text-center">
-        <Button
-          color="primary"
-          onClick={onOpenVehicleDrawer}
-          className="gap-1.5"
-        >
+        <Button color="primary" onClick={onOpenVehicleDrawer} className="gap-1.5">
           <Icon.Plus />
         </Button>
       </td>
 
-      {/* Item Code */}
       <td className="px-2 py-2.5">
         <div ref={codeRef} className="relative">
           <div className="relative flex items-center">
@@ -334,10 +356,12 @@ function InlineSearchRow({
             )}
           </div>
           {showCode && <SugDrop items={codeSug} onSel={fill} />}
+          {itemNotSelected && (
+            <p className="text-[10px] font-medium text-red-500 mt-1">Please select an item from the list</p>
+          )}
         </div>
       </td>
 
-      {/* Item Name */}
       <td className="px-2 py-2.5">
         <div ref={nameRef} className="relative min-w-[160px]">
           <input type="text" value={row._nameQ} onChange={e => onName(e.target.value)} placeholder="Search name..." className={iCls + " border-gray-300 dark:border-gray-600"} />
@@ -345,13 +369,9 @@ function InlineSearchRow({
         </div>
       </td>
 
-      {/* HSN - readonly */}
       <td className="px-2 py-2.5"><div className={roCls + " text-center"}>{row.hsnCode || "—"}</div></td>
-
-      {/* UOM - readonly */}
       <td className="px-2 py-2.5"><div className={roCls + " text-center"}>{row.uom || "—"}</div></td>
 
-      {/* QTY - editable, validates */}
       <td className="px-2 py-2.5">
         <div className="relative">
           <input
@@ -379,40 +399,33 @@ function InlineSearchRow({
         </div>
       </td>
 
-      {/* Rate - editable */}
       <td className="px-2 py-2.5">
         <input type="number" value={row.rate} onChange={e => setRow(r => ({ ...r, rate: e.target.value }))} placeholder="0.00" className={iCls + " text-right border-gray-300 dark:border-gray-600"} />
       </td>
 
-      {/* Disc - editable */}
       <td className="px-2 py-2.5">
         <input type="number" value={row.discount} onChange={e => setRow(r => ({ ...r, discount: e.target.value }))} placeholder="0" className={iCls + " text-right border-gray-300 dark:border-gray-600"} />
       </td>
 
-      {/* Taxable preview - readonly */}
       <td className="px-2 py-2.5"><div className={roCls + " text-right"}>{(row._filled || row.qty) ? FMT2(taxable) : "—"}</div></td>
 
-      {/* GST % badge */}
       <td className="px-2 py-2.5 text-center">
         {row.gstPct
           ? <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold text-xs">{row.gstPct}%</span>
           : <span className="text-gray-300 text-xs">—</span>}
       </td>
 
-      {/* GST Amt preview - readonly */}
       <td className="px-2 py-2.5"><div className={roCls + " text-right"}>{(row._filled || row.qty) ? FMT2(gstAmt) : "—"}</div></td>
 
-      {/* Total preview - readonly */}
       <td className="px-2 py-2.5"><div className={roCls + " text-right font-semibold text-gray-700 dark:text-gray-300"}>{(row._filled || row.qty) ? FMT2(total) : "—"}</div></td>
 
-      {/* Confirm button */}
       <td className="px-2 py-2.5 text-center">
         <button
           type="button" onClick={handleAdd}
-          title={!row.itemCode || !row.itemName ? "Select an item first" : !row.qty ? "Enter quantity" : "Add item"}
+          title={!row.itemId ? "Select an item from the list first" : !row.qty ? "Enter quantity" : "Add item"}
           className={[
             "w-8 h-8 rounded-full flex items-center justify-center mx-auto transition-all duration-200",
-            row.itemCode && row.itemName && row.qty
+            row.itemId && row.qty
               ? "bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-green-200 hover:scale-110 active:scale-95"
               : "bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed",
           ].join(" ")}
@@ -495,7 +508,7 @@ function BankDetailsDrawer({ open, onClose, bankDetails, setBankDetails }: any) 
 ───────────────────────────────────────────── */
 interface VehicleCatalogItem {
   id: string;
-  itemId: string;
+  itemId: number | null;
   itemCode: string;
   itemName: string;
   categoryName: string;
@@ -509,7 +522,7 @@ interface VehicleCatalogItem {
 
 const mapApiVehicleItem = (item: any): VehicleCatalogItem => ({
   id: String(item.itemId),
-  itemId: item.itemId || "",
+  itemId: item.itemId || null,
   itemCode: item.itemCode || "",
   itemName: item.itemName || "",
   categoryName: item.categoryName || "",
@@ -822,6 +835,7 @@ function CreateAccountDrawer({ open, onClose }: any) {
    MAIN PAGE
 ───────────────────────────────────────────── */
 export default function VehiclePurchaseBill() {
+  const navigate = useNavigate();
   const [billType, setBillType] = useState("manual");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vehicleDrawerOpen, setVehicleDrawerOpen] = useState(false);
@@ -833,18 +847,68 @@ export default function VehiclePurchaseBill() {
   const fileRef = useRef<HTMLInputElement>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
-  const [uploadedFiles, setUploadedFiles] = useState([]);
+  type UploadedFile = {
+    name: string;
+    size: string;
+  };
 
-  const [hdr, setHdr] = useState({
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+
+  // ---- Shared item catalog (search row + vehicle drawer dono ke liye) ----
+  const [itemCatalog, setItemCatalog] = useState<VehicleCatalogItem[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await Get("master/itemmaster/vehicle-list", {}, false);
+        if (res.data?.success) {
+          setItemCatalog((res.data.data || []).map(mapApiVehicleItem));
+        }
+      } catch (err) {
+        // fail silently — inline search simply won't show suggestions
+      }
+    })();
+  }, []);
+
+  // ---- Party/Location option ka shape ----
+  interface PartyOption {
+    id: number | string;
+    name: string;
+    mobile?: string;
+    balance?: number;
+    drOrCr?: string;
+    stateName?: string;
+  }
+
+  interface LocationOption {
+    id: number;
+    name: string;
+  }
+
+  interface HdrState {
+    poNo: LocationOption[];
+    poLocation: LocationOption[];
+    orderDate: string;
+    date: string;
+    terms: string;
+    partyName: PartyOption[];
+    billNo: string;
+    purchaseBillNo: string;
+    purchaseDate: string;
+    purchaseLocation: LocationOption[];
+    dueDate: string;
+    narration: string;
+  }
+
+  const [hdr, setHdr] = useState<HdrState>({
     poNo: [], poLocation: [{ id: 1, name: "Main Branch" }], orderDate: "",
     date: "2026-06-12", terms: "Credit", partyName: [],
     billNo: "", purchaseBillNo: "", purchaseDate: "",
     purchaseLocation: [{ id: 1, name: "Main Branch" }], dueDate: "", narration: "",
   });
 
-  // ---- Field-level errors (toaster ki jagah) ----
+  // ---- Field-level errors for client-side pre-submit checks ----
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string>("");
   const clearError = (key: string) => setFormErrors((prev) => {
     if (!prev[key]) return prev;
     const next = { ...prev };
@@ -860,10 +924,11 @@ export default function VehiclePurchaseBill() {
         if (res.data?.success) {
           setHdr((h) => ({ ...h, billNo: res.data.data?.billNo || "" }));
         } else {
-          setGeneralError(res.data?.message || "Failed to generate Bill No.");
+          // API validation / error message -> toaster
+          toasterrormsg(res.data?.message || "Failed to generate Bill No.");
         }
-      } catch (err) {
-        setGeneralError("Failed to generate Bill No.");
+      } catch (err: any) {
+        toasterrormsg(err?.response?.data?.message || "Failed to generate Bill No.");
       }
     })();
   }, []);
@@ -917,10 +982,10 @@ export default function VehiclePurchaseBill() {
             }))
           );
         } else {
-          setGeneralError(res.data?.message || "Failed to load supplier list.");
+          toasterrormsg(res.data?.message || "Failed to load supplier list.");
         }
-      } catch (err) {
-        setGeneralError("Failed to load supplier list.");
+      } catch (err: any) {
+        toasterrormsg(err?.response?.data?.message || "Failed to load supplier list.");
       } finally {
         setLoadingParty(false);
       }
@@ -969,7 +1034,32 @@ export default function VehiclePurchaseBill() {
   }, []);
 
   // ---- GST same-state check — UNCHANGED ----
-  const selectedParty = (hdr.partyName as any[])[0];
+  const selectedParty = hdr.partyName[0]; // ab PartyOption | undefined, 'any' nahi
+
+  // 👇 FIX: Combobox ke `value` ko hamesha usi `data` array (partyOptions) se
+  // hi derive karo jo Combobox ko diya ja raha hai. Isse reference/identity
+  // mismatch ki wajah se "select toh hota he par naam show nahi hota" wala
+  // bug fix ho jaata he — kyunki Combobox ab exactly wahi object dekhega
+  // jo uski apni `data` list mein bhi maujood he.
+const partyComboValue = useMemo(() => {
+  if (!selectedParty) return null;
+  const matched = partyOptions.find((p) => p.id === selectedParty.id);
+  return matched || selectedParty;
+}, [selectedParty, partyOptions]);
+
+const cashComboValue = useMemo(() => {
+  const sel = cashAccount[0];
+  if (!sel) return null;
+  const matched = cashAccountOptions.find((c) => c.id === sel.id);
+  return matched || sel;
+}, [cashAccount, cashAccountOptions]);
+
+const bankComboValue = useMemo(() => {
+  const sel = bankAccount[0];
+  if (!sel) return null;
+  const matched = bankAccountOptions.find((b) => b.id === sel.id);
+  return matched || sel;
+}, [bankAccount, bankAccountOptions]);
 
   const companyStateClean = companyState?.trim().toLowerCase() || "";
   const partyStateClean = selectedParty?.stateName?.trim().toLowerCase() || "";
@@ -1057,7 +1147,7 @@ export default function VehiclePurchaseBill() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  // ---- Ab errors object return karta hai (toast ki jagah field-level) ----
+  // ---- Client-side pre-submit checks (field-level, not API errors) ----
   const validateBeforeSave = (): Record<string, string> => {
     const errors: Record<string, string> = {};
 
@@ -1084,15 +1174,17 @@ export default function VehiclePurchaseBill() {
     const errors = validateBeforeSave();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      setGeneralError("");
       return;
     }
     setFormErrors({});
-    setGeneralError("");
     setSubmitting(true);
 
     try {
+
+      const financialYearId = sessionStorage.getItem("financialYearId");
+
       const payload = {
+        financialYearId: financialYearId,
         terms: termsValue,
         accountId: selectedParty.id,
         billNo: hdr.billNo,
@@ -1136,11 +1228,14 @@ export default function VehiclePurchaseBill() {
       const res = await Post("purchase/create", payload, false);
       if (res.data?.success) {
         toastsuccessmsg(res.data?.message || "Purchase bill saved successfully.");
+        // 👇 create ke baad register list page par redirect
+        navigate("/purchase-master/purchase-register");
       } else {
-        setGeneralError(res.data?.message || "Failed to save purchase bill.");
+        // 👇 backend/API validation error message -> toaster
+        toasterrormsg(res.data?.message || "Failed to save purchase bill.");
       }
     } catch (err: any) {
-      setGeneralError(err?.response?.data?.message || "Something went wrong while saving.");
+      toasterrormsg(err?.response?.data?.message || "Something went wrong while saving.");
     } finally {
       setSubmitting(false);
     }
@@ -1157,16 +1252,6 @@ export default function VehiclePurchaseBill() {
             <Button variant="outlined" className="gap-2"><Icon.Back /> Back</Button>
           </Link>
         </div>
-
-        {/* General error banner — API/load failures (toaster ki jagah) */}
-        {generalError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-900 px-4 py-3 flex items-center justify-between">
-            <p className="text-sm text-red-600 dark:text-red-300">{generalError}</p>
-            <button type="button" onClick={() => setGeneralError("")} className="text-red-400 hover:text-red-600">
-              <Icon.Close />
-            </button>
-          </div>
-        )}
 
         {/* HEADER FORM */}
         <Card className="mb-5 shadow-none">
@@ -1231,7 +1316,7 @@ export default function VehiclePurchaseBill() {
               />
             </div>
 
-            {/* Party Name — ab dynamic + reference-safe selection (fix) */}
+            {/* Party Name — dynamic + fixed display (matched item from partyOptions) */}
             <div className="sm:col-span-2">
               <FieldLabel required>Party Name</FieldLabel>
               <div className="flex items-center gap-2">
@@ -1239,18 +1324,9 @@ export default function VehiclePurchaseBill() {
                   <Combobox
                     data={partyOptions}
                     displayField="name"
-                    value={hdr.partyName}
+                    value={partyComboValue}
                     onChange={(selected: any) => {
-                      const chosen = Array.isArray(selected) ? selected[0] : selected;
-                      if (!chosen) {
-                        setHdr(h => ({ ...h, partyName: [] }));
-                        return;
-                      }
-                      // 👇 FIX: partyOptions array mein se hi exact matching object dhoondo
-                      // taaki Combobox ke andar selected-value comparison sahi se match ho
-                      // aur selected item UI mein turant dikhe.
-                      const matched = partyOptions.find((p) => p.id === chosen.id) || chosen;
-                      setHdr(h => ({ ...h, partyName: [matched] }));
+                      setHdr(h => ({ ...h, partyName: selected ? [selected] : [] }));
                       clearError("partyName");
                     }}
                     placeholder={loadingParty ? "Loading suppliers..." : "Select or search party"}
@@ -1348,12 +1424,9 @@ export default function VehiclePurchaseBill() {
                 <Combobox
                   data={cashAccountOptions}
                   displayField="name"
-                  value={cashAccount}
+                  value={cashComboValue}
                   onChange={(selected: any) => {
-                    const chosen = Array.isArray(selected) ? selected[0] : selected;
-                    if (!chosen) { setCashAccount([]); return; }
-                    const matched = cashAccountOptions.find((c) => c.id === chosen.id) || chosen;
-                    setCashAccount([matched]);
+                    setCashAccount(selected ? [selected] : []);
                     clearError("cashAccount");
                   }}
                   placeholder="Select Cash Account"
@@ -1373,12 +1446,9 @@ export default function VehiclePurchaseBill() {
                     <Combobox
                       data={bankAccountOptions}
                       displayField="name"
-                      value={bankAccount}
+                      value={bankComboValue}
                       onChange={(selected: any) => {
-                        const chosen = Array.isArray(selected) ? selected[0] : selected;
-                        if (!chosen) { setBankAccount([]); return; }
-                        const matched = bankAccountOptions.find((b) => b.id === chosen.id) || chosen;
-                        setBankAccount([matched]);
+                        setBankAccount(selected ? [selected] : []);
                         clearError("bankAccount");
                       }}
                       placeholder="Select Bank Account"
@@ -1435,7 +1505,13 @@ export default function VehiclePurchaseBill() {
                     <th key={h} className="px-3 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
-                <InlineSearchRow onAdd={addItemFromPreview} initialRow={pendingItem} onClearPreview={() => setPendingItem(null)} onOpenVehicleDrawer={() => setVehicleDrawerOpen(true)} />
+                <InlineSearchRow
+                  onAdd={addItemFromPreview}
+                  initialRow={pendingItem}
+                  onClearPreview={() => setPendingItem(null)}
+                  onOpenVehicleDrawer={() => setVehicleDrawerOpen(true)}
+                  itemCatalog={itemCatalog}
+                />
               </thead>
               <tbody>
                 {items.map((item: any, idx: number) => (
@@ -1634,7 +1710,8 @@ export default function VehiclePurchaseBill() {
                   <Icon.Print /> Save & Print
                 </button>
                 <button type="button"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-red-400 hover:text-red-500 dark:hover:border-red-500 dark:hover:text-red-400 text-gray-600 dark:text-gray-300 font-semibold text-sm transition-all bg-white dark:bg-transparent">
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-red-400 hover:text-red-500 dark:hover:border-red-500 dark:hover:text-red-400 text-gray-600 dark:text-gray-300 font-semibold text-sm transition-all bg-white dark:bg-transparent"
+                  onClick={() => navigate("/purchase-master/purchase-register")}>
                   <Icon.Close /> Cancel
                 </button>
               </div>

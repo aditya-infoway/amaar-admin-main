@@ -1,13 +1,11 @@
 // Import Dependencies
 import {
-  ChevronUpDownIcon,
   MagnifyingGlassIcon,
   PrinterIcon,
   CheckIcon,
   UserIcon,
   TagIcon,
 } from "@heroicons/react/24/outline";
-import { TbUpload } from "react-icons/tb";
 import clsx from "clsx";
 import {
   Menu,

@@ -139,24 +139,45 @@ export interface Account {
   id: string;
   accountName: string;
   printName?: string;
+
   groupId?: string | number;
   groupName?: string;
+
   openingBalance?: string;
   drOrCr?: string;
   currentBalance?: string;
   currentDrOrCr?: string;
+
   countryName?: string;
   stateName?: string;
-  cityName?: string;
+  stateCode?: string;
   districtName?: string;
   talukaName?: string;
+  cityName?: string;
   area?: string;
+
   addressLine1?: string;
   addressLine2?: string;
   pincode?: string;
+
   phoneNo?: string;
   mobileNo?: string;
   email?: string;
+
+  // 👇 Add these
+  contactPersonName?: string;
+  birthdayOn?: string;
+  anniversary?: string;
+
+  bankAccountNo?: string;
+  bankName?: string;
+  ifscCode?: string;
+  branchName?: string;
+
+  gstNo?: string;
+  panCard?: string;
+  aadharCardNo?: string;
+
   status: string;
   createdAt?: string;
 }
@@ -174,6 +195,7 @@ export const mapApiAccountToAccount = (item: any): Account => ({
   currentDrOrCr: item.currentDrOrCr,
   countryName: item.countryName,
   stateName: item.stateName,
+  stateCode: item.stateCode ?? "",
   cityName: item.cityName,
   districtName: item.districtName,
   talukaName: item.talukaName,

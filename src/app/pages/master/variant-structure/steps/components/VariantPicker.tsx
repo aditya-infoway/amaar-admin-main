@@ -217,11 +217,11 @@ export function VariantPicker({ disabled = false }: { disabled?: boolean }) {
   };
 
   const summaryFields: { label: string; value: string }[] = displayFieldOrder
-    .filter((key) => key !== "variantCode")
-    .map((key) => ({
-      label: fieldLabels[key],
-      value: (variantSummary as Record<string, string> | undefined)?.[key] || "",
-    }));
+  .filter((key): key is Exclude<typeof key, "variantCode"> => key !== "variantCode")
+  .map((key) => ({
+    label: fieldLabels[key],
+    value: variantSummary?.[key] ?? "",
+  }));
 
   return (
     <Card className="p-4 sm:p-5">
