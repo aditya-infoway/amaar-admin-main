@@ -7,6 +7,7 @@ import {
 } from "@headlessui/react";
 import {
   EllipsisHorizontalIcon,
+  EyeIcon,        // 👈 add karo
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
@@ -55,6 +56,9 @@ export function createRowActions<T extends { id: string }>(
 
     const state = deleteError ? "error" : deleteSuccess ? "success" : "pending";
 
+    // 👇 add: agar page ne viewRow meta function diya hai tabhi "View" option dikhega
+    const hasViewAction = Boolean(table.options.meta?.viewRow);
+
     return (
       <>
         <Menu as="div" className="relative inline-block text-left">
@@ -74,6 +78,28 @@ export function createRowActions<T extends { id: string }>(
               anchor={{ to: "bottom end", gap: 8 }}
               className="dark:border-dark-500 dark:bg-dark-750 absolute z-100 w-[9rem] rounded-lg border border-gray-300 bg-white py-1 shadow-lg shadow-gray-200/50 outline-hidden dark:shadow-none"
             >
+              {/* 👇 add — View menu item, sirf tab dikhega jab page ne viewRow diya ho */}
+              {hasViewAction && (
+                <MenuItem>
+                  {({ focus }) => (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        table.options.meta?.viewRow?.(row.original)
+                      }
+                      className={clsx(
+                        "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
+                        focus &&
+                          "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
+                      )}
+                    >
+                      <EyeIcon className="size-4.5 stroke-1" />
+                      <span>View</span>
+                    </button>
+                  )}
+                </MenuItem>
+              )}
+
               <MenuItem>
                 {({ focus }) => (
                   <button

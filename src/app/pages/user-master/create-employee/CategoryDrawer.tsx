@@ -1,5 +1,3 @@
-import { Fragment, useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
 import {
   Dialog,
   DialogPanel,
@@ -7,152 +5,129 @@ import {
   TransitionChild,
 } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
+import { useForm } from "react-hook-form";
+import { Controller } from "react-hook-form";
+import { Fragment, useState } from "react";
 
-import { Button, Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
+import { Button, Input } from "@/components/ui";
+import { Get } from "@/ApiHelper";
+import { departmentOptions, branchOptions } from "./options";
 import { Employee } from "./data";
+
+interface RoleOption {
+  id: string;
+  label: string;
+  department: string;
+}
+
+interface EmployeeFormValues extends Employee {
+  confirmPassword: string;
+}
 
 interface EmployeeDrawerProps {
   isOpen: boolean;
   close: () => void;
   employee: Employee | null;
+  roles: RoleOption[];
   onSave: (employee: Employee) => void;
 }
-
-interface EmployeeFormValues {
-  department: string;
-  branch: string;
-  role: string;
-  employeeName: string;
-  mobileNumber: string;
-  alternateNumber: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-// Department options
-const departmentOptions = [
-  { id: "sale", label: "Sale" },
-  { id: "production", label: "Production" },
-];
-
-// Branch options
-const branchOptions = [
-  { id: "main-branch", label: "Main Branch" },
-  { id: "branch-1", label: "Branch 1" },
-  { id: "branch-2", label: "Branch 2" },
-];
-
-// Role options for each department
-const roleOptions: Record<string, { id: string; label: string }[]> = {
-  sale: [
-    { id: "sale-manager", label: "Sale Manager" },
-    { id: "sale-executive", label: "Sale Executive" },
-    { id: "telecaller", label: "Telecaller" },
-    { id: "accountant", label: "Accountant" },
-    { id: "cashier", label: "Cashier" },
-  ],
-  production: [
-    { id: "cutting", label: "Cutting" },
-    { id: "welding", label: "Welding" },
-    { id: "fitting", label: "Fitting" },
-    { id: "blasting", label: "Blasting" },
-    { id: "paint", label: "Paint" },
-    { id: "washing", label: "Washing" },
-    { id: "qc", label: "QC" },
-    { id: "production-manager", label: "Production Manager" },
-  ],
-};
-
-const getRolesForDepartment = (departmentId: string) => {
-  return roleOptions[departmentId] || [];
-};
-
-const emptyFormValues: EmployeeFormValues = {
-  department: "",
-  branch: "",
-  role: "",
-  employeeName: "",
-  mobileNumber: "",
-  alternateNumber: "",
-  email: "",
-  password: "",
-  confirmPassword: "",
-};
 
 export function EmployeeDrawer({
   isOpen,
   close,
   employee,
+  roles,
   onSave,
 }: EmployeeDrawerProps) {
+  const [checking, setChecking] = useState(false);
   const isEditing = Boolean(employee?.id);
 
   const {
-    control,
     register,
     handleSubmit,
+    control,
     watch,
-    reset,
     setValue,
+    reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<EmployeeFormValues>({
-    defaultValues: emptyFormValues,
+    values: employee ? { ...employee, confirmPassword: "" } : undefined,
   });
 
   const selectedDepartment = watch("department");
-  const roleOptionsForDepartment = getRolesForDepartment(selectedDepartment);
-
-  useEffect(() => {
-    if (employee && employee.id) {
-      // Map employee data to form values
-      // Assuming employee has these fields, if not, adjust accordingly
-      reset({
-        department: (employee as any).department || "",
-        branch: employee.branch || "",
-        role: employee.role || "",
-        employeeName: employee.employeeName || "",
-        mobileNumber: employee.mobileNumber || "",
-        alternateNumber: employee.alternateNumber || "",
-        email: employee.email || "",
-        password: employee.password || "",
-        confirmPassword: employee.password || "",
-      });
-    } else {
-      reset(emptyFormValues);
-    }
-  }, [employee, reset]);
+  const roleOptions = roles
+    .filter((item) => item.department === selectedDepartment)
+    .map((item) => ({ id: item.id, label: item.label }));
 
   const handleClose = () => {
     reset();
+    clearErrors();
     close();
   };
 
-  const onSubmit = handleSubmit((values) => {
-    onSave({
-      id: employee?.id || crypto.randomUUID(),
-      // Map form values to employee fields
-      // If Employee type doesn't have department, add it or use a different field
-      ...(values as any),
-      branch: values.branch,
-      role: values.role,
-      employeeName: values.employeeName,
-      mobileNumber: values.mobileNumber,
-      alternateNumber: values.alternateNumber,
-      email: values.email,
-      password: values.password,
-      createdBy: employee?.createdBy || "Admin",
-      createdType: employee?.createdType || "Manual",
-      createdAt: employee?.createdAt || new Date().toISOString(),
-    });
+  // ---- Mobile/email uniqueness ka lightweight client-side check ----
+  // (Server final validation karega hi.)
+  const checkUnique = async (mobileNumber: string, email: string) => {
+    setChecking(true);
+    try {
+      const response = await Get("master/employee/list", {}, false);
+      if (response.data?.success) {
+        const allEmployees: any[] = response.data.data || [];
+        const mobileTaken = allEmployees.some(
+          (e) =>
+            e.mobileNumber?.trim() === mobileNumber.trim() &&
+            String(e.employeeId) !== String(employee?.id || "")
+        );
+        const emailTaken = allEmployees.some(
+          (e) =>
+            e.email?.trim().toLowerCase() === email.trim().toLowerCase() &&
+            String(e.employeeId) !== String(employee?.id || "")
+        );
+        return { mobileTaken, emailTaken };
+      }
+      return { mobileTaken: false, emailTaken: false };
+    } catch (error) {
+      return { mobileTaken: false, emailTaken: false }; // fail-open; server enforce karega
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const onSubmit = async (data: EmployeeFormValues) => {
+    const { mobileTaken, emailTaken } = await checkUnique(data.mobileNumber, data.email);
+
+    let hasError = false;
+    if (mobileTaken) {
+      setError("mobileNumber", {
+        type: "manual",
+        message: "Mobile number already exists. Please enter a different number.",
+      });
+      hasError = true;
+    }
+    if (emailTaken) {
+      setError("email", {
+        type: "manual",
+        message: "Email already exists. Please enter a different email.",
+      });
+      hasError = true;
+    }
+    if (!isEditing && data.password !== data.confirmPassword) {
+      setError("confirmPassword", { type: "manual", message: "Passwords do not match" });
+      hasError = true;
+    }
+    if (hasError) return;
+
+    const { confirmPassword, ...rest } = data;
+    onSave({ ...rest, id: employee?.id || "" });
     handleClose();
-  });
+  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-100" onClose={handleClose}>
-        {/* Backdrop */}
         <TransitionChild
           as="div"
           enter="ease-out duration-300"
@@ -163,8 +138,6 @@ export function EmployeeDrawer({
           leaveTo="opacity-0"
           className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40"
         />
-
-        {/* Drawer Panel */}
         <TransitionChild
           as={DialogPanel}
           enter="ease-out transform-gpu transition-transform duration-200"
@@ -175,169 +148,146 @@ export function EmployeeDrawer({
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-md transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
             <h3 className="text-lg font-semibold text-white">
               {isEditing ? "Edit Employee" : "Add Employee"}
             </h3>
-            <Button
-              onClick={handleClose}
-              variant="flat"
-              isIcon
-              className="size-6 rounded-full text-white"
-            >
-              <XMarkIcon className="size-4.5" />
+            <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full">
+              <XMarkIcon className="size-4.5 text-white" />
             </Button>
           </div>
 
-          <form
-            onSubmit={onSubmit}
-            className="flex grow flex-col overflow-hidden"
-          >
+          <form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col overflow-hidden">
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-              {/* Department */}
               <Controller
+                control={control}
                 name="department"
-                control={control}
                 rules={{ required: "Department is required" }}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...rest } }) => (
                   <Listbox
-                    label="Department"
-                    error={errors.department?.message}
                     data={departmentOptions}
-                    value={
-                      departmentOptions.find((item) => item.id === field.value) ||
-                      null
-                    }
+                    value={departmentOptions.find((item) => item.id === value) || null}
                     onChange={(item) => {
-                      field.onChange(item.id);
-                      setValue("role", "");
+                      onChange(item.id);
+                      setValue("roleId", "");
                     }}
-                    placeholder="Select Department"
+                    label="Department"
+                    placeholder="Select department"
                     displayField="label"
+                    error={errors.department?.message}
+                    {...rest}
                   />
                 )}
               />
 
-              {/* Branch */}
               <Controller
+                control={control}
                 name="branch"
-                control={control}
                 rules={{ required: "Branch is required" }}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...rest } }) => (
                   <Listbox
-                    label="Branch"
-                    error={errors.branch?.message}
                     data={branchOptions}
-                    value={
-                      branchOptions.find((item) => item.id === field.value) ||
-                      null
-                    }
-                    onChange={(item) => field.onChange(item.id)}
-                    placeholder="Select Branch"
+                    value={branchOptions.find((item) => item.id === value) || branchOptions[0]}
+                    onChange={(item) => onChange(item.id)}
+                    label="Branch"
+                    placeholder="Select branch"
                     displayField="label"
+                    error={errors.branch?.message}
+                    {...rest}
                   />
                 )}
               />
 
-              {/* Role */}
               <Controller
-                name="role"
                 control={control}
+                name="roleId"
                 rules={{ required: "Role is required" }}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...rest } }) => (
                   <Listbox
+                    data={roleOptions}
+                    value={roleOptions.find((item) => item.id === value) || null}
+                    onChange={(item) => onChange(item.id)}
                     label="Role"
-                    error={errors.role?.message}
-                    data={roleOptionsForDepartment}
-                    value={
-                      roleOptionsForDepartment.find(
-                        (item) => item.id === field.value,
-                      ) || null
-                    }
-                    onChange={(item) => field.onChange(item.id)}
-                    placeholder="Select Role"
+                    placeholder="Select role"
                     displayField="label"
-                    disabled={!selectedDepartment}
+                    error={errors.roleId?.message}
+                    inputProps={{ disabled: !selectedDepartment }}
+                    {...rest}
                   />
                 )}
               />
 
-              {/* Employee Name */}
               <Input
+                {...register("employeeName", { required: "Employee name is required" })}
                 label="Employee Name"
-                required
-                placeholder="Enter Employee Name"
+                placeholder="Enter employee name"
                 error={errors.employeeName?.message}
-                {...register("employeeName", {
-                  required: "Employee Name is required",
-                })}
               />
 
-              {/* Mobile Number */}
-              <Input
-                label="Mobile Number"
-                required
-                placeholder="Enter Mobile Number"
-                error={errors.mobileNumber?.message}
-                {...register("mobileNumber", {
-                  required: "Mobile Number is required",
-                })}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  {...register("mobileNumber", {
+                    required: "Mobile number is required",
+                    pattern: { value: /^[0-9]{10}$/, message: "Mobile number must be 10 digits" },
+                    onChange: () => clearErrors("mobileNumber"),
+                  })}
+                  label="Mobile Number"
+                  placeholder="Enter mobile number"
+                  error={errors.mobileNumber?.message}
+                />
+                <Input
+                  {...register("alternateNumber", {
+                    pattern: { value: /^[0-9]{10}$/, message: "Alternate number must be 10 digits" },
+                  })}
+                  label="Alternate Number"
+                  placeholder="Enter alternate number"
+                  error={errors.alternateNumber?.message}
+                />
+              </div>
 
-              {/* Alternate Number */}
               <Input
-                label="Alternate Number"
-                required
-                placeholder="Enter Alternate Number"
-                error={errors.alternateNumber?.message}
-                {...register("alternateNumber", {
-                  required: "Alternate Number is required",
+                {...register("email", {
+                  required: "Email is required",
+                  pattern: { value: /^\S+@\S+\.\S+$/, message: "Enter a valid email" },
+                  onChange: () => clearErrors("email"),
                 })}
-              />
-
-              {/* Email */}
-              <Input
                 label="Email"
-                required
                 type="email"
-                placeholder="Enter Email"
+                placeholder="Enter email"
                 error={errors.email?.message}
-                {...register("email", { required: "Email is required" })}
               />
 
-              {/* Password */}
               <Input
-                label="Password"
-                required
-                type="password"
-                placeholder="Enter Password"
-                error={errors.password?.message}
-                {...register("password", { required: "Password is required" })}
-              />
-
-              {/* Confirm Password */}
-              <Input
-                label="Confirm Password"
-                required
-                type="password"
-                placeholder="Enter Confirm Password"
-                error={errors.confirmPassword?.message}
-                {...register("confirmPassword", {
-                  required: "Confirm Password is required",
-                  validate: (value, formValues) =>
-                    value === formValues.password || "Passwords do not match",
+                {...register("password", {
+                  required: isEditing ? false : "Password is required",
+                  minLength: { value: 6, message: "Password must be at least 6 characters" },
                 })}
+                label={isEditing ? "New Password" : "Password"}
+                type="password"
+                placeholder="Enter password"
+                error={errors.password?.message}
+                disabled={checking}
+              />
+
+              <Input
+                {...register("confirmPassword", {
+                  validate: (value, formValues) =>
+                    (!formValues.password && !value) ||
+                    value === formValues.password ||
+                    "Passwords do not match",
+                })}
+                label="Confirm Password"
+                type="password"
+                placeholder="Confirm password"
+                error={errors.confirmPassword?.message}
               />
             </div>
-
-            {/* Footer */}
             <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
               <Button type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" color="primary">
-                {isEditing ? "Update Employee" : "Add Employee"}
+              <Button type="submit" color="primary" disabled={checking}>
+                {checking ? "Checking..." : isEditing ? "Update" : "Create"}
               </Button>
             </div>
           </form>

@@ -8,6 +8,7 @@ declare module "@tanstack/react-table" {
     deleteRow?: (row: Row<TData>) => void;
     deleteRows?: (rows: Row<TData>[]) => void;
     openEditDrawer?: (row: TData) => void;
+    viewRow?: (row: TData) => void;
     updateData?: (rowIndex: number, columnId: string, value: unknown) => void;
     setTableSettings?: Dispatch<SetStateAction<TableSettings>>;
     setToolbarFilters?: Dispatch<SetStateAction<string[] | undefined>>;
