@@ -7,25 +7,32 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Post, Put, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
 import { EmployeeDrawer } from "./CategoryDrawer";
-import { columns, exportColumns } from "./columns";
-import { Employee, emptyEmployee } from "./data";
-import { departmentOptions } from "./options";
+import { createColumns, exportColumns } from "./columns";
+import { emptyEmployee, Employee, mapApiEmployeeToEmployee } from "./data";
+import { departmentOptions, getBranchLabel, getDepartmentLabel } from "./options";
+
+interface RoleOption {
+  id: string;
+  label: string;
+  department: string;
+}
 
 export default function EmployeePage() {
-  const [data, setData] = useState<Employee[]>(() =>
-    masterStorage.getEmployees(),
-  );
+  const [data, setData] = useState<Employee[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -35,6 +42,51 @@ export default function EmployeePage() {
   const [filterName, setFilterName] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("");
 
+  // ---- Fetch roles and employees ----
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [roleRes, employeeRes] = await Promise.all([
+        Get("master/role/list", {}, false),
+        Get("master/employee/list", {}, false),
+      ]);
+
+      if (roleRes.data?.success) {
+        setRoles(
+          (roleRes.data.data || []).map((item: any) => ({
+            id: String(item.roleId),
+            label: item.roleName,
+            department: item.department,
+          }))
+        );
+      }
+
+      if (employeeRes.data?.success) {
+        setData((employeeRes.data.data || []).map(mapApiEmployeeToEmployee));
+      } else {
+        toasterrormsg(employeeRes.data?.message || "Failed to fetch employees.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching employee data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getRoleName = (id: string) =>
+    roles.find((item) => item.id === id)?.label || "";
+
+  const columns = useMemo(
+    () => createColumns(getRoleName),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roles.length],
+  );
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       if (
@@ -42,15 +94,92 @@ export default function EmployeePage() {
         !item.employeeName.toLowerCase().includes(filterName.toLowerCase())
       )
         return false;
-      if (filterDepartment && item.typeOfDepartment !== filterDepartment)
-        return false;
+      if (filterDepartment && item.department !== filterDepartment) return false;
       return true;
     });
   }, [data, filterName, filterDepartment]);
 
-  const persist = (next: Employee[]) => {
-    setData(next);
-    masterStorage.saveEmployees(next);
+  const exportRows = filteredData.map((row) => ({
+    ...row,
+    departmentName: getDepartmentLabel(row.department),
+    branchName: getBranchLabel(row.branch),
+    roleName: getRoleName(row.roleId),
+  }));
+
+  // ---- Save (create or update) via API ----
+  const handleSave = async (item: Employee) => {
+    const payload: any = {
+      department: item.department,
+      branch: item.branch,
+      roleId: Number(item.roleId),
+      employeeName: item.employeeName,
+      mobileNumber: item.mobileNumber,
+      alternateNumber: item.alternateNumber,
+      email: item.email,
+    };
+
+    try {
+      if (item.id) {
+        if (item.password) payload.password = item.password;
+
+        const response = await Put(
+          "master/employee/update",
+          { employeeId: Number(item.id), ...payload },
+          false
+        );
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Employee updated successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to update employee.");
+        }
+      } else {
+        payload.password = item.password;
+        const response = await Post("master/employee/create", payload, false);
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "Employee created successfully.");
+          fetchAll();
+        } else {
+          toasterrormsg(response.data?.message || "Failed to create employee.");
+        }
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while saving the employee.");
+    }
+  };
+
+  const handleDeleteOne = async (row: Employee) => {
+    try {
+      const response = await Delete(
+        "master/employee/delete",
+        { employeeId: Number(row.id) },
+        false
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Employee deleted successfully.");
+        setData((prev) => prev.filter((item) => item.id !== row.id));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to delete employee.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting the employee.");
+    }
+  };
+
+  const handleDeleteMany = async (rows: { original: Employee }[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) =>
+          Delete("master/employee/delete", { employeeId: Number(r.original.id) }, false)
+        )
+      );
+      const ids = new Set(rows.map((r) => r.original.id));
+      setData((prev) => prev.filter((item) => !ids.has(item.id)));
+      setRowSelection({});
+      toastsuccessmsg("Selected employees deleted successfully.");
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting employees.");
+    }
   };
 
   const table = useReactTable({
@@ -64,14 +193,8 @@ export default function EmployeePage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: (row) => handleDeleteOne(row.original),
+      deleteRows: (rows) => handleDeleteMany(rows),
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -98,16 +221,9 @@ export default function EmployeePage() {
             setEditing(emptyEmployee());
             setDrawerOpen(true);
           }}
-          onExportExcel={() =>
-            exportToExcel(filteredData, exportColumns, "employees")
-          }
+          onExportExcel={() => exportToExcel(exportRows, exportColumns, "employees")}
           onExportPdf={() =>
-            exportToPdf(
-              filteredData,
-              exportColumns,
-              "Employee List",
-              "employees",
-            )
+            exportToPdf(exportRows, exportColumns, "Employee List", "employees")
           }
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-2">
@@ -125,7 +241,7 @@ export default function EmployeePage() {
                   ) || { id: "", label: "All" }
                 }
                 onChange={(item) => setFilterDepartment(item.id)}
-                label="Type of Department"
+                label="Department"
                 placeholder="All departments"
                 displayField="label"
               />
@@ -136,7 +252,11 @@ export default function EmployeePage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No employees found. Click Add Employee to add one."
+          emptyMessage={
+            loading
+              ? "Loading employees..."
+              : "No employees found. Click Add Employee to add one."
+          }
         />
       </div>
 
@@ -144,14 +264,8 @@ export default function EmployeePage() {
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         employee={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        roles={roles}
+        onSave={handleSave}
       />
     </Page>
   );

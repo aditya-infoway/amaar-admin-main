@@ -6,105 +6,52 @@ import {
 } from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../shared/createRowActions";
 import { TextCell } from "../shared/tableCells";
-import { ExportColumn } from "../shared/export";
 import { Employee } from "./data";
-import {
-  getBranchLabel,
-  getDepartmentLabel,
-  getRoleLabel,
-} from "./options";
+import { getBranchLabel, getDepartmentLabel } from "./options";
 
 const RowActions = createRowActions<Employee>("employee");
 
-export const columns: ColumnDef<Employee>[] = [
-  {
-    id: "select",
-    header: SelectHeader,
-    cell: SelectCell,
-    enableSorting: false,
-  },
-  {
-    id: "typeOfDepartment",
-    accessorKey: "typeOfDepartment",
-    header: "Type of Department",
-    cell: (info) => getDepartmentLabel(info.getValue<string>()),
-  },
-  {
-    id: "branch",
-    accessorKey: "branch",
-    header: "Branch",
-    cell: (info) => getBranchLabel(info.getValue<string>()),
-  },
-  {
-    id: "role",
-    accessorKey: "role",
-    header: "Role",
-    cell: (info) => getRoleLabel(info.getValue<string>()),
-  },
-  {
-    id: "employeeName",
-    accessorKey: "employeeName",
-    header: "Employee Name",
-    cell: TextCell,
-  },
-  {
-    id: "mobileNumber",
-    accessorKey: "mobileNumber",
-    header: "Mobile No",
-    cell: TextCell,
-  },
-  {
-    id: "alternateNumber",
-    accessorKey: "alternateNumber",
-    header: "Alternate No",
-    cell: TextCell,
-  },
-  {
-    id: "email",
-    accessorKey: "email",
-    header: "Email",
-    cell: TextCell,
-  },
-  {
-    id: "createdBy",
-    accessorKey: "createdBy",
-    header: "Created By",
-    cell: TextCell,
-  },
-  {
-    id: "createdType",
-    accessorKey: "createdType",
-    header: "Created Type",
-    cell: TextCell,
-  },
-  {
-    id: "actions",
-    header: "Action",
-    cell: RowActions,
-    enableSorting: false,
-  },
-];
+export function createColumns(
+  getRoleName: (id: string) => string,
+): ColumnDef<Employee>[] {
+  return [
+    { id: "select", header: SelectHeader, cell: SelectCell, enableSorting: false },
+    {
+      id: "department",
+      accessorFn: (row) => getDepartmentLabel(row.department),
+      header: "Department",
+      cell: TextCell,
+    },
+    {
+      id: "branch",
+      accessorFn: (row) => getBranchLabel(row.branch),
+      header: "Branch",
+      cell: TextCell,
+    },
+    {
+      id: "roleId",
+      accessorFn: (row) => getRoleName(row.roleId),
+      header: "Role",
+      cell: TextCell,
+    },
+    { id: "employeeName", accessorKey: "employeeName", header: "Employee Name", cell: TextCell },
+    { id: "mobileNumber", accessorKey: "mobileNumber", header: "Mobile No", cell: TextCell },
+    { id: "alternateNumber", accessorKey: "alternateNumber", header: "Alternate No", cell: TextCell },
+    { id: "email", accessorKey: "email", header: "Email", cell: TextCell },
+    { id: "createdBy", accessorKey: "createdBy", header: "Created By", cell: TextCell },
+    { id: "createdType", accessorKey: "createdType", header: "Created Type", cell: TextCell },
+    { id: "actions", header: "Action", cell: RowActions, enableSorting: false },
+  ];
+}
 
-export const exportColumns: ExportColumn<Employee>[] = [
-  {
-    key: "typeOfDepartment",
-    header: "Type of Department",
-    format: (value: unknown) => getDepartmentLabel(value as string),
-  },
-  {
-    key: "branch",
-    header: "Branch",
-    format: (value: unknown) => getBranchLabel(value as string),
-  },
-  {
-    key: "role",
-    header: "Role",
-    format: (value: unknown) => getRoleLabel(value as string),
-  },
-  { key: "employeeName", header: "Employee Name" },
-  { key: "mobileNumber", header: "Mobile No" },
-  { key: "alternateNumber", header: "Alternate No" },
-  { key: "email", header: "Email" },
-  { key: "createdBy", header: "Created By" },
-  { key: "createdType", header: "Created Type" },
+export const exportColumns = [
+  { key: "departmentName" as const, header: "Department" },
+  { key: "branchName" as const, header: "Branch" },
+  { key: "roleName" as const, header: "Role" },
+  { key: "employeeName" as const, header: "Employee Name" },
+  { key: "mobileNumber" as const, header: "Mobile No" },
+  { key: "alternateNumber" as const, header: "Alternate No" },
+  { key: "email" as const, header: "Email" },
+  { key: "createdBy" as const, header: "Created By" },
+  { key: "createdType" as const, header: "Created Type" },
 ];
