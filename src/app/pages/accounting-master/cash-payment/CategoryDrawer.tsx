@@ -6,39 +6,36 @@ import {
 } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Controller, useForm } from "react-hook-form";
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input, Radio, Textarea } from "@/components/ui";
-import { cashAccountOptions, oppAccountOptions } from "./data";
 import { CashPayment } from "../shared/types";
 import { DatePicker } from "@/components/shared/form/Datepicker";
 import { AccountListbox, AccountOption } from "@/components/shared/form/AccountListbox";
-import { Combobox } from "@/components/shared/form/StyledCombobox";
+import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 
 interface CashPaymentDrawerProps {
   isOpen: boolean;
   close: () => void;
-  cashPayment: CashPayment | null;
-  onSave: (cashPayment: CashPayment) => void;
+  onSaved: () => void; // save hone ke baad list refresh trigger karne ke liye
 }
 
+const paymentApi = {
+  nextVoucherNo: (financialYearId: string) =>
+    Get("payment/next-voucher-no", { financialYearId, voucherType: "CASH PAYMENT" }, false),
+  create: (payload: Record<string, any>) => Post("payment/cash/create", payload, false),
+};
 
-export function CashPaymentDrawer({
-  isOpen,
-  close,
-  cashPayment,
-  onSave,
-}: CashPaymentDrawerProps) {
-  const isEdit = Boolean(cashPayment?.id);
+const accountApi = {
+  cashList: () => Get("master/account/cash/list", {}, false),
+  oppList: () => Get("master/account/opposite/list", {}, false),
+};
 
-  const bomOptions = [
-    { id: "bom-1", label: "BOM/26-27/001" },
-    { id: "bom-2", label: "BOM/26-27/002" },
-    { id: "bom-3", label: "BOM/26-27/003" },
-    { id: "bom-4", label: "BOM/26-27/004" },
-    { id: "bom-5", label: "BOM/26-27/005" },
-  ];
+export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerProps) {
+  const [submitting, setSubmitting] = useState(false);
+  const [cashAccountOptions, setCashAccountOptions] = useState<{ id: string; label: string }[]>([]);
+  const [oppAccountOptions, setOppAccountOptions] = useState<AccountOption[]>([]);
 
   const {
     register,
@@ -46,28 +43,91 @@ export function CashPaymentDrawer({
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
-  } = useForm<CashPayment>({
-    defaultValues: {
-      paymentMode: "manual",
-    },
-    values: cashPayment || undefined,
+  } = useForm<CashPayment & { paymentMode: "manual" | "bom" }>({
+    defaultValues: { paymentMode: "manual", date: "" },
   });
 
   const paymentMode = watch("paymentMode");
 
+  // Drawer open hote hi: cash accounts, opp accounts, aur next voucher no fetch karo
+  useEffect(() => {
+    if (!isOpen) return;
+
+    (async () => {
+      try {
+        const financialYearId = sessionStorage.getItem("financialYearId") || "";
+
+        const [cashRes, oppRes, voucherRes] = await Promise.all([
+          accountApi.cashList(),
+          accountApi.oppList(),
+          paymentApi.nextVoucherNo(financialYearId),
+        ]);
+
+        const cashList = cashRes?.data?.data || [];
+        setCashAccountOptions(
+          cashList.map((a: any) => ({ id: String(a.id), label: a.accountName })),
+        );
+
+        const oppList = oppRes?.data?.data || [];
+        setOppAccountOptions(
+          oppList.map((a: any) => ({
+            id: String(a.id),
+            name: a.accountName,
+            number: a.mobileNo || "",
+            balance: Number(a.currentBalance || 0),
+          })),
+        );
+
+        const voucherNo = voucherRes?.data?.data?.voucherNo || "";
+        setValue("voucherNo", voucherNo);
+        setValue("date", new Date().toISOString().slice(0, 10));
+      } catch (err) {
+        toasterrormsg("Failed to load form data");
+      }
+    })();
+  }, [isOpen, setValue]);
+
   const handleClose = () => {
-    reset();
+    reset({ paymentMode: "manual" });
     close();
   };
 
-  const onSubmit = (data: CashPayment) => {
-    onSave({
-      ...data,
-      id: cashPayment?.id || crypto.randomUUID(),
-      createdAt: cashPayment?.createdAt || new Date().toISOString(),
-    });
-    handleClose();
+  const onSubmit = async (data: any) => {
+    // BOM abhi save nahi hota — extra safety guard
+    if (data.paymentMode === "bom") {
+      toasterrormsg("BOM payment is not available yet.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const financialYearId = sessionStorage.getItem("financialYearId");
+
+      const res = await paymentApi.create({
+        cashAccountId: Number(data.cashAccount),
+        voucherNo: data.voucherNo,
+        date: data.date,
+        oppAccountId: Number(data.oppAccount),
+        amount: Number(data.amount),
+        narration: data.narration || "",
+        financialYearId: financialYearId ? Number(financialYearId) : undefined,
+      });
+
+      if (res?.data?.status === 400 || res?.data?.success === false) {
+        toasterrormsg(res?.data?.message || "Something went wrong.");
+        return;
+      }
+
+      toastsuccessmsg(res?.data?.message || "Cash payment saved successfully");
+      onSaved();
+      handleClose();
+    } catch (err: any) {
+      toasterrormsg(err?.response?.data?.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -96,25 +156,14 @@ export function CashPaymentDrawer({
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
-            <h3 className="text-lg font-semibold text-white">
-              {isEdit ? "Edit Cash Payment" : "Add Cash Payment"}
-            </h3>
-            <Button
-              onClick={handleClose}
-              variant="flat"
-              isIcon
-              className="size-6 rounded-full text-white"
-            >
+            <h3 className="text-lg font-semibold text-white">Add Cash Payment</h3>
+            <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full text-white">
               <XMarkIcon className="size-4.5" />
             </Button>
           </div>
 
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="flex grow flex-col overflow-hidden"
-          >
+          <form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col overflow-hidden">
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-
               {/* Payment Mode Radio */}
               <Controller
                 control={control}
@@ -123,45 +172,16 @@ export function CashPaymentDrawer({
                 render={({ field }) => (
                   <div className="flex items-center gap-6 py-2">
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-dark-100">
-                      <Radio
-                        checked={field.value === "manual"}
-                        onChange={() => field.onChange("manual")}
-                      />
+                      <Radio checked={field.value === "manual"} onChange={() => field.onChange("manual")} />
                       Manual
                     </label>
-
-                    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-dark-100">
-                      <Radio
-                        checked={field.value === "bom"}
-                        onChange={() => field.onChange("bom")}
-                      />
-                      BOM - Cancle
-
+                    <label className="flex cursor-not-allowed items-center gap-2 text-sm font-medium text-gray-400">
+                      <Radio checked={field.value === "bom"} disabled onChange={() => field.onChange("bom")} />
+                      BOM (Coming Soon)
                     </label>
                   </div>
                 )}
               />
-
-              {/* BOM No — only shown when BOM is selected */}
-              {paymentMode === "bom" && (
-                <Controller
-                  control={control}
-                  name="bomNo"
-                  rules={{ required: "BOM No is required" }}
-                  render={({ field: { value, onChange } }) => (
-                    <Combobox
-                      data={bomOptions}
-                      displayField="label"
-                      value={value}
-                      onChange={onChange}
-                      placeholder="Select BOM No."
-                      label="BOM No."
-                      searchFields={["label"]}
-                      error={errors.bomNo?.message}
-                    />
-                  )}
-                />
-              )}
 
               {/* Cash Account / Voucher No / Date */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -172,45 +192,48 @@ export function CashPaymentDrawer({
                   render={({ field: { value, onChange, ...rest } }) => (
                     <Listbox
                       data={cashAccountOptions}
-                      value={
-                        cashAccountOptions.find((item) => item.id === value) || null
-                      }
+                      value={cashAccountOptions.find((item) => item.id === value) || null}
                       onChange={(item) => onChange(item.id)}
                       label="Cash Account"
                       placeholder="Select Cash Account"
                       displayField="label"
-                      error={errors.cashAccount?.message}
+                      error={errors.cashAccount?.message as string}
                       {...rest}
                     />
                   )}
                 />
 
                 <Input
-                  {...register("voucherNo", {
-                    required: "Voucher no is required",
-                  })}
+                  {...register("voucherNo", { required: "Voucher no is required" })}
                   label="Voucher No."
-                  placeholder="Voucher No."
-                  error={errors.voucherNo?.message}
+                  placeholder="Auto generated"
+                  readOnly
+                  error={errors.voucherNo?.message as string}
                 />
 
-                <DatePicker
-                  options={{
-                    disable: [
-                      function (date) {
-                        return date.getDay() === 0 || date.getDay() === 6;
-                      },
-                    ],
-                    locale: {
-                      firstDayOfWeek: 1,
-                    },
-                  }}
-                  placeholder="Choose date..."
-                  label="Date"
+                <Controller
+                  control={control}
+                  name="date"
+                  rules={{ required: "Date is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <DatePicker
+                      label="Date"
+                      value={value}
+                      onChange={(dates: Date[]) => {
+                        const picked = dates?.[0];
+                        if (!picked) return onChange("");
+                        const yyyy = picked.getFullYear();
+                        const mm = String(picked.getMonth() + 1).padStart(2, "0");
+                        const dd = String(picked.getDate()).padStart(2, "0");
+                        onChange(`${yyyy}-${mm}-${dd}`);
+                      }}
+                      placeholder="Choose date..."
+                      error={errors.date?.message as string}
+                    />
+                  )}
                 />
               </div>
 
-              {/* Divider */}
               <div className="border-t-3 border-dotted border-primary my-8" />
 
               {/* Opp Account / Amount */}
@@ -227,43 +250,38 @@ export function CashPaymentDrawer({
                         onChange={(item: AccountOption) => onChange(item.id)}
                         label="Opp. Account"
                         placeholder="Select Opp. Account"
-                        error={errors.oppAccount?.message}
+                        error={errors.oppAccount?.message as string}
                       />
                     )}
                   />
                 </div>
 
                 <Input
-                  {...register("amount", {
-                    required: "Amount is required",
-                  })}
+                  {...register("amount", { required: "Amount is required" })}
                   label="Amount"
                   placeholder="Amount"
                   type="number"
-                  error={errors.amount?.message}
+                  error={errors.amount?.message as string}
                 />
               </div>
 
-              {/* Narration */}
               <Textarea
                 {...register("narration")}
                 rows={5}
                 label="Narration"
                 placeholder="Enter Narration"
-                error={errors.narration?.message}
+                error={errors.narration?.message as string}
               />
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
-              <Button onClick={handleClose}>
-                Cancel
-              </Button>
+              <Button type="button" onClick={handleClose}>Cancel</Button>
               <Button
                 type="submit"
+                disabled={submitting || paymentMode === "bom"}
                 className="bg-red-600 text-white hover:bg-red-700"
               >
-                {isEdit ? "Update Cash Payment" : "Add Cash Payment"}
+                {submitting ? "Saving..." : "Add Cash Payment"}
               </Button>
             </div>
           </form>

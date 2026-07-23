@@ -62,6 +62,13 @@ export const baseNavigationObj: Record<string, NavigationTree> = {
     title: "Purchase Master",
     icon: "purchaseMaster",
   },
+  stockReport: {
+    id: "stockReport",
+    type: "collapse",
+    path: "/stock-report",
+    title: "Stock Report",
+    icon: "stockReport",
+  },
   userMaster: {
     id: "userMaster",
     type: "collapse",

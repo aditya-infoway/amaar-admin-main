@@ -416,6 +416,52 @@ const protectedRoutes: RouteObject = {
                 },
               ],
             },
+            {
+              path: "purchase-order",
+              children: [
+                {
+                  index: true,
+                  lazy: async () => ({
+                    Component: (
+                      await import(
+                        "@/app/pages/purchase-master/purchase-order"
+                      )
+                    ).default,
+                  }),
+                },
+                {
+                  path: "create",
+                  lazy: async () => ({
+                    Component: (
+                      await import(
+                        "@/app/pages/purchase-master/purchase-order"
+                      )
+                    ).default,
+                  }),
+                },
+              ],
+            },
+          ],
+        },
+        {
+          path: "stock-report",
+          children: [
+            {
+              index: true,
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/stock-report")
+                ).default,
+              }),
+            },
+            {
+              path: ":itemId",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/stock-report/StockReportDetailPage")
+                ).default,
+              }),
+            },
           ],
         },
         // In your route configuration file

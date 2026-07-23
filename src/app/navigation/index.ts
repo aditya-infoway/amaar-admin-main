@@ -6,6 +6,7 @@ import { leadMaster } from "./segments/leadMaster";
 import { logout } from "./segments/logout";
 import { master } from "./segments/master";
 import { purchaseMaster } from "./segments/purchaseMaster";
+import { stockReport } from "./segments/stockReport";
 import { userMaster } from "./segments/userMaster";
 
 export const navigation = [
@@ -16,6 +17,7 @@ export const navigation = [
   enquiryMaster,
   accountingMaster,
   purchaseMaster,
+  stockReport,
   userMaster,
   logout,
 ];

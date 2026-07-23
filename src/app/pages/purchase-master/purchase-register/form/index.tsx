@@ -148,28 +148,12 @@ function Card({ title, titleRight, children, className = "" }: any) {
   );
 }
 
-function FDate({ label, required, value, onChange, placeholder }: any) {
-  return (
-    <div className="w-full">
-      {label && <FieldLabel required={required}>{label}</FieldLabel>}
-      <DatePicker
-        value={value}
-        onChange={(dates) => {
-          if (dates && dates.length > 0) {
-            const d = dates[0];
-            const yr = d.getFullYear();
-            const mo = String(d.getMonth() + 1).padStart(2, "0");
-            const dy = String(d.getDate()).padStart(2, "0");
-            onChange(`${yr}-${mo}-${dy}`);
-          } else {
-            onChange("");
-          }
-        }}
-        options={{ dateFormat: "d-m-Y", defaultDate: value || undefined }}
-        placeholder={placeholder || "Select Date"}
-      />
-    </div>
-  );
+// ✅ NEW — formatDateForApi helper, jaisa doosre working module me hai
+function formatDateForApi(date: Date): string {
+  const yr = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  const dy = String(date.getDate()).padStart(2, "0");
+  return `${yr}-${mo}-${dy}`;
 }
 
 /* ─────────────────────────────────────────────
@@ -372,7 +356,7 @@ function InlineSearchRow({
       <td className="px-2 py-2.5"><div className={roCls + " text-center"}>{row.hsnCode || "—"}</div></td>
       <td className="px-2 py-2.5"><div className={roCls + " text-center"}>{row.uom || "—"}</div></td>
 
-      <td className="px-2 py-2.5">
+      <td className="px-2 py-2.5 w-20">
         <div className="relative">
           <input
             type="number" min={0}
@@ -403,7 +387,7 @@ function InlineSearchRow({
         <input type="number" value={row.rate} onChange={e => setRow(r => ({ ...r, rate: e.target.value }))} placeholder="0.00" className={iCls + " text-right border-gray-300 dark:border-gray-600"} />
       </td>
 
-      <td className="px-2 py-2.5">
+      <td className="px-2 py-2.5 w-20">
         <input type="number" value={row.discount} onChange={e => setRow(r => ({ ...r, discount: e.target.value }))} placeholder="0" className={iCls + " text-right border-gray-300 dark:border-gray-600"} />
       </td>
 
@@ -477,9 +461,25 @@ function BankDetailsDrawer({ open, onClose, bankDetails, setBankDetails }: any) 
           {bankDetails.paymentMode === "CHEQUE" && (
             <div className="grid grid-cols-2 gap-3">
               <Input label="Cheque No *" placeholder="Cheque No" value={bankDetails.chequeNo} onChange={(e: any) => sf("chequeNo", e.target.value)} />
-              <FDate label="Cheque Date *" value={bankDetails.chequeDate} onChange={(v: any) => sf("chequeDate", v)} />
+              <DatePicker
+                label="Cheque Date *"
+                value={bankDetails.chequeDate}
+                onChange={(selectedDates: Date[]) => {
+                  const picked = selectedDates?.[0];
+                  sf("chequeDate", picked ? formatDateForApi(picked) : "");
+                }}
+                placeholder="Select Date"
+              />
               <div className="col-span-2">
-                <FDate label="Clear Date" value={bankDetails.clearDate} onChange={(v: any) => sf("clearDate", v)} />
+                <DatePicker
+                  label="Clear Date"
+                  value={bankDetails.clearDate}
+                  onChange={(selectedDates: Date[]) => {
+                    const picked = selectedDates?.[0];
+                    sf("clearDate", picked ? formatDateForApi(picked) : "");
+                  }}
+                  placeholder="Select Date"
+                />
               </div>
             </div>
           )}
@@ -902,7 +902,8 @@ export default function VehiclePurchaseBill() {
 
   const [hdr, setHdr] = useState<HdrState>({
     poNo: [], poLocation: [{ id: 1, name: "Main Branch" }], orderDate: "",
-    date: "2026-06-12", terms: "Credit", partyName: [],
+    date: new Date().toISOString().slice(0, 10),
+    terms: "Credit", partyName: [],
     billNo: "", purchaseBillNo: "", purchaseDate: "",
     purchaseLocation: [{ id: 1, name: "Main Branch" }], dueDate: "", narration: "",
   });
@@ -1078,11 +1079,27 @@ const bankComboValue = useMemo(() => {
   const sgstTotal = isSameState ? totGST / 2 : 0;
   const igstTotal = isSameState ? 0 : totGST;
 
+  // ✅ CHANGED — same itemId already list me ho to Qty merge + recalc, warna naya row
   const addItemFromPreview = (item: any) => {
-    setItems(prev => [...prev, item]);
+    setItems(prev => {
+      const idx = prev.findIndex((i: any) => i.itemId === item.itemId);
+      if (idx !== -1) {
+        const existing = prev[idx];
+        const mergedQty = (Number(existing.qty) || 0) + (Number(item.qty) || 0);
+        const merged = calcItem({
+          ...existing,
+          qty: mergedQty, // rate/discount/gst existing row se hi rahega — consistency ke liye
+        });
+        const next = [...prev];
+        next[idx] = merged;
+        return next;
+      }
+      return [...prev, item];
+    });
     setPendingItem(null);
     clearError("items");
   };
+
   const removeItem = (id: any) => setItems(prev => prev.filter((i: any) => i.id !== id));
 
   const handleFileChange = (e: any) => {
@@ -1114,7 +1131,8 @@ const bankComboValue = useMemo(() => {
           return;
         }
 
-        setItems(prev => [...prev, calcItem({
+        // ✅ CHANGED — ab direct items array me push nahi, sirf preview row me set hoga
+        setPendingItem(calcItem({
           id: Date.now() + Math.random(),
           itemId: v.itemId,
           itemCode: v.itemCode,
@@ -1125,8 +1143,7 @@ const bankComboValue = useMemo(() => {
           rate: Number(v.salesPrice),
           discount: 0,
           gstPct: parseFloat(v.taxSlab) || 0,
-        })]);
-        clearError("items");
+        }));
       } else {
         setBarcodeError(res.data?.message || "No item found for this barcode.");
       }
@@ -1298,12 +1315,28 @@ const bankComboValue = useMemo(() => {
                 <FieldLabel>Purchase Order Location</FieldLabel>
                 <Listbox data={LOCATION_OPTIONS} value={hdr.poLocation} onChange={setH("poLocation")} displayField="name" placeholder="Location" />
               </div>
-              <FDate label="Order Date" value={hdr.orderDate} onChange={setHDate("orderDate")} />
+              <DatePicker
+                label="Order Date"
+                value={hdr.orderDate}
+                onChange={(selectedDates: Date[]) => {
+                  const picked = selectedDates?.[0];
+                  setHDate("orderDate")(picked ? formatDateForApi(picked) : "");
+                }}
+                placeholder="Select Date"
+              />
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <FDate label="Date" value={hdr.date} onChange={setHDate("date")} />
+            <DatePicker
+              label="Date"
+              value={hdr.date}
+              onChange={(selectedDates: Date[]) => {
+                const picked = selectedDates?.[0];
+                setHDate("date")(picked ? formatDateForApi(picked) : "");
+              }}
+              placeholder="Select Date"
+            />
 
             <div>
               <FieldLabel>Terms</FieldLabel>
@@ -1378,10 +1411,16 @@ const bankComboValue = useMemo(() => {
             </div>
 
             <div>
-              <FDate
+              <DatePicker
                 label="Purchase Date"
                 value={hdr.purchaseDate}
-                onChange={(v: any) => { setHDate("purchaseDate")(v); clearError("purchaseDate"); }}
+                onChange={(selectedDates: Date[]) => {
+                  const picked = selectedDates?.[0];
+                  const formatted = picked ? formatDateForApi(picked) : "";
+                  setHDate("purchaseDate")(formatted);
+                  clearError("purchaseDate");
+                }}
+                placeholder="Select Date"
               />
               {formErrors.purchaseDate && (
                 <p className="text-xs text-red-500 mt-1">{formErrors.purchaseDate}</p>
@@ -1407,10 +1446,16 @@ const bankComboValue = useMemo(() => {
 
             {termsValue === "Credit" && (
               <div>
-                <FDate
+                <DatePicker
                   label="Due Date"
                   value={hdr.dueDate}
-                  onChange={(v: any) => { setHDate("dueDate")(v); clearError("dueDate"); }}
+                  onChange={(selectedDates: Date[]) => {
+                    const picked = selectedDates?.[0];
+                    const formatted = picked ? formatDateForApi(picked) : "";
+                    setHDate("dueDate")(formatted);
+                    clearError("dueDate");
+                  }}
+                  placeholder="Select Date"
                 />
                 {formErrors.dueDate && (
                   <p className="text-xs text-red-500 mt-1">{formErrors.dueDate}</p>

@@ -7,45 +7,55 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
+import { Get, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
 import { CashPaymentDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
-import { CashPayment, emptyCashPayment } from "./data";
+import { CashPayment } from "./data";
 
 export default function CashPaymentPage() {
-  const [data, setData] = useState<CashPayment[]>(() =>
-    masterStorage.getCashPayments(),
-  );
+  const [data, setData] = useState<CashPayment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<CashPayment | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterVoucher, setFilterVoucher] = useState("");
 
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const financialYearId = sessionStorage.getItem("financialYearId") || "";
+      const response = await Get("payment/cash/list", { financialYearId }, false);
+      if (response?.data?.success) {
+        setData(response.data.data || []);
+      } else {
+        toasterrormsg(response?.data?.message || "Failed to fetch cash payments.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching cash payments.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      if (
-        filterVoucher &&
-        !item.voucherNo.toLowerCase().includes(filterVoucher.toLowerCase())
-      )
-        return false;
+      if (filterVoucher && !item.voucherNo.toLowerCase().includes(filterVoucher.toLowerCase())) return false;
       return true;
     });
   }, [data, filterVoucher]);
-
-  const persist = (next: CashPayment[]) => {
-    setData(next);
-    masterStorage.saveCashPayments(next);
-  };
 
   const table = useReactTable({
     data: filteredData,
@@ -54,18 +64,9 @@ export default function CashPaymentPage() {
     enableRowSelection: true,
     getRowId: (row) => row.id,
     meta: {
-      openEditDrawer: (row: CashPayment) => {
-        setEditing(row);
-        setDrawerOpen(true);
-      },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      // Delete abhi working nahi — sirf UI me option dikhta he
+      deleteRow: () => toasterrormsg("Delete is not available yet."),
+      deleteRows: () => toasterrormsg("Delete is not available yet."),
     },
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
@@ -86,21 +87,9 @@ export default function CashPaymentPage() {
           table={table}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
-          onCreate={() => {
-            setEditing(emptyCashPayment());
-            setDrawerOpen(true);
-          }}
-          onExportExcel={() =>
-            exportToExcel(filteredData, exportColumns, "cash_payments")
-          }
-          onExportPdf={() =>
-            exportToPdf(
-              filteredData,
-              exportColumns,
-              "Cash Payment List",
-              "cash_payments",
-            )
-          }
+          onCreate={() => setDrawerOpen(true)}
+          onExportExcel={() => exportToExcel(filteredData, exportColumns, "cash_payments")}
+          onExportPdf={() => exportToPdf(filteredData, exportColumns, "Cash Payment List", "cash_payments")}
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-1">
               <Input
@@ -116,22 +105,14 @@ export default function CashPaymentPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No cash payments found. Click Add Cash Payment to add one."
+          emptyMessage={loading ? "Loading cash payments..." : "No cash payments found. Click Add Cash Payment to add one."}
         />
       </div>
 
       <CashPaymentDrawer
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
-        cashPayment={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        onSaved={fetchAll}
       />
     </Page>
   );

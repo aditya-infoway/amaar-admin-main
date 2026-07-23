@@ -372,6 +372,7 @@ export function AccountForm() {
 
         <form
           onSubmit={handleSubmit(onSubmit)}
+          noValidate
           className="rounded-lg bg-white p-6 shadow-sm dark:bg-dark-800"
         >
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2 lg:divide-x lg:divide-gray-200 dark:lg:divide-dark-500">
@@ -624,7 +625,10 @@ export function AccountForm() {
                   <DatePicker
                     label="Birthday On"
                     value={value}
-                    onChange={(date: any) => onChange(date)}
+                    onChange={(selectedDates: Date[]) => {
+                      const picked = selectedDates?.[0];
+                      onChange(picked ? formatDateForApi(picked) : "");
+                    }}
                     placeholder="Select Date"
                     {...rest}
                   />
@@ -638,7 +642,10 @@ export function AccountForm() {
                   <DatePicker
                     label="Anniversary"
                     value={value}
-                    onChange={(date: any) => onChange(date)}
+                    onChange={(selectedDates: Date[]) => {
+                      const picked = selectedDates?.[0];
+                      onChange(picked ? formatDateForApi(picked) : "");
+                    }}
                     placeholder="Select Date"
                     {...rest}
                   />

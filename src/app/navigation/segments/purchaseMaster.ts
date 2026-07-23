@@ -11,5 +11,12 @@ export const purchaseMaster: NavigationTree = {
       title: "Purchase Register",
       icon: "purchase_master.purchaseRegister",
     },
+    {
+      id: "purchase_master.purchaseOrder",
+      type: "item",
+      path: "/purchase-master/purchase-order",
+      title: "Purchase Order",
+      icon: "purchase_master.purchaseOrder",
+    },
   ],
 };
