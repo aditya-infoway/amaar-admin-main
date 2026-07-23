@@ -416,6 +416,31 @@ const protectedRoutes: RouteObject = {
                 },
               ],
             },
+            {
+              path: "purchase-order",
+              children: [
+                {
+                  index: true,
+                  lazy: async () => ({
+                    Component: (
+                      await import(
+                        "@/app/pages/purchase-master/purchase-order"
+                      )
+                    ).default,
+                  }),
+                },
+                {
+                  path: "create",
+                  lazy: async () => ({
+                    Component: (
+                      await import(
+                        "@/app/pages/purchase-master/purchase-order"
+                      )
+                    ).default,
+                  }),
+                },
+              ],
+            },
           ],
         },
         {
