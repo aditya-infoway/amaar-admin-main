@@ -25,6 +25,7 @@ import {
   CubeTransparentIcon,
   UsersIcon,
   UserGroupIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import { ElementType } from "react";
 
@@ -68,8 +69,11 @@ userMaster: UsersIcon,
 "user_master.createEmployee": UsersIcon,
 
   // Purchase Master
-purchaseMaster: ShoppingCartIcon,
-"purchase_master.purchaseRegister": ClipboardDocumentListIcon,
+  purchaseMaster: ShoppingCartIcon,
+  "purchase_master.purchaseRegister": ClipboardDocumentListIcon,
+
+  stockReport: CircleStackIcon,
+  "stock_report.stockReport": ClipboardDocumentListIcon,
 
   // Enquiry Master
   enquiryMaster: ClipboardDocumentListIcon,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui";
-import { Get, toasterrormsg } from "@/ApiHelper";
+import { Button, Badge } from "@/components/ui";
+import { Get, Put, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 
 const INR = (n: any) =>
   "₹ " + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -28,6 +28,7 @@ interface PurchaseDetailItem {
   gstPct: number;
   gstAmt: number;
   total: number;
+  verified: boolean;
 }
 
 interface PurchaseDetail {
@@ -68,6 +69,34 @@ function InfoRow({ label, value }: { label: string; value: any }) {
 export function PurchaseDetailsDrawer({ open, purchaseId, onClose }: PurchaseDetailsDrawerProps) {
   const [data, setData] = useState<PurchaseDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
+
+  const handleVerifyItem = async (item: PurchaseDetailItem) => {
+    if (item.verified) return;
+    setVerifyingId(item.purchaseDetailsId);
+    try {
+      const res = await Put("purchase/item/verify", { purchaseDetailsId: item.purchaseDetailsId }, false);
+      if (res.data?.success) {
+        toastsuccessmsg(res.data?.message || "Item verified successfully.");
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                items: prev.items.map((it) =>
+                  it.purchaseDetailsId === item.purchaseDetailsId ? { ...it, verified: true } : it,
+                ),
+              }
+            : prev,
+        );
+      } else {
+        toasterrormsg(res.data?.message || "Failed to verify item.");
+      }
+    } catch (err: any) {
+      toasterrormsg(err?.response?.data?.message || "Something went wrong while verifying item.");
+    } finally {
+      setVerifyingId(null);
+    }
+  };
 
   useEffect(() => {
     if (!open || !purchaseId) return;
@@ -154,7 +183,7 @@ export function PurchaseDetailsDrawer({ open, purchaseId, onClose }: PurchaseDet
                   <table className="w-full min-w-[900px]">
                     <thead>
                       <tr className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                        {["#", "Item Code", "Item Name", "HSN Code", "UOM", "Qty", "Rate (₹)", "Disc (%)", "Taxable (₹)", "GST %", "GST Amt (₹)", "Total (₹)"].map((h) => (
+                        {["#", "Verify", "Item Code", "Item Name", "HSN Code", "UOM", "Qty", "Rate (₹)", "Disc (%)", "Taxable (₹)", "GST %", "GST Amt (₹)", "Total (₹)"].map((h) => (
                           <th key={h} className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">
                             {h}
                           </th>
@@ -165,6 +194,23 @@ export function PurchaseDetailsDrawer({ open, purchaseId, onClose }: PurchaseDet
                       {(data.items || []).map((item, idx) => (
                         <tr key={item.purchaseDetailsId} className="border-b border-gray-100 dark:border-gray-700">
                           <td className="px-3 py-2 text-sm text-gray-400">{idx + 1}</td>
+                          <td className="px-3 py-2 text-center">
+                            {item.verified ? (
+                              <Badge color="success" className="rounded-full">
+                                Success
+                              </Badge>
+                            ) : (
+                              <Button
+                                color="primary"
+                                variant="outlined"
+                                className="!px-2 !py-1 text-xs"
+                                disabled={verifyingId === item.purchaseDetailsId}
+                                onClick={() => handleVerifyItem(item)}
+                              >
+                                {verifyingId === item.purchaseDetailsId ? "..." : "Verify"}
+                              </Button>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-sm font-bold text-primary">{item.itemCode}</td>
                           <td className="px-3 py-2 text-sm text-gray-800 dark:text-gray-100 font-medium whitespace-nowrap">{item.itemName}</td>
                           <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">{item.hsnCode}</td>
@@ -184,7 +230,7 @@ export function PurchaseDetailsDrawer({ open, purchaseId, onClose }: PurchaseDet
                       ))}
                       {(!data.items || data.items.length === 0) && (
                         <tr>
-                          <td colSpan={12} className="px-3 py-8 text-center text-sm text-gray-400">
+                          <td colSpan={13} className="px-3 py-8 text-center text-sm text-gray-400">
                             No items found for this bill.
                           </td>
                         </tr>
@@ -192,7 +238,7 @@ export function PurchaseDetailsDrawer({ open, purchaseId, onClose }: PurchaseDet
                     </tbody>
                     <tfoot>
                       <tr className="bg-primary/5 border-t-2 border-primary/20">
-                        <td className="px-3 py-2.5 text-sm font-extrabold text-primary" colSpan={5}>Total</td>
+                        <td className="px-3 py-2.5 text-sm font-extrabold text-primary" colSpan={6}>Total</td>
                         <td className="px-3 py-2.5 text-sm text-right font-extrabold text-primary">{FMT3(totalQty)}</td>
                         <td colSpan={2} />
                         <td className="px-3 py-2.5 text-sm text-right font-extrabold text-primary">{INR(data.taxableValue).replace("₹ ", "")}</td>
