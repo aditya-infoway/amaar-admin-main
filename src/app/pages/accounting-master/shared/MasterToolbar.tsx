@@ -13,10 +13,10 @@ import { Button, Input } from "@/components/ui";
 
 interface MasterToolbarProps<T> {
   title: string;
-  createLabel: string;
+  createLabel?: string;
   searchPlaceholder: string;
   table: Table<T>;
-  onCreate: () => void;
+  onCreate?: () => void;
   showFilters: boolean;
   onToggleFilters: () => void;
   onExportExcel: () => void;
@@ -69,14 +69,16 @@ export function MasterToolbar<T>({
             <DocumentArrowDownIcon className="size-4 text-error-600" />
             <span>PDF</span>
           </Button>
-          <Button
-            color="primary"
-            className="h-9 gap-2 rounded-md px-4 text-sm"
-            onClick={onCreate}
-          >
-            <PlusIcon className="size-4" />
-            <span>{createLabel}</span>
-          </Button>
+          {onCreate && (
+            <Button
+              color="primary"
+              className="h-9 gap-2 rounded-md px-4 text-sm"
+              onClick={onCreate}
+            >
+              <PlusIcon className="size-4" />
+              <span>{createLabel}</span>
+            </Button>
+          )}
         </div>
       </div>
 

@@ -89,8 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        const authToken = window.localStorage.getItem("authToken");
-        const companyId = window.localStorage.getItem(COMPANY_ID_KEY);
+        const authToken = window.sessionStorage.getItem("authToken");
+        const companyId = window.sessionStorage.getItem(COMPANY_ID_KEY);
 
         if (authToken && isTokenValid(authToken) && companyId) {
           setSession(authToken);
@@ -106,6 +106,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
     init();
+  }, []);
+
+  useEffect(() => {
+    const handleForceLogout = () => {
+      logout();
+    };
+
+    window.addEventListener("force-logout", handleForceLogout);
+
+    return () => {
+      window.removeEventListener("force-logout", handleForceLogout);
+    };
   }, []);
 
   // STEP 1: login validate — OTP nahi
@@ -158,8 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setSession(token);
-    window.localStorage.setItem("authToken", token);
-    window.localStorage.setItem(COMPANY_ID_KEY, companyId);
+    window.sessionStorage.setItem("authToken", token);
+    window.sessionStorage.setItem(COMPANY_ID_KEY, companyId);
     window.sessionStorage.setItem("authToken", token);
     window.sessionStorage.setItem("user", JSON.stringify(state.user));
     window.sessionStorage.removeItem(PENDING_TOKEN_KEY);
@@ -170,8 +182,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     setSession(null);
-    window.localStorage.removeItem("authToken");
-    window.localStorage.removeItem(COMPANY_ID_KEY);
+    window.sessionStorage.removeItem("authToken");
+    window.sessionStorage.removeItem(COMPANY_ID_KEY);
     window.sessionStorage.removeItem("authToken");
     window.sessionStorage.removeItem("user");
     window.sessionStorage.removeItem(PENDING_TOKEN_KEY);

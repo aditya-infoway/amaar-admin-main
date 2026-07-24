@@ -66,30 +66,28 @@ function Header_delete(useHeader: any) {
 }
 
 //Logout
-
-
-const Logout=()=> {
-    sessionStorage.clear()
-    location.reload()
-}
+const Logout = () => {
+  window.dispatchEvent(new Event("force-logout"));
+};
 
 export const Post = async (fileName: string, data: any, useHeader: any) => {
     try {
       const url = `${URL.localurl}${fileName}`;
       const response = await axios.post(url, data, Header(useHeader));
   
-      if (response.data.status == 403) {
-        console.log("hshshsh");
-        
+      if (response.data.status === 401 || response.data.status === 403) {
         Logout();
       }
   
       return response;
     } catch (error) {
-      console.log("Error fetching data: ", error);
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
+      if (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 401 || error.response?.status === 403)
+      ) {
         Logout();
       }
+
       throw error;
     }
   };
@@ -101,16 +99,19 @@ export const Post = async (fileName: string, data: any, useHeader: any) => {
       const url = `${URL.localurl}${fileName}`;
       const response = await axios.delete(url, { data: data, headers: header });
   
-      if (response.data.status === 403) {
+      if (response.data.status === 401 || response.data.status === 403) {
         Logout();
       }
   
       return response;
     } catch (error) {
-      console.error("There was an error deleting the data:", error);
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
+      if (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 401 || error.response?.status === 403)
+      ) {
         Logout();
       }
+
       throw error;
     }
   };
@@ -122,16 +123,19 @@ export const Post = async (fileName: string, data: any, useHeader: any) => {
       const response = await axios.patch(url, data, Header(useHeader));
       console.log(response, "ppppsssss");
   
-      if (response.data.status === 403) {
+      if (response.data.status === 401 || response.data.status === 403) {
         Logout();
       }
   
       return response;
     } catch (error) {
-      console.log("Error fetching data: ", error);
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
+      if (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 401 || error.response?.status === 403)
+      ) {
         Logout();
       }
+
       throw error;
     }
   };
@@ -142,16 +146,19 @@ export const Post = async (fileName: string, data: any, useHeader: any) => {
       const url = `${URL.localurl}${fileName}`;
       const response = await axios.get(url, { params: data, ...Header(useHeader) });
   
-      if (response.data.status === 403) {
+      if (response.data.status === 401 || response.data.status === 403) {
         Logout();
       }
   
       return response;
     } catch (error) {
-      console.error("Error fetching data: ", error);
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
+      if (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 401 || error.response?.status === 403)
+      ) {
         Logout();
       }
+
       throw error;
     }
   };
@@ -163,16 +170,29 @@ export const Post = async (fileName: string, data: any, useHeader: any) => {
       const response = await axios.put(url, data, Header(useHeader));
       console.log(response, "ppppsssss");
   
-      if (response.data.status === 403) {
+      if (response.data.status === 401 || response.data.status === 403) {
         Logout();
       }
   
       return response;
     } catch (error) {
-      console.log("Error fetching data: ", error);
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
+      if (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 401 || error.response?.status === 403)
+      ) {
         Logout();
       }
+
       throw error;
     }
   };
+
+export const formatDateDDMMYYYY = (value: string | null | undefined): string => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "—";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+};

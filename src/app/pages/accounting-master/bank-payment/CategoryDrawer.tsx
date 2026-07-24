@@ -6,38 +6,57 @@ import {
 } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Controller, useForm } from "react-hook-form";
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
-import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Button, Input, Radio, Textarea } from "@/components/ui";
-import { bankAccountOptions, oppAccountOptions } from "./data";
 import { BankPayment } from "../shared/types";
 import { DatePicker } from "@/components/shared/form/Datepicker";
 import { AccountListbox, AccountOption } from "@/components/shared/form/AccountListbox";
+import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 
 interface BankPaymentDrawerProps {
   isOpen: boolean;
   close: () => void;
-  bankPayment: BankPayment | null;
-  onSave: (bankPayment: BankPayment) => void;
+  onSaved: () => void;
 }
 
-const bomOptions = [
-  { id: "bom-1", label: "BOM/26-27/001" },
-  { id: "bom-2", label: "BOM/26-27/002" },
-  { id: "bom-3", label: "BOM/26-27/003" },
-  { id: "bom-4", label: "BOM/26-27/004" },
-  { id: "bom-5", label: "BOM/26-27/005" },
-];
+const paymentApi = {
+  nextVoucherNo: (financialYearId: string) =>
+    Get("payment/next-voucher-no", { financialYearId, voucherType: "BANK PAYMENT" }, false),
+  create: (payload: Record<string, any>) => Post("payment/bank/create", payload, false),
+};
 
-export function BankPaymentDrawer({
-  isOpen,
-  close,
-  bankPayment,
-  onSave,
-}: BankPaymentDrawerProps) {
-  const isEdit = Boolean(bankPayment?.id);
+const accountApi = {
+  bankList: () => Get("master/account/bank/list", {}, false),
+  oppList: () => Get("master/account/opposite/list", {}, false),
+};
+
+const emptyDefaults = {
+  paymentMode: "manual",
+  bankAccount: "",
+  voucherNo: "",
+  date: "",
+  oppAccount: "",
+  amount: "",
+  transactionMode: "neft",
+  chequeNumber: "",
+  chequeDate: "",
+  chequeClearDate: "",
+  narration: "",
+} as const; 
+
+const formatDateForApi = (date: Date): string => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerProps) {
+  const [submitting, setSubmitting] = useState(false);
+  const [bankAccountOptions, setBankAccountOptions] = useState<{ id: string; label: string }[]>([]);
+  const [oppAccountOptions, setOppAccountOptions] = useState<AccountOption[]>([]);
 
   const {
     register,
@@ -45,31 +64,107 @@ export function BankPaymentDrawer({
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
-  } = useForm<BankPayment>({
-    defaultValues: {
-      paymentMode: "manual",
-      transactionMode: "neft",
-      bomNo: [],
-    },
-    values: bankPayment || undefined,
+  } = useForm<BankPayment & { paymentMode: "manual" | "bom" }>({
+    defaultValues: emptyDefaults,
   });
 
   const paymentMode = watch("paymentMode");
   const transactionMode = watch("transactionMode");
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    reset(emptyDefaults);
+    setBankAccountOptions([]);
+    setOppAccountOptions([]);
+
+    (async () => {
+      try {
+        const financialYearId = sessionStorage.getItem("financialYearId") || "";
+
+        const [bankRes, oppRes, voucherRes] = await Promise.all([
+          accountApi.bankList(),
+          accountApi.oppList(),
+          paymentApi.nextVoucherNo(financialYearId),
+        ]);
+
+        const bankList = bankRes?.data?.data || [];
+        setBankAccountOptions(
+          bankList.map((a: any) => ({ id: String(a.id), label: a.accountName })),
+        );
+
+        const oppList = oppRes?.data?.data || [];
+        setOppAccountOptions(
+          oppList.map((a: any) => ({
+            id: String(a.id),
+            name: a.accountName,
+            number: a.mobileNo || "",
+            balance: Number(a.currentBalance || 0),
+          })),
+        );
+
+        const voucherNo = voucherRes?.data?.data?.voucherNo || "";
+        setValue("voucherNo", voucherNo);
+        setValue("date", formatDateForApi(new Date()));
+      } catch (err) {
+        toasterrormsg("Failed to load form data");
+      }
+    })();
+  }, [isOpen, reset, setValue]);
+
   const handleClose = () => {
-    reset();
+    reset(emptyDefaults);
     close();
   };
 
-  const onSubmit = (data: BankPayment) => {
-    onSave({
-      ...data,
-      id: bankPayment?.id || crypto.randomUUID(),
-      createdAt: bankPayment?.createdAt || new Date().toISOString(),
-    });
-    handleClose();
+  const onSubmit = async (data: any) => {
+    if (data.paymentMode === "bom") {
+      toasterrormsg("BOM payment is not available yet.");
+      return;
+    }
+
+    // Cheque mode client-side guard
+    if (data.transactionMode === "cheque" && (!data.chequeNumber || !data.chequeDate)) {
+      toasterrormsg("Cheque number and cheque date are required for cheque mode.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const financialYearId = sessionStorage.getItem("financialYearId");
+      const companyId = sessionStorage.getItem("companyId");
+
+      const res = await paymentApi.create({
+        bankAccountId: Number(data.bankAccount),
+        voucherNo: data.voucherNo,
+        date: data.date,
+        oppAccountId: Number(data.oppAccount),
+        amount: Number(data.amount),
+        transactionMode: String(data.transactionMode).toUpperCase(),
+        chequeNo: data.transactionMode === "cheque" ? data.chequeNumber : "",
+        chequeDate: data.transactionMode === "cheque" ? data.chequeDate : "",
+        chequeClearDate: data.transactionMode === "cheque" ? data.chequeClearDate : "",
+        narration: data.narration || "",
+        financialYearId: financialYearId ? Number(financialYearId) : undefined,
+        createdBy: companyId ? Number(companyId) : undefined,
+        createdType: "Super Admin",
+      });
+
+      if (res?.data?.status === 400 || res?.data?.success === false) {
+        toasterrormsg(res?.data?.message || "Something went wrong.");
+        return;
+      }
+
+      toastsuccessmsg(res?.data?.message || "Bank payment saved successfully");
+      onSaved();
+      handleClose();
+    } catch (err: any) {
+      toasterrormsg(err?.response?.data?.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -96,73 +191,32 @@ export function BankPaymentDrawer({
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full lg:max-w-[50%] transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
-            <h3 className="text-lg font-semibold text-white">
-              {isEdit ? "Edit Bank Payment" : "Add Bank Payment"}
-            </h3>
-            <Button
-              onClick={handleClose}
-              variant="flat"
-              isIcon
-              className="size-6 rounded-full text-white"
-            >
+            <h3 className="text-lg font-semibold text-white">Add Bank Payment</h3>
+            <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full text-white">
               <XMarkIcon className="size-4.5" />
             </Button>
           </div>
 
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="flex grow flex-col overflow-hidden"
-          >
+          <form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col overflow-hidden">
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-
               {/* Payment Mode Radio */}
               <Controller
                 control={control}
                 name="paymentMode"
-                defaultValue="manual"
                 render={({ field }) => (
                   <div className="flex items-center gap-6 py-2">
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-dark-100">
-                      <Radio
-                        checked={field.value === "manual"}
-                        onChange={() => field.onChange("manual")}
-                      />
+                      <Radio checked={field.value === "manual"} onChange={() => field.onChange("manual")} />
                       Manual
                     </label>
-
-                    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-dark-100">
-                      <Radio
-                        checked={field.value === "bom"}
-                        onChange={() => field.onChange("bom")}
-                      />
-                      BOM - Cancel
+                    <label className="flex cursor-not-allowed items-center gap-2 text-sm font-medium text-gray-400">
+                      <Radio checked={field.value === "bom"} disabled onChange={() => field.onChange("bom")} />
+                      BOM (Coming Soon)
                     </label>
                   </div>
                 )}
               />
-
-              {/* BOM No — only shown when BOM is selected */}
-              {paymentMode === "bom" && (
-                <Controller
-                  control={control}
-                  name="bomNo"
-                  rules={{ required: "BOM No is required" }}
-                  render={({ field: { value, onChange } }) => (
-                    <Combobox
-                      data={bomOptions}
-                      displayField="label"
-                      value={value}
-                      onChange={onChange}
-                      placeholder="Select BOM No."
-                      label="BOM No."
-                      searchFields={["label"]}
-                      error={errors.bomNo?.message}
-                    />
-                  )}
-                />
-              )}
 
               {/* Bank Account / Voucher No / Date */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -173,45 +227,44 @@ export function BankPaymentDrawer({
                   render={({ field: { value, onChange, ...rest } }) => (
                     <Listbox
                       data={bankAccountOptions}
-                      value={
-                        bankAccountOptions.find((item) => item.id === value) || null
-                      }
+                      value={bankAccountOptions.find((item) => item.id === value) || null}
                       onChange={(item) => onChange(item.id)}
                       label="Bank Account"
-                      placeholder="Select"
+                      placeholder="Select Bank Account"
                       displayField="label"
-                      error={errors.bankAccount?.message}
+                      error={errors.bankAccount?.message as string}
                       {...rest}
                     />
                   )}
                 />
 
                 <Input
-                  {...register("voucherNo", {
-                    required: "Voucher no is required",
-                  })}
+                  {...register("voucherNo", { required: "Voucher no is required" })}
                   label="Voucher No."
-                  placeholder="Voucher No."
-                  error={errors.voucherNo?.message}
+                  placeholder="Auto generated"
+                  readOnly
+                  error={errors.voucherNo?.message as string}
                 />
 
-                <DatePicker
-                  options={{
-                    disable: [
-                      function (date) {
-                        return date.getDay() === 0 || date.getDay() === 6;
-                      },
-                    ],
-                    locale: {
-                      firstDayOfWeek: 1,
-                    },
-                  }}
-                  placeholder="Choose date..."
-                  label="Date"
+                <Controller
+                  control={control}
+                  name="date"
+                  rules={{ required: "Date is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <DatePicker
+                      label="Date"
+                      value={value}
+                      onChange={(dates: Date[]) => {
+                        const picked = dates?.[0];
+                        onChange(picked ? formatDateForApi(picked) : "");
+                      }}
+                      placeholder="Choose date..."
+                      error={errors.date?.message as string}
+                    />
+                  )}
                 />
               </div>
 
-              {/* Divider */}
               <div className="border-t-3 border-dotted border-primary my-8" />
 
               {/* Opp Account / Amount */}
@@ -228,20 +281,18 @@ export function BankPaymentDrawer({
                         onChange={(item: AccountOption) => onChange(item.id)}
                         label="Opp. Account"
                         placeholder="Select Opp. Account"
-                        error={errors.oppAccount?.message}
+                        error={errors.oppAccount?.message as string}
                       />
                     )}
                   />
                 </div>
 
                 <Input
-                  {...register("amount", {
-                    required: "Amount is required",
-                  })}
+                  {...register("amount", { required: "Amount is required" })}
                   label="Amount"
                   placeholder="Amount"
                   type="number"
-                  error={errors.amount?.message}
+                  error={errors.amount?.message as string}
                 />
               </div>
 
@@ -249,22 +300,13 @@ export function BankPaymentDrawer({
               <Controller
                 control={control}
                 name="transactionMode"
-                defaultValue="neft"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-dark-100">
-                      Mode:
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-dark-100">Mode:</label>
                     <div className="flex flex-wrap items-center gap-6">
                       {["neft", "rtgs", "imps", "cheque", "upi"].map((mode) => (
-                        <label
-                          key={mode}
-                          className="flex cursor-pointer items-center gap-2 text-sm font-medium uppercase text-gray-700 dark:text-dark-100"
-                        >
-                          <Radio
-                            checked={field.value === mode}
-                            onChange={() => field.onChange(mode)}
-                          />
+                        <label key={mode} className="flex cursor-pointer items-center gap-2 text-sm font-medium uppercase text-gray-700 dark:text-dark-100">
+                          <Radio checked={field.value === mode} onChange={() => field.onChange(mode)} />
                           {mode}
                         </label>
                       ))}
@@ -277,66 +319,65 @@ export function BankPaymentDrawer({
               {transactionMode === "cheque" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Input
-                    {...register("chequeNumber", {
-                      required: "Cheque number is required",
-                    })}
+                    {...register("chequeNumber", { required: "Cheque number is required" })}
                     label="Cheque Number"
                     placeholder="Enter cheque number"
-                    error={errors.chequeNumber?.message}
+                    error={errors.chequeNumber?.message as string}
                   />
 
-                  <DatePicker
-                    options={{
-                      disable: [
-                        function (date) {
-                          return date.getDay() === 0 || date.getDay() === 6;
-                        },
-                      ],
-                      locale: {
-                        firstDayOfWeek: 1,
-                      },
-                    }}
-                    placeholder="Choose date..."
-                    label="Cheque Date"
+                  <Controller
+                    control={control}
+                    name="chequeDate"
+                    rules={{ required: "Cheque date is required" }}
+                    render={({ field: { value, onChange } }) => (
+                      <DatePicker
+                        label="Cheque Date"
+                        value={value}
+                        onChange={(dates: Date[]) => {
+                          const picked = dates?.[0];
+                          onChange(picked ? formatDateForApi(picked) : "");
+                        }}
+                        placeholder="Choose date..."
+                        error={errors.chequeDate?.message as string}
+                      />
+                    )}
                   />
 
-                  <DatePicker
-                    options={{
-                      disable: [
-                        function (date) {
-                          return date.getDay() === 0 || date.getDay() === 6;
-                        },
-                      ],
-                      locale: {
-                        firstDayOfWeek: 1,
-                      },
-                    }}
-                    placeholder="Choose date..."
-                    label="Cheque Clear Date"
+                  <Controller
+                    control={control}
+                    name="chequeClearDate"
+                    render={({ field: { value, onChange } }) => (
+                      <DatePicker
+                        label="Cheque Clear Date"
+                        value={value}
+                        onChange={(dates: Date[]) => {
+                          const picked = dates?.[0];
+                          onChange(picked ? formatDateForApi(picked) : "");
+                        }}
+                        placeholder="Choose date..."
+                      />
+                    )}
                   />
                 </div>
               )}
 
-              {/* Narration */}
               <Textarea
                 {...register("narration")}
                 rows={5}
                 label="Narration"
                 placeholder="Enter Narration"
-                error={errors.narration?.message}
+                error={errors.narration?.message as string}
               />
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
-              <Button onClick={handleClose}>
-                Cancel
-              </Button>
+              <Button type="button" onClick={handleClose}>Cancel</Button>
               <Button
                 type="submit"
+                disabled={submitting || paymentMode === "bom"}
                 className="bg-red-600 text-white hover:bg-red-700"
               >
-                {isEdit ? "Update Bank Payment" : "Add Bank Payment"}
+                {submitting ? "Saving..." : "Add Bank Payment"}
               </Button>
             </div>
           </form>

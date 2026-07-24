@@ -95,6 +95,8 @@ userMaster: UsersIcon,
   "accounting_master.bankReceipt": BuildingLibraryIcon,
   "accounting_master.contra": ArrowsRightLeftIcon,
   "accounting_master.journalEntry": ClipboardDocumentListIcon,
+  "accounting_master.cashBook": ClipboardDocumentListIcon,
+  "accounting_master.bankBook": ClipboardDocumentListIcon,
 
   settings: SettingIcon,
   "settings.general": HiUserIcon,
