@@ -60,5 +60,19 @@ export const accountingMaster: NavigationTree = {
       title: "Journal Entry",
       icon: "accounting_master.journalEntry",
     },
+    {
+      id: "accounting_master.cashBook",
+      type: "item",
+      path: "/accounting-master/cash-book",
+      title: "Cash Book",
+      icon: "accounting_master.cashBook",
+    },
+    {
+      id: "accounting_master.bankBook",
+      type: "item",
+      path: "/accounting-master/bank-book",
+      title: "Bank Book",
+      icon: "accounting_master.bankBook",
+    },
   ],
 };

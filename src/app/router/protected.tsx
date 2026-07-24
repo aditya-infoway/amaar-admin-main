@@ -369,6 +369,22 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+            {
+              path: "cash-book",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/accounting-master/cash-book")
+                ).default,
+              }),
+            },
+            {
+              path: "bank-book",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/accounting-master/bank-book")
+                ).default,
+              }),
+            },
           ],
         },
         {

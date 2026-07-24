@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { formatDateDDMMYYYY } from "@/ApiHelper";
 
 import {
   SelectCell,
@@ -11,8 +12,6 @@ import { TextCell } from "../shared/tableCells";
 import { ExportColumn } from "../shared/export";
 import { CashPayment } from "../shared/types";
 
-// ✅ CHANGED — JSX hataya, createElement use kiya kyunki file .ts hai (.tsx nahi)
-// Edit hata diya — sirf Delete icon rakha (abhi non-functional, meta.deleteRow call karta he)
 const RowActions = ({ row, table }: any) =>
   createElement(
     "div",
@@ -40,10 +39,19 @@ export const columns: ColumnDef<CashPayment>[] = [
     id: "date",
     accessorKey: "date",
     header: "Date",
-    cell: (info) => {
-      const value = info.getValue<string>();
-      return value ? new Date(value).toLocaleDateString() : "—";
-    },
+    cell: (info) => formatDateDDMMYYYY(info.getValue<string>()),  // 👈 change yaha
+  },
+  {
+    id: "createdBy",
+    accessorKey: "createdBy",
+    header: "Created By",
+    cell: TextCell,
+  },
+  {
+    id: "createdType",
+    accessorKey: "createdType",
+    header: "Created Type",
+    cell: TextCell,
   },
   { id: "actions", header: "Actions", cell: RowActions, enableSorting: false },
 ];
@@ -56,6 +64,8 @@ export const exportColumns: ExportColumn<CashPayment>[] = [
   {
     key: "date",
     header: "Date",
-    format: (value: unknown) => (value ? new Date(value as string).toLocaleDateString() : ""),
+    format: (value: unknown) => formatDateDDMMYYYY(value as string),
   },
+  { key: "createdBy", header: "Created By" },
+  { key: "createdType", header: "Created Type" },
 ];

@@ -15,6 +15,8 @@ export interface CashPayment {
   oppAccount: string;
   amount: string;
   narration: string;
+  createdBy?: string;      // 👈 naya
+  createdType?: string;
   createdAt: string;
   bomNo?: { id: string; label: string }[];
 
@@ -99,6 +101,8 @@ export interface BankPayment {
   chequeDate?: string;
   chequeClearDate?: string;
   narration: string;
+  createdBy?: string;      // 👈 naya
+  createdType?: string;
   createdAt: string;
 }
 export interface CashReceipt {
@@ -145,4 +149,57 @@ export interface JournalEntry {
   amount: string;
   narration: string;
   createdAt: string;
+}
+
+export type CashBookRow = {
+  sr: number;
+  id: string;
+  voucherNo: string;
+  date: string;
+  type: string; // whatever is stored in paymentCollectedByModules — "CP", "BP", "LCR", "JCR", "DCR", ...
+  accountName: string;
+  partyName: string;
+  receipt: string; // "" when this row is not a receipt
+  payment: string; // "" when this row is not a payment
+  narration: string;
+  createdBy: string;
+  createdType: string;
+};
+ 
+export type CashBookSummary = {
+  list: CashBookRow[];
+  totalReceipts: string;
+  totalPayments: string;
+  closingBalance: string;
+  totalTransactions: number;
+};
+
+export interface BankBookRow {
+  sr: number;
+  id: string;
+  branch: string;
+  date: string;
+  voucherNo: string;
+  type: string;
+  accountName: string;
+  partyName: string;
+  receipt: string;
+  payment: string;
+  mode: string;
+  chequeNo: string;
+  chequeDate: string;
+  clearDate: string;
+  narration: string;
+  createdType: string;
+  createdBy: string;
+}
+
+export interface BankBookSummary {
+  list: BankBookRow[];
+  openingBalance: string | null;
+  totalReceipts: string;
+  totalPayments: string;
+  closingBalance: string;
+  totalTransactions: number;
+  multipleBanks: boolean;
 }

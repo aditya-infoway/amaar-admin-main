@@ -7,45 +7,55 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
+import { Get, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
 import { BankPaymentDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
-import { BankPayment, emptyBankPayment } from "./data";
+import { BankPayment } from "./data";
 
 export default function BankPaymentPage() {
-  const [data, setData] = useState<BankPayment[]>(() =>
-    masterStorage.getBankPayments(),
-  );
+  const [data, setData] = useState<BankPayment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<BankPayment | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterVoucher, setFilterVoucher] = useState("");
 
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const financialYearId = sessionStorage.getItem("financialYearId") || "";
+      const response = await Get("payment/bank/list", { financialYearId }, false);
+      if (response?.data?.success) {
+        setData(response.data.data || []);
+      } else {
+        toasterrormsg(response?.data?.message || "Failed to fetch bank payments.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching bank payments.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      if (
-        filterVoucher &&
-        !item.voucherNo.toLowerCase().includes(filterVoucher.toLowerCase())
-      )
-        return false;
+      if (filterVoucher && !item.voucherNo.toLowerCase().includes(filterVoucher.toLowerCase())) return false;
       return true;
     });
   }, [data, filterVoucher]);
-
-  const persist = (next: BankPayment[]) => {
-    setData(next);
-    masterStorage.saveBankPayments(next);
-  };
 
   const table = useReactTable({
     data: filteredData,
@@ -54,18 +64,8 @@ export default function BankPaymentPage() {
     enableRowSelection: true,
     getRowId: (row) => row.id,
     meta: {
-      openEditDrawer: (row: BankPayment) => {
-        setEditing(row);
-        setDrawerOpen(true);
-      },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: () => toasterrormsg("Delete is not available yet."),
+      deleteRows: () => toasterrormsg("Delete is not available yet."),
     },
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
@@ -86,21 +86,9 @@ export default function BankPaymentPage() {
           table={table}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
-          onCreate={() => {
-            setEditing(emptyBankPayment());
-            setDrawerOpen(true);
-          }}
-          onExportExcel={() =>
-            exportToExcel(filteredData, exportColumns, "bank_payments")
-          }
-          onExportPdf={() =>
-            exportToPdf(
-              filteredData,
-              exportColumns,
-              "Bank Payment List",
-              "bank_payments",
-            )
-          }
+          onCreate={() => setDrawerOpen(true)}
+          onExportExcel={() => exportToExcel(filteredData, exportColumns, "bank_payments")}
+          onExportPdf={() => exportToPdf(filteredData, exportColumns, "Bank Payment List", "bank_payments")}
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-1">
               <Input
@@ -116,22 +104,14 @@ export default function BankPaymentPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No bank payments found. Click Add Bank Payment to add one."
+          emptyMessage={loading ? "Loading bank payments..." : "No bank payments found. Click Add Bank Payment to add one."}
         />
       </div>
 
       <BankPaymentDrawer
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
-        bankPayment={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        onSaved={fetchAll}
       />
     </Page>
   );
