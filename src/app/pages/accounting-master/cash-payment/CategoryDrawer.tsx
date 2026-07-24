@@ -18,7 +18,7 @@ import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 interface CashPaymentDrawerProps {
   isOpen: boolean;
   close: () => void;
-  onSaved: () => void; // save hone ke baad list refresh trigger karne ke liye
+  onSaved: () => void;
 }
 
 const paymentApi = {
@@ -30,6 +30,17 @@ const paymentApi = {
 const accountApi = {
   cashList: () => Get("master/account/cash/list", {}, false),
   oppList: () => Get("master/account/opposite/list", {}, false),
+};
+
+// 👇 Complete empty defaults — ye hamesha yahi ek jagah se reset hoga, partial object kahin bhi nahi
+const emptyDefaults = {
+  paymentMode: "manual" as const,
+  cashAccount: "",
+  voucherNo: "",
+  date: "",
+  oppAccount: "",
+  amount: "",
+  narration: "",
 };
 
 export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerProps) {
@@ -46,14 +57,18 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
     setValue,
     formState: { errors },
   } = useForm<CashPayment & { paymentMode: "manual" | "bom" }>({
-    defaultValues: { paymentMode: "manual", date: "" },
+    defaultValues: emptyDefaults,
   });
 
   const paymentMode = watch("paymentMode");
 
-  // Drawer open hote hi: cash accounts, opp accounts, aur next voucher no fetch karo
+  // Drawer open hote hi: SABSE PEHLE form ko fully reset karo, phir data fetch karo
   useEffect(() => {
     if (!isOpen) return;
+
+    reset(emptyDefaults);            // 👈 purana data (amount/narration/accounts) turant saaf
+    setCashAccountOptions([]);        // dropdown options bhi reset — purani list flash na ho
+    setOppAccountOptions([]);
 
     (async () => {
       try {
@@ -87,15 +102,14 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
         toasterrormsg("Failed to load form data");
       }
     })();
-  }, [isOpen, setValue]);
+  }, [isOpen, reset, setValue]);
 
   const handleClose = () => {
-    reset({ paymentMode: "manual" });
+    reset(emptyDefaults);   // 👈 yaha bhi complete object se reset
     close();
   };
 
   const onSubmit = async (data: any) => {
-    // BOM abhi save nahi hota — extra safety guard
     if (data.paymentMode === "bom") {
       toasterrormsg("BOM payment is not available yet.");
       return;
@@ -104,6 +118,7 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
     try {
       setSubmitting(true);
       const financialYearId = sessionStorage.getItem("financialYearId");
+      const companyId = sessionStorage.getItem("companyId");
 
       const res = await paymentApi.create({
         cashAccountId: Number(data.cashAccount),
@@ -113,6 +128,8 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
         amount: Number(data.amount),
         narration: data.narration || "",
         financialYearId: financialYearId ? Number(financialYearId) : undefined,
+        createdBy: companyId ? Number(companyId) : undefined,
+        createdType: "Super Admin",
       });
 
       if (res?.data?.status === 400 || res?.data?.success === false) {
@@ -122,7 +139,7 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
 
       toastsuccessmsg(res?.data?.message || "Cash payment saved successfully");
       onSaved();
-      handleClose();
+      handleClose();   // 👈 save ke baad bhi fully reset hoke close hoga
     } catch (err: any) {
       toasterrormsg(err?.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
@@ -154,7 +171,6 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full lg:max-w-[50%] transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
             <h3 className="text-lg font-semibold text-white">Add Cash Payment</h3>
             <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full text-white">
@@ -164,11 +180,9 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col overflow-hidden">
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-              {/* Payment Mode Radio */}
               <Controller
                 control={control}
                 name="paymentMode"
-                defaultValue="manual"
                 render={({ field }) => (
                   <div className="flex items-center gap-6 py-2">
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-dark-100">
@@ -183,7 +197,6 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
                 )}
               />
 
-              {/* Cash Account / Voucher No / Date */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Controller
                   control={control}
@@ -236,7 +249,6 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
 
               <div className="border-t-3 border-dotted border-primary my-8" />
 
-              {/* Opp Account / Amount */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="sm:col-span-2">
                   <Controller
