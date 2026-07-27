@@ -1,5 +1,5 @@
 import { ChevronLeftIcon } from "@heroicons/react/20/solid";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router";
 
@@ -59,13 +59,18 @@ interface OptionItem {
   label: string;
 }
 
+// Group ke saath uski category bhi rakhni hai filtering ke liye
+interface GroupOptionItem extends OptionItem {
+  itemCategoryId: string;
+}
+
 export default function ItemMasterFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
   const [categoryOptions, setCategoryOptions] = useState<OptionItem[]>([]);
-  const [groupOptionsList, setGroupOptionsList] = useState<OptionItem[]>([]);
+  const [allGroupOptions, setAllGroupOptions] = useState<GroupOptionItem[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
@@ -86,6 +91,7 @@ export default function ItemMasterFormPage() {
 
   const stockMapping = watch("stockMapping");
   const barcodeType = watch("barcodeType");
+  const selectedCategoryId = watch("itemCategoryId");
 
   // ---- Item Category — dynamic from Item Category master ----
   useEffect(() => {
@@ -105,15 +111,19 @@ export default function ItemMasterFormPage() {
     })();
   }, []);
 
-  // ---- Group — dynamic from Item Group master ----
+  // ---- Group — dynamic from Item Group master (poori list, category ke saath) ----
   useEffect(() => {
     (async () => {
       try {
         setLoadingGroups(true);
         const res = await Get("master/itemgroup/list", {}, false);
         const list = res?.data?.data || [];
-        setGroupOptionsList(
-          list.map((g: any) => ({ id: String(g.itemGroupId), label: g.groupName }))
+        setAllGroupOptions(
+          list.map((g: any) => ({
+            id: String(g.itemGroupId),
+            label: g.groupName,
+            itemCategoryId: g.itemCategoryId != null ? String(g.itemCategoryId) : "",
+          }))
         );
       } catch (err) {
         toasterrormsg("Failed to load groups");
@@ -122,6 +132,14 @@ export default function ItemMasterFormPage() {
       }
     })();
   }, []);
+
+  // ---- Selected category ke hisab se groups filter ----
+  const filteredGroupOptions = useMemo(() => {
+    if (!selectedCategoryId) return [];
+    return allGroupOptions.filter(
+      (g) => g.itemCategoryId === selectedCategoryId
+    );
+  }, [allGroupOptions, selectedCategoryId]);
 
   // ---- Edit mode: existing item load karo ----
   useEffect(() => {
@@ -300,11 +318,16 @@ export default function ItemMasterFormPage() {
                   control={control}
                   name="itemCategoryId"
                   rules={{ required: "Item category is required" }}
-                  render={({ field: { value, onChange, ...rest } }) => (
+                  render={({ field: { value, onChange } }) => (
                     <Combobox
                       data={categoryOptions}
                       value={categoryOptions.find((item) => item.id === value) || null}
-                      onChange={(item: any) => onChange(item.id)}
+                      onChange={(item: any) => {
+                        onChange(item.id);
+                        // Category badalte hi purani Group selection clear karo
+                        setValue("groupId", "", { shouldValidate: false });
+                        clearErrors("groupId");
+                      }}
                       label="Item Category"
                       placeholder={loadingCategories ? "Loading..." : "Select item category"}
                       displayField="label"
@@ -314,22 +337,30 @@ export default function ItemMasterFormPage() {
                   )}
                 />
 
-                {/* Group — dynamic */}
+                {/* Group — sirf selected category ke groups, category select na ho to disabled */}
                 <Controller
                   control={control}
                   name="groupId"
                   rules={{ required: "Group is required" }}
-                  render={({ field: { value, onChange, ...rest } }) => (
-
+                  render={({ field: { value, onChange } }) => (
                     <Combobox
-                      data={groupOptionsList}
-                      value={groupOptionsList.find((item) => item.id === value) || null}
+                      data={filteredGroupOptions}
+                      value={filteredGroupOptions.find((item) => item.id === value) || null}
                       onChange={(item: any) => onChange(item.id)}
                       label="Group"
-                      placeholder={loadingGroups ? "Loading..." : "Select group"}
+                      placeholder={
+                        !selectedCategoryId
+                          ? "Select item category first"
+                          : loadingGroups
+                          ? "Loading..."
+                          : filteredGroupOptions.length === 0
+                          ? "No groups in this category"
+                          : "Select group"
+                      }
                       displayField="label"
                       error={errors.groupId?.message}
                       searchFields={["label"]}
+                      disabled={!selectedCategoryId || loadingGroups}
                     />
                   )}
                 />
@@ -492,7 +523,6 @@ export default function ItemMasterFormPage() {
                   <div className="max-w-md">
                     <Input
                       {...register("barcode", {
-                        // required hataya — ab optional hai
                         minLength: { value: 4, message: "Barcode must be at least 4 characters" },
                         maxLength: { value: 30, message: "Barcode must not exceed 30 characters" },
                         pattern: {
@@ -513,10 +543,7 @@ export default function ItemMasterFormPage() {
                     <p className="mt-1 font-mono text-lg font-bold text-gray-900 dark:text-dark-50">
                       {generatingBarcode ? "Generating..." : watch("barcode") || "—"}
                     </p>
-                    <input
-                      type="hidden"
-                      {...register("barcode")}   // 👈 required hataya yahan se bhi
-                    />
+                    <input type="hidden" {...register("barcode")} />
                   </div>
                 )}
               </div>

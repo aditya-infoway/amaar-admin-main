@@ -1,6 +1,8 @@
 export interface ItemGroup {
   id: string;
   groupName: string;
+  itemCategoryId: string;
+  categoryName?: string;
   status: string;
   createdAt?: string;
 }
@@ -8,13 +10,15 @@ export interface ItemGroup {
 export const emptyItemGroup = (): ItemGroup => ({
   id: "",
   groupName: "",
+  itemCategoryId: "",
   status: "active",
 });
 
-// API se aane wale raw row ko frontend Type me map karta hai
 export const mapApiItemGroupToItemGroup = (item: any): ItemGroup => ({
   id: String(item.itemGroupId),
   groupName: item.groupName,
+  itemCategoryId: item.itemCategoryId != null ? String(item.itemCategoryId) : "",
+  categoryName: item.categoryName || "",
   status: item.status,
   createdAt: item.created,
 });

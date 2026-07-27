@@ -97,6 +97,7 @@ userMaster: UsersIcon,
   "accounting_master.journalEntry": ClipboardDocumentListIcon,
   "accounting_master.cashBook": ClipboardDocumentListIcon,
   "accounting_master.bankBook": ClipboardDocumentListIcon,
+  "accounting_master.ledgerReport": ClipboardDocumentListIcon,
 
   settings: SettingIcon,
   "settings.general": HiUserIcon,

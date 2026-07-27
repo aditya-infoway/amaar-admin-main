@@ -35,13 +35,30 @@ export default function ItemGroupPage() {
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
+  // naya state
+  const [categoryOptions, setCategoryOptions] = useState<{ id: string; label: string }[]>([]);
+
+  // ---- Fetch item categories once, for merging category names ----
+  const fetchCategories = async () => {
+    try {
+      const res = await Get("master/itemcategory/list", {}, false);
+      const list = res?.data?.data || [];
+      setCategoryOptions(
+        list.map((c: any) => ({ id: String(c.itemCategoryId), label: c.categoryName }))
+      );
+    } catch (error) {
+      // ignore, table will show "-" for category
+    }
+  };
+
   // ---- Fetch item groups ----
   const fetchAll = async () => {
     setLoading(true);
     try {
       const response = await Get("master/itemgroup/list", {}, false);
       if (response.data?.success) {
-        setData((response.data.data || []).map(mapApiItemGroupToItemGroup));
+        const mapped = (response.data.data || []).map(mapApiItemGroupToItemGroup);
+        setData(mapped);
       } else {
         toasterrormsg(response.data?.message || "Failed to fetch item groups.");
       }
@@ -53,26 +70,35 @@ export default function ItemGroupPage() {
   };
 
   useEffect(() => {
+    fetchCategories();
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // merge category name into rows once both are loaded
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      if (
-        filterName &&
-        !item.groupName.toLowerCase().includes(filterName.toLowerCase())
-      )
-        return false;
-      if (filterStatus && item.status !== filterStatus) return false;
-      return true;
-    });
-  }, [data, filterName, filterStatus]);
+    return data
+      .map((item) => ({
+        ...item,
+        categoryName:
+          categoryOptions.find((c) => c.id === item.itemCategoryId)?.label || "",
+      }))
+      .filter((item) => {
+        if (
+          filterName &&
+          !item.groupName.toLowerCase().includes(filterName.toLowerCase())
+        )
+          return false;
+        if (filterStatus && item.status !== filterStatus) return false;
+        return true;
+      });
+  }, [data, categoryOptions, filterName, filterStatus]);
 
   // ---- Save (create or update) via API ----
   const handleSave = async (item: ItemGroup) => {
     const payload = {
       groupName: item.groupName,
+      itemCategoryId: Number(item.itemCategoryId),
       status: item.status,
     };
 
