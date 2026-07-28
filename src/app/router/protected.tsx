@@ -385,6 +385,27 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+            {
+              path: "ledger-report",
+              children: [
+                {
+                  index: true,
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/accounting-master/ledger-report")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "details/:id",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/accounting-master/ledger-report/details")
+                    ).default,
+                  }),
+                },
+              ],
+            },
           ],
         },
         {

@@ -6,13 +6,19 @@ import {
 } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Controller, useForm } from "react-hook-form";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
+import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Button, Input } from "@/components/ui";
 import { Get } from "@/ApiHelper";
 import { statusOptions } from "../shared/constants";
 import { ItemGroup } from "./data";
+
+interface OptionItem {
+  id: string;
+  label: string;
+}
 
 interface ItemGroupDrawerProps {
   isOpen: boolean;
@@ -29,6 +35,8 @@ export function ItemGroupDrawer({
 }: ItemGroupDrawerProps) {
   const isEdit = Boolean(itemGroup?.id);
   const [checkingName, setCheckingName] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<OptionItem[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const {
     register,
@@ -41,6 +49,27 @@ export function ItemGroupDrawer({
   } = useForm<ItemGroup>({
     values: itemGroup || undefined,
   });
+
+  // ---- Item Category — dynamic from Item Category master ----
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingCategories(true);
+        const res = await Get("master/itemcategory/list", {}, false);
+        const list = res?.data?.data || [];
+        setCategoryOptions(
+          list.map((c: any) => ({
+            id: String(c.itemCategoryId),
+            label: c.categoryName,
+          }))
+        );
+      } catch (error) {
+        // silently ignore, dropdown will just stay empty
+      } finally {
+        setLoadingCategories(false);
+      }
+    })();
+  }, []);
 
   const handleClose = () => {
     reset();
@@ -131,6 +160,26 @@ export function ItemGroupDrawer({
             className="flex grow flex-col overflow-hidden"
           >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+
+              {/* Item Category — dynamic */}
+              <Controller
+                control={control}
+                name="itemCategoryId"
+                rules={{ required: "Item category is required" }}
+                render={({ field: { value, onChange } }) => (
+                  <Combobox
+                    data={categoryOptions}
+                    value={categoryOptions.find((item) => item.id === value) || null}
+                    onChange={(item: any) => onChange(item.id)}
+                    label="Item Category"
+                    placeholder={loadingCategories ? "Loading..." : "Select item category"}
+                    displayField="label"
+                    error={errors.itemCategoryId?.message}
+                    searchFields={["label"]}
+                  />
+                )}
+              />
+              
               {/* Item Group Name */}
               <Input
                 {...register("groupName", {

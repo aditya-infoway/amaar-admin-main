@@ -203,3 +203,50 @@ export interface BankBookSummary {
   totalTransactions: number;
   multipleBanks: boolean;
 }
+
+export interface LedgerAccountRow {
+  id: number;
+  accountName: string;
+  groupName: string;
+  addressLine1: string;
+  cityName: string;
+  stateName: string;
+  currentBalance: number;
+  currentDrOrCr: "DR" | "CR";
+}
+
+export type LedgerReportType = "all" | "ledger" | "default";
+
+export interface LedgerReportModalValues {
+  fromDate: string;
+  toDate: string;
+  displayType: string;
+}
+
+export interface LedgerDetailRow {
+  sr: number;
+  date: string;
+  voucherNo: string;
+  type: string;
+  particulars: string;
+  debit: string;
+  credit: string;
+  balance: string;
+}
+
+export interface LedgerDetailSummary {
+  account: {
+    id: number;
+    accountName: string;
+    groupName: string;
+  };
+  fromDate: string;
+  toDate: string;
+  openingBalance: string;
+  openingBalanceLabel: string;
+  totalDebit: string;
+  totalCredit: string;
+  closingBalance: string;
+  closingBalanceLabel: string;
+  list: LedgerDetailRow[];
+}

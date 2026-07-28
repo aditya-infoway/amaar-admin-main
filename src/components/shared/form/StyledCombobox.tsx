@@ -115,6 +115,7 @@ function CustomCombobox<TValue = DataItem>(
     keys: searchFields,
     threshold: 0.2,
     matchAllOnEmptyQuery: true,
+    limit: data.length || 1000,
   });
 
   const boxSizeRef = useRef<HTMLDivElement>(null);

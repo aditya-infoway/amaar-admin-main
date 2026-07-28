@@ -74,5 +74,12 @@ export const accountingMaster: NavigationTree = {
       title: "Bank Book",
       icon: "accounting_master.bankBook",
     },
+    {
+      id: "accounting_master.ledgerReport",
+      type: "item",
+      path: "/accounting-master/ledger-report",
+      title: "Ledger Report",
+      icon: "accounting_master.ledgerReport",
+    },
   ],
 };
