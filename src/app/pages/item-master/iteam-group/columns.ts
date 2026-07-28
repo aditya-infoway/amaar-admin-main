@@ -19,6 +19,12 @@ export const columns: ColumnDef<ItemGroup>[] = [
     enableSorting: false,
   },
   {
+    id: "categoryName",
+    accessorKey: "categoryName",
+    header: "Item Category",
+    cell: TextCell,
+  },
+  {
     id: "groupName",
     accessorKey: "groupName",
     header: "Item Group Name",
@@ -48,6 +54,7 @@ export const columns: ColumnDef<ItemGroup>[] = [
 ];
 
 export const exportColumns: ExportColumn<ItemGroup>[] = [
+  { key: "categoryName", header: "Item Category" },
   { key: "groupName", header: "Item Group Name" },
   {
     key: "createdAt",

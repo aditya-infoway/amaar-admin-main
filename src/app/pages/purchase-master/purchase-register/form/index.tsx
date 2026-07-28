@@ -1199,6 +1199,7 @@ const bankComboValue = useMemo(() => {
     try {
 
       const financialYearId = sessionStorage.getItem("financialYearId");
+      const companyId = sessionStorage.getItem("companyId");
 
       const payload = {
         financialYearId: financialYearId,
@@ -1217,6 +1218,9 @@ const bankComboValue = useMemo(() => {
         discountPct: charges.discPct,
         discountAmount: charges.discAmt,
         roundAmount: charges.roundOff,
+
+        createdBy: companyId ? Number(companyId) : undefined,
+        createdType: "Super Admin",
 
         cashAccountId: termsValue === "Cash" ? cashAccount[0]?.id : null,
         bankAccountId: termsValue === "Bank" ? bankAccount[0]?.id : null,
