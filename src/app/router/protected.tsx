@@ -632,6 +632,14 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+            {
+              path: "prefix",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/settings/sections/Prefix")
+                ).default,
+              }),
+            },
           ],
         },
       ],

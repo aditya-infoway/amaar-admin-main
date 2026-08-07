@@ -26,6 +26,7 @@ import {
   UsersIcon,
   UserGroupIcon,
   CircleStackIcon,
+  HashtagIcon,
 } from "@heroicons/react/24/outline";
 import { ElementType } from "react";
 
@@ -64,9 +65,9 @@ export const navigationIcons: Record<string, ElementType> = {
   "leadMaster.list": UserGroupIcon,
 
   // User Master
-userMaster: UsersIcon,
-"user_master.createAccount": UserPlusIcon,
-"user_master.createEmployee": UsersIcon,
+  userMaster: UsersIcon,
+  "user_master.createAccount": UserPlusIcon,
+  "user_master.createEmployee": UsersIcon,
 
   // Purchase Master
   purchaseMaster: ShoppingCartIcon,
@@ -84,7 +85,7 @@ userMaster: UsersIcon,
   "enquiry_master.banker": BuildingLibraryIcon,
   "enquiry_master.finance": BanknotesIcon,
 
-    // Accounting Master
+  // Accounting Master
   accountingMaster: BanknotesIcon,
 
   "accounting_master.debitNote": DocumentTextIcon,
@@ -102,4 +103,5 @@ userMaster: UsersIcon,
   settings: SettingIcon,
   "settings.general": HiUserIcon,
   "settings.appearance": TbPalette,
+  "settings.prefix": HashtagIcon,
 };
