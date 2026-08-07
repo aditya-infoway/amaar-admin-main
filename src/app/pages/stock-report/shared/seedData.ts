@@ -11,7 +11,6 @@ import {
   Variant,
   VariantStructure,
 } from "./types";
-import { buildVariantStructureFromVariant } from "./variantStructureUtils";
 
 export const SEED_CATEGORIES: Category[] = [
   { id: "cat-1", code: "CAT001", categoryName: "Commercial Vehicles", slug: "commercial-vehicles", createdAt: "2024-01-10T00:00:00.000Z", status: "active" },
@@ -442,14 +441,3 @@ export const SEED_ITEMS: ItemMaster[] = [
     barcode: "8901234567006",
   },
 ];
-
-export const SEED_VARIANT_STRUCTURES: VariantStructure[] = SEED_VARIANTS.map(
-  (variant, index) =>
-    buildVariantStructureFromVariant(
-      variant,
-      SEED_CATEGORIES,
-      SEED_PRODUCT_SERIES,
-      SEED_MODELS,
-      `vstr-${index + 1}`,
-    ),
-);

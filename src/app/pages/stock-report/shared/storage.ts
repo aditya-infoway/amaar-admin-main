@@ -22,7 +22,6 @@ import {
   SEED_PRODUCT_SERIES,
   SEED_PROFESSIONS,
   SEED_VARIANTS,
-  SEED_VARIANT_STRUCTURES,
 } from "./seedData";
 
 const SEED_VERSION = "9";
@@ -67,7 +66,6 @@ function ensureAllSeeded(): void {
   write(KEYS.productSeries, SEED_PRODUCT_SERIES);
   write(KEYS.models, SEED_MODELS);
   write(KEYS.variants, SEED_VARIANTS);
-  write(KEYS.variantStructures, SEED_VARIANT_STRUCTURES);
   write(KEYS.items, SEED_ITEMS);
   write(KEYS.professions, SEED_PROFESSIONS);
   write(KEYS.enquiryStatuses, SEED_ENQUIRY_STATUSES);
@@ -153,7 +151,6 @@ export const masterStorage = {
     write(KEYS.productSeries, SEED_PRODUCT_SERIES);
     write(KEYS.models, SEED_MODELS);
     write(KEYS.variants, SEED_VARIANTS);
-    write(KEYS.variantStructures, SEED_VARIANT_STRUCTURES);
     write(KEYS.items, SEED_ITEMS);
     window.localStorage.setItem(KEYS.seedVersion, SEED_VERSION);
   },
