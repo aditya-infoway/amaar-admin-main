@@ -17,6 +17,13 @@ export const settings: NavigationTree = {
       icon: "settings.general",
     },
     {
+      id: "prefix",
+      type: "item",
+      path: "/settings/prefix",
+      title: "Prefix",
+      icon: "settings.prefix",
+    },
+    {
       id: "appearance",
       type: "item",
       path: "/settings/appearance",
