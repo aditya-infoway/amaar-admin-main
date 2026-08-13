@@ -8,12 +8,14 @@ import { master } from "./segments/master";
 import { purchaseMaster } from "./segments/purchaseMaster";
 import { stockReport } from "./segments/stockReport";
 import { userMaster } from "./segments/userMaster";
+import { followups } from "./segments/followups";
 
 export const navigation = [
   dashboards,
   master,
   itemMaster,
   leadMaster,
+  followups,
   enquiryMaster,
   accountingMaster,
   purchaseMaster,
