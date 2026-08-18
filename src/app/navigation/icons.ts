@@ -64,6 +64,9 @@ export const navigationIcons: Record<string, ElementType> = {
   leadMaster: UserGroupIcon,
   "leadMaster.list": UserGroupIcon,
 
+  followups: TbUsers,
+  "followups.list": TbUsers,
+
   // User Master
   userMaster: UsersIcon,
   "user_master.createAccount": UserPlusIcon,

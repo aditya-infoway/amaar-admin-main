@@ -611,6 +611,44 @@ const protectedRoutes: RouteObject = {
             // },
           ],
         },
+         // Followups
+        {
+          path: "followups",
+          children: [
+            {
+              index: true,
+              element: <Navigate to="todayfollowups" replace /> ,
+            },
+
+            {
+              path: "todayfollowups",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/followup/todayfolloups")
+                ).default,
+              }),
+            },
+
+            {
+              path: "follow-up/:id",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/followup/followup")
+                ).default,
+              }),
+            },
+
+            {
+              path: "history/:id",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/followup/followuphistory")
+                ).default,
+              }),
+            },
+
+          ],
+        },
       ],
     },
     // The app layout supports only the main layout. Avoid using it for other layouts.

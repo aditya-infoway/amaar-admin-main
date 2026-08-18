@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   MagnifyingGlassIcon,
   ChevronLeftIcon,
@@ -14,7 +14,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { Table, THead, TBody, Tr, Th, Td } from "@/components/ui/Table";
 import { DatePicker } from "@/components/shared/form/Datepicker";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, Textarea } from "@/components/ui";
+
 import { exportToExcel, exportToPdf } from "../shared/export";
 import {
   Dialog,
@@ -29,56 +30,32 @@ import {
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import MultiSelect from "@/components/shared/form/MultiSelect";
 import { Fragment } from "react";
+import {
+  Get,
+  Post,
+  Put,
+  Delete,
+  toasterrormsg,
+  toastsuccessmsg,
+} from "@/ApiHelper";
+import dayjs from "dayjs";
 
 interface MultiSelectOption {
   id: string;
   name: string;
 }
 
-// ─── STATIC MOCK DATA ──────────────────────────────────────────────────────
-
-const STATIC_CREATE_MASTER = [
-  {
-    id: 1,
-    type: "Trailer Detail",
-    description: "Trailer chassis frame",
-    actualItem: [{ id: "frame-assembly", name: "Frame Assembly" }],
-    exShowroom: "₹45,000",
-    effectiveDate: "01 Aug 2026",
-  },
-  {
-    id: 2,
-    type: "Main Chassis",
-    description: "Main chassis frame",
-    actualItem: [{ id: "chassis-frame", name: "Chassis Frame" }],
-    exShowroom: "₹75,000",
-    effectiveDate: "01 Aug 2026",
-  },
-  {
-    id: 3,
-    type: "Body Details",
-    description: "Body panel assembly",
-    actualItem: [{ id: "body-panels", name: "Body Panels" }],
-    exShowroom: "₹32,500",
-    effectiveDate: "01 Aug 2026",
-  },
-  {
-    id: 4,
-    type: "Hyd Kit",
-    description: "Hydraulic kit assembly",
-    actualItem: [{ id: "hydraulic-kit", name: "Hydraulic Kit" }],
-    exShowroom: "₹28,000",
-    effectiveDate: "01 Aug 2026",
-  },
-  {
-    id: 5,
-    type: "Axle",
-    description: "Rear axle assembly",
-    actualItem: [{ id: "axle-assembly", name: "Axle Assembly" }],
-    exShowroom: "₹55,000",
-    effectiveDate: "01 Aug 2026",
-  },
-];
+interface CreateMasterItem {
+  createMasterId: number;
+  companyId: number;
+  type: string;
+  description: string;
+  actualItem: MultiSelectOption[];
+  exShowroom: string;
+  effectiveDate: string;
+  status: string;
+  created?: string;
+}
 
 // ─── TYPE OPTIONS ──────────────────────────────────────────────────────────
 
@@ -134,6 +111,11 @@ export default function CreateMaster() {
   const [search, setSearch] = useState("");
   const [showDrawer, setShowDrawer] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [createMasterData, setCreateMasterData] = useState<CreateMasterItem[]>(
+    [],
+  );
+
+  const [loading, setLoading] = useState(false);
 
   // ─── FORM STATE ──────────────────────────────────────────────────────────
 
@@ -154,7 +136,7 @@ export default function CreateMaster() {
   // ─── HANDLERS ────────────────────────────────────────────────────────────
 
   const handleRefresh = () => {
-    console.log("Refreshing data...");
+    fetchCreateMasterList();
   };
 
   const handleOpenAddDrawer = () => {
@@ -169,39 +151,237 @@ export default function CreateMaster() {
     setShowDrawer(true);
   };
 
-  const handleOpenEditDrawer = (item: any) => {
-    setEditId(item.id);
+const formatDateForPicker = (date: any): string => {
+  if (!date) return "";
+
+  if (typeof date?.format === "function") {
+    return date.format("DD-MM-YYYY");
+  }
+
+  if (date instanceof Date) {
+    return dayjs(date).format("DD-MM-YYYY");
+  }
+
+  if (typeof date === "string") {
+    // Backend: YYYY-MM-DD or ISO
+    if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
+      const [year, month, day] = date.substring(0, 10).split("-");
+      return `${day}-${month}-${year}`;
+    }
+
+    // Already DD-MM-YYYY
+    if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
+      return date;
+    }
+  }
+
+  return "";
+};
+
+const getDatePickerValue = (date: string): Date | undefined => {
+  if (!date) return undefined;
+
+  const [day, month, year] = date.split("-");
+
+  if (!day || !month || !year) return undefined;
+
+  return new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day)
+  );
+};
+
+const handleEffectiveDateChange = (selectedDates: Date[]) => {
+  const selectedDate = selectedDates?.[0];
+
+  setFormData((prev) => ({
+    ...prev,
+    effectiveDate: selectedDate
+      ? dayjs(selectedDate).format("DD-MM-YYYY")
+      : "",
+  }));
+};
+
+const formatDateForApi = (date: string): string => {
+  if (!date) return "";
+
+  if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
+    const [day, month, year] = date.split("-");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  return date;
+};
+
+  const handleOpenEditDrawer = (item: CreateMasterItem) => {
+    setEditId(item.createMasterId);
+
     setFormData({
       type: item.type,
       description: item.description,
       actualItem: Array.isArray(item.actualItem) ? item.actualItem : [],
-      exShowroom: item.exShowroom,
-      effectiveDate: item.effectiveDate,
+      exShowroom: String(item.exShowroom ?? ""),
+      effectiveDate: formatDateForPicker(item.effectiveDate),
     });
+
     setShowDrawer(true);
   };
 
-  const handleSave = () => {
-    console.log("Saving data:", formData);
-    setShowDrawer(false);
+  const handleSave = async () => {
+    try {
+      if (!formData.type.trim()) {
+        toasterrormsg("Type is required");
+        return;
+      }
+
+      if (!formData.description.trim()) {
+        toasterrormsg("Description is required");
+        return;
+      }
+
+      if (formData.actualItem.length === 0) {
+        toasterrormsg("Actual Item is required");
+        return;
+      }
+
+      if (!formData.exShowroom.trim()) {
+        toasterrormsg("Ex-Showroom is required");
+        return;
+      }
+
+      if (!formData.effectiveDate) {
+        toasterrormsg("Effective Date is required");
+        return;
+      }
+
+     const payload = {
+  type: formData.type.trim(),
+  description: formData.description.trim(),
+  actualItem: formData.actualItem,
+  exShowroom: Number(formData.exShowroom),
+  effectiveDate: formatDateForApi(formData.effectiveDate),
+  status: "active",
+};
+
+      setLoading(true);
+
+      if (editId !== null) {
+        await Put(
+          "master/createmaster/update",
+          {
+            createMasterId: editId,
+            ...payload,
+          },
+          false,
+        );
+
+        toastsuccessmsg("Create Master updated successfully");
+      } else {
+        await Post("master/createmaster/create", payload, false);
+
+        toastsuccessmsg("Create Master created successfully");
+      }
+
+      setShowDrawer(false);
+
+      setFormData({
+        type: "",
+        description: "",
+        actualItem: [],
+        exShowroom: "",
+        effectiveDate: "",
+      });
+
+      setEditId(null);
+
+      await fetchCreateMasterList();
+    } catch (error: any) {
+      console.error("Create Master save error:", error);
+
+      toasterrormsg(error?.response?.data?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id: number) => {
-    alert(`Delete record ${id}`);
+  const handleDelete = async (id: number) => {
+    try {
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this record?",
+      );
+
+      if (!confirmed) return;
+
+      setLoading(true);
+
+      await Delete(
+        "master/createmaster/delete",
+        {
+          createMasterId: id,
+        },
+        false,
+      );
+
+      toastsuccessmsg("Create Master deleted successfully");
+
+      await fetchCreateMasterList();
+    } catch (error: any) {
+      console.error("Delete Create Master error:", error);
+
+      toasterrormsg(
+        error?.response?.data?.message || "Failed to delete Create Master",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const fetchCreateMasterList = async () => {
+    try {
+      setLoading(true);
+
+      const response = await Get("master/createmaster/list", {}, false);
+
+      if (response?.data?.status === 200 || response?.data?.success) {
+        const data = response?.data?.data || [];
+
+        setCreateMasterData(data);
+      } else {
+        toasterrormsg(
+          response?.data?.message || "Failed to fetch Create Master list",
+        );
+      }
+    } catch (error: any) {
+      console.error("Create Master list error:", error);
+
+      toasterrormsg(
+        error?.response?.data?.message || "Failed to fetch Create Master list",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCreateMasterList();
+  }, []);
 
   // ─── FILTER & PAGINATION ──────────────────────────────────────────────────
 
-  const filteredData = STATIC_CREATE_MASTER.filter((item) => {
+  const filteredData = createMasterData.filter((item) => {
     const searchLower = search.toLowerCase();
+
     const actualItemStr = Array.isArray(item.actualItem)
-      ? item.actualItem.map((i: any) => i.name).join(" ")
-      : item.actualItem;
+      ? item.actualItem.map((i) => i.name).join(" ")
+      : "";
+
     return (
       item.type.toLowerCase().includes(searchLower) ||
       item.description.toLowerCase().includes(searchLower) ||
       actualItemStr.toLowerCase().includes(searchLower) ||
-      item.exShowroom.includes(search)
+      String(item.exShowroom).includes(search)
     );
   });
 
@@ -226,7 +406,7 @@ export default function CreateMaster() {
           <button
             type="button"
             title="Export Excel"
-            onClick={() => exportToExcel(currentItems, [], "create-master")}
+            onClick={() => exportToExcel(currentItems, [], "createmaster")}
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             <ArrowDownTrayIcon className="h-4 w-4 text-black" />
@@ -238,7 +418,7 @@ export default function CreateMaster() {
             type="button"
             title="Export PDF"
             onClick={() =>
-              exportToPdf(currentItems, [], "Create Master", "create-master")
+              exportToPdf(currentItems, [], "Create Master", "createmaster")
             }
             className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
           >
@@ -291,7 +471,7 @@ export default function CreateMaster() {
               {currentItems.length > 0 ? (
                 currentItems.map((item, index) => (
                   <Tr
-                    key={item.id}
+                    key={item.createMasterId}
                     className="dark:hover:bg-dark-700/40 align-middle transition-colors hover:bg-gray-50/30"
                   >
                     <Td className="py-3 text-center text-[12px] font-medium text-gray-500">
@@ -346,7 +526,9 @@ export default function CreateMaster() {
                             {({ active }) => (
                               <button
                                 type="button"
-                                onClick={() => handleDelete(item.id)}
+                                onClick={() =>
+                                  handleDelete(item.createMasterId)
+                                }
                                 className={`${
                                   active
                                     ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
@@ -526,25 +708,6 @@ export default function CreateMaster() {
                     />
                   </div>
 
-                  {/* Description */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Description <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="Enter description"
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                      className="w-full"
-                    />
-                  </div>
-
                   {/* Actual Item - Multi Select with Checkbox */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -588,15 +751,29 @@ export default function CreateMaster() {
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Effective Date <span className="text-red-500">*</span>
                     </label>
-                    <DatePicker
-                      placeholder="Select effective date"
-                      value={formData.effectiveDate}
-                      onChange={(date: any) => {
+                   <DatePicker
+  placeholder="Select effective date"
+  value={getDatePickerValue(formData.effectiveDate)}
+  onChange={handleEffectiveDateChange}
+/>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Description <span className="text-red-500">*</span>
+                    </label>
+                    <Textarea
+                      placeholder="Enter description"
+                      rows={2}
+                      value={formData.description}
+                      onChange={(e) =>
                         setFormData({
                           ...formData,
-                          effectiveDate: date,
-                        });
-                      }}
+                          description: e.target.value,
+                        })
+                      }
+                      className="w-full"
                     />
                   </div>
                 </div>
