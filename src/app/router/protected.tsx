@@ -49,21 +49,22 @@ const protectedRoutes: RouteObject = {
             {
               path: "category",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/category")).default,
+                Component: (await import("@/app/pages/master/category"))
+                  .default,
               }),
             },
             {
               path: "bom",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/bom/form")).default,
+                Component: (await import("@/app/pages/master/bom/form"))
+                  .default,
               }),
             },
             {
               path: "product-series",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/master/product-series")
-                ).default,
+                Component: (await import("@/app/pages/master/product-series"))
+                  .default,
               }),
             },
             {
@@ -110,8 +111,6 @@ const protectedRoutes: RouteObject = {
           ],
         },
 
-
-
         {
           path: "master/brand",
           children: [
@@ -122,31 +121,56 @@ const protectedRoutes: RouteObject = {
             {
               path: "body-type",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/brand/body-type")).default,
+                Component: (await import("@/app/pages/master/brand/body-type"))
+                  .default,
               }),
             },
             {
               path: "axle-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/brand/axle-brand")).default,
+                Component: (await import("@/app/pages/master/brand/axle-brand"))
+                  .default,
               }),
             },
             {
               path: "hydraulic-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/brand/hydraulic-brand")).default,
+                Component: (
+                  await import("@/app/pages/master/brand/hydraulic-brand")
+                ).default,
               }),
             },
             {
               path: "tyre-brand",
               lazy: async () => ({
-                Component: (await import("@/app/pages/master/brand/tyre-brand")).default,
+                Component: (await import("@/app/pages/master/brand/tyre-brand"))
+                  .default,
               }),
             },
           ],
         },
 
-           {
+        {
+          path: "master/quotation-master",
+          children: [
+            {
+              index: true,
+              element: (
+                <Navigate to="/master/quotation-master/createmaster" replace />
+              ),
+            },
+            {
+              path: "createmaster",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/master/quotation-master/createmaster")
+                ).default,
+              }),
+            },
+          ],
+        },
+
+        {
           path: "enquiry-master",
           children: [
             {
@@ -193,18 +217,16 @@ const protectedRoutes: RouteObject = {
             {
               path: "banker",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/enquiry-master/banker")
-                ).default,
+                Component: (await import("@/app/pages/enquiry-master/banker"))
+                  .default,
               }),
             },
 
             {
               path: "finance",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/enquiry-master/finance")
-                ).default,
+                Component: (await import("@/app/pages/enquiry-master/finance"))
+                  .default,
               }),
             },
           ],
@@ -222,13 +244,15 @@ const protectedRoutes: RouteObject = {
             {
               path: "create",
               lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form")).default,
+                Component: (await import("@/app/pages/item-master/form"))
+                  .default,
               }),
             },
             {
               path: "edit/:id",
               lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form")).default,
+                Component: (await import("@/app/pages/item-master/form"))
+                  .default,
               }),
             },
           ],
@@ -251,14 +275,16 @@ const protectedRoutes: RouteObject = {
             {
               path: "create",
               lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form")).default,
+                Component: (await import("@/app/pages/item-master/form"))
+                  .default,
               }),
             },
 
             {
               path: "edit/:id",
               lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form")).default,
+                Component: (await import("@/app/pages/item-master/form"))
+                  .default,
               }),
             },
 
@@ -283,9 +309,8 @@ const protectedRoutes: RouteObject = {
             {
               path: "item-group",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/item-master/iteam-group")
-                ).default,
+                Component: (await import("@/app/pages/item-master/iteam-group"))
+                  .default,
               }),
             },
           ],
@@ -425,9 +450,7 @@ const protectedRoutes: RouteObject = {
                   index: true,
                   lazy: async () => ({
                     Component: (
-                      await import(
-                        "@/app/pages/purchase-master/purchase-register"
-                      )
+                      await import("@/app/pages/purchase-master/purchase-register")
                     ).default,
                   }),
                 },
@@ -435,9 +458,7 @@ const protectedRoutes: RouteObject = {
                   path: "create",
                   lazy: async () => ({
                     Component: (
-                      await import(
-                        "@/app/pages/purchase-master/purchase-register/form"
-                      )
+                      await import("@/app/pages/purchase-master/purchase-register/form")
                     ).default,
                   }),
                 },
@@ -445,9 +466,7 @@ const protectedRoutes: RouteObject = {
                   path: "edit/:id",
                   lazy: async () => ({
                     Component: (
-                      await import(
-                        "@/app/pages/purchase-master/purchase-register/form"
-                      )
+                      await import("@/app/pages/purchase-master/purchase-register/form")
                     ).default,
                   }),
                 },
@@ -460,9 +479,7 @@ const protectedRoutes: RouteObject = {
                   index: true,
                   lazy: async () => ({
                     Component: (
-                      await import(
-                        "@/app/pages/purchase-master/purchase-order"
-                      )
+                      await import("@/app/pages/purchase-master/purchase-order")
                     ).default,
                   }),
                 },
@@ -470,9 +487,7 @@ const protectedRoutes: RouteObject = {
                   path: "create",
                   lazy: async () => ({
                     Component: (
-                      await import(
-                        "@/app/pages/purchase-master/purchase-order"
-                      )
+                      await import("@/app/pages/purchase-master/purchase-order")
                     ).default,
                   }),
                 },
@@ -486,9 +501,7 @@ const protectedRoutes: RouteObject = {
             {
               index: true,
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/stock-report")
-                ).default,
+                Component: (await import("@/app/pages/stock-report")).default,
               }),
             },
             {
@@ -553,9 +566,8 @@ const protectedRoutes: RouteObject = {
             {
               path: "enquiry",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/lead-master/enquiry")
-                ).default,
+                Component: (await import("@/app/pages/lead-master/enquiry"))
+                  .default,
               }),
             },
             // {
@@ -577,9 +589,8 @@ const protectedRoutes: RouteObject = {
             {
               path: "quotation",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/lead-master/quotation")
-                ).default,
+                Component: (await import("@/app/pages/lead-master/quotation"))
+                  .default,
               }),
             },
             // {
