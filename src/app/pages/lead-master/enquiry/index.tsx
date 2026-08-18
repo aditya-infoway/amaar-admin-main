@@ -3,27 +3,40 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  Row,
   RowSelectionState,
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
 import { EnquiryDrawer } from "./CategoryDrawer";
-import { columns, exportColumns } from "./columns";
-import { Enquiry, emptyEnquiry } from "./data";
+import { createColumns, createExportColumns } from "./columns";
+import { Enquiry, mapApiLeadToEnquiry } from "./data";
 
 export default function EnquiryPage() {
-  const [data, setData] = useState<Enquiry[]>(() =>
-    masterStorage.getEnquiries(),
+  // FIX — sessionStorage ko state se read karo, component mount ke time,
+  // na ki module-load time (jab tak company select hi nahi hua tha)
+  const [financialYearId, setFinancialYearId] = useState<string>(
+    () => sessionStorage.getItem("financialYearId") || "",
   );
+
+  useEffect(() => {
+    const fyId = sessionStorage.getItem("financialYearId") || "";
+    if (fyId !== financialYearId) setFinancialYearId(fyId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [data, setData] = useState<Enquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modelOptions, setModelOptions] = useState<{ id: string; label: string }[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -33,25 +46,87 @@ export default function EnquiryPage() {
   const [filterName, setFilterName] = useState("");
   const [filterCity, setFilterCity] = useState("");
 
+  const fetchList = async () => {
+    setLoading(true);
+    try {
+      const role = "Super Admin";
+
+      // const response = await Get("lead/list", {}, false);
+      const response = await Get(
+        "lead/list",
+        { role },
+        false,
+      );
+      if (response.data?.success) {
+        setData((response.data.data || []).map(mapApiLeadToEnquiry));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to fetch enquiries.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching enquiries.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchList();
+    // model dropdown ek hi baar load — drawer aur table dono use karenge
+    (async () => {
+      try {
+        const response = await Get("master/model/list", {}, false);
+        if (response.data?.success) {
+          setModelOptions(
+            (response.data.data || []).map((item: any) => ({
+              id: String(item.modelId ?? item.id),
+              label: item.modelName ?? item.label,
+            })),
+          );
+        }
+      } catch (error) {
+        // silent - table model label "—" dikha dega
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const columns = useMemo(() => createColumns(modelOptions), [modelOptions]);
+  const exportColumns = useMemo(() => createExportColumns(modelOptions), [modelOptions]);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      if (
-        filterName &&
-        !item.name.toLowerCase().includes(filterName.toLowerCase())
-      )
-        return false;
-      if (
-        filterCity &&
-        !item.city.toLowerCase().includes(filterCity.toLowerCase())
-      )
-        return false;
+      if (filterName && !item.name.toLowerCase().includes(filterName.toLowerCase())) return false;
+      if (filterCity && !item.city.toLowerCase().includes(filterCity.toLowerCase())) return false;
       return true;
     });
   }, [data, filterName, filterCity]);
 
-  const persist = (next: Enquiry[]) => {
-    setData(next);
-    masterStorage.saveEnquiries(next);
+  const handleDeleteOne = async (row: Enquiry) => {
+    try {
+      const response = await Delete("lead/delete", { leadId: Number(row.id) }, false);
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Enquiry deleted successfully.");
+        setData((prev) => prev.filter((item) => item.id !== row.id));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to delete enquiry.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting the enquiry.");
+    }
+  };
+
+  const handleDeleteMany = async (rows: Row<Enquiry>[]) => {
+    try {
+      await Promise.all(
+        rows.map((r) => Delete("lead/delete", { leadId: Number(r.original.id) }, false)),
+      );
+      const ids = new Set(rows.map((r) => r.original.id));
+      setData((prev) => prev.filter((item) => !ids.has(item.id)));
+      setRowSelection({});
+      toastsuccessmsg("Selected enquiries deleted successfully.");
+    } catch (error) {
+      toasterrormsg("Something went wrong while deleting enquiries.");
+    }
   };
 
   const table = useReactTable({
@@ -65,14 +140,8 @@ export default function EnquiryPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      deleteRow: (row: Row<Enquiry>) => handleDeleteOne(row.original),
+      deleteRows: (rows: Row<Enquiry>[]) => handleDeleteMany(rows),
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,
@@ -96,34 +165,15 @@ export default function EnquiryPage() {
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
           onCreate={() => {
-            setEditing(emptyEnquiry());
+            setEditing(null);
             setDrawerOpen(true);
           }}
-          onExportExcel={() =>
-            exportToExcel(filteredData, exportColumns, "enquiries")
-          }
-          onExportPdf={() =>
-            exportToPdf(
-              filteredData,
-              exportColumns,
-              "Enquiry List",
-              "enquiries",
-            )
-          }
+          onExportExcel={() => exportToExcel(filteredData, exportColumns, "enquiries")}
+          onExportPdf={() => exportToPdf(filteredData, exportColumns, "Enquiry List", "enquiries")}
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="Name"
-                value={filterName}
-                onChange={(e) => setFilterName(e.target.value)}
-                placeholder="Filter by name"
-              />
-              <Input
-                label="City"
-                value={filterCity}
-                onChange={(e) => setFilterCity(e.target.value)}
-                placeholder="Filter by city"
-              />
+              <Input label="Name" value={filterName} onChange={(e) => setFilterName(e.target.value)} placeholder="Filter by name" />
+              <Input label="City" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Filter by city" />
             </div>
           }
         />
@@ -131,7 +181,7 @@ export default function EnquiryPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No enquiries found. Click Add Enquiry to add one."
+          emptyMessage={loading ? "Loading enquiries..." : "No enquiries found. Click Add Enquiry to add one."}
         />
       </div>
 
@@ -139,14 +189,8 @@ export default function EnquiryPage() {
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         enquiry={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        financialYearId={financialYearId}
+        onSaved={fetchList}
       />
     </Page>
   );
