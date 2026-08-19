@@ -38,27 +38,48 @@ export interface Enquiry {
 }
 
 export interface Quotation {
-  remark: any;
   id: string;
   qNo: string;
   leadId: string;
+
   customerName: string;
   mobile: string;
   email: string;
   address: string;
   city: string;
   model: string;
-  tyre: string;
-  axle: string;
-  hydraulic: string;
-  box: string;
-  color: string;
-  chassis: string;
-  markup: string;
+  remark?: string;
+
+  vehicleType?: "tipper" | "trailer";
+
+  trailer?: number | null;
+  chassis?: number | null;
+  body?: number | null;
+  hydraulic?: number | null;
+  axle?: number | null;
+  suspension?: number | null;
+  tyre?: number | null;
+  rim?: number | null;
+  kingPin?: number | null;
+  landingLeg?: number | null;
+  brakeSystem?: number | null;
+  mudguard?: number | null;
+  color?: number | null;
+  electricalTapes?: number | null;
+  supdRupd?: number | null;
+  box?: number | null;
+  spareWheelCarrier?: number | null;
+
+  warranty?: string;
+
   discountType: "amount" | "percentage";
   discountValue: string;
+
+  basicCost?: string;
+  gstAmount?: string;
   finalPrice: string;
+
   createdBy: string;
   position: string;
-  createdAt: string;
+  createdAt?: string;
 }

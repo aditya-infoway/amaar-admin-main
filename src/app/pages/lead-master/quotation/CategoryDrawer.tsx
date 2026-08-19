@@ -10,9 +10,8 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Button, Input, Radio, Textarea } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { TextEditor } from "@/components/shared/form/TextEditor";
-import type Delta from "quill-delta";
-import { masterStorage } from "../shared/storage";
-import { Quotation } from "./data";
+import Delta from "quill-delta";
+import type { Quotation } from "../shared/types";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import {
   Get,
@@ -22,6 +21,7 @@ import {
   toasterrormsg,
   toastsuccessmsg,
 } from "@/ApiHelper";
+
 
 // TEMP: static option lists so the drawer compiles/works standalone.
 // Replace each of these with a real fetch (masterStorage / API) once
@@ -35,8 +35,24 @@ interface DropdownOption {
 }
 
 // Helpers for the Combobox-style array state used by all 17 spec dropdowns
-function idOf(selected: DropdownOption[]): string {
-  return selected[0]?.id || "";
+function idOf(selected: DropdownOption[]): number | null {
+  const value = selected?.[0];
+
+  if (!value) return null;
+
+  const rawId = value.id;
+
+  if (rawId === undefined || rawId === null || rawId === "") {
+    return null;
+  }
+
+  const id = Number(rawId);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+
+  return id;
 }
 
 interface QuotationDrawerProps {
@@ -61,7 +77,7 @@ interface LeadOption {
 }
 
 interface CreateMasterOption {
-  id: string | number;
+  createMasterId: string | number;
   type: string;
   description: string;
   actualItem?: any[];
@@ -151,6 +167,11 @@ export function QuotationDrawer({
               leadCode: lead.leadCode,
               name: lead.name,
               number: lead.number,
+              email: lead.email || "",
+              address: lead.address || "",
+              city: lead.city || "",
+              model: lead.model || "",
+              remark: lead.remark || "",
               label: `${lead.leadCode} - ${lead.name} - ${lead.number}`,
             })),
           );
@@ -164,12 +185,32 @@ export function QuotationDrawer({
     fetchLeads();
   }, [isOpen]);
 
-  const modelOptions = useMemo(() => {
-    return masterStorage.getModels().map((item) => ({
-      id: item.id,
-      label: item.modelName,
-    }));
-  }, []);
+  const [modelOptions, setModelOptions] = useState<DropdownOption[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchModels = async () => {
+      try {
+        const response = await Get("master/model/list", {}, false);
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          const models = response.data.data || [];
+
+          setModelOptions(
+            models.map((item: any) => ({
+              id: String(item.modelId ?? item.id),
+              label: item.modelName ?? item.label,
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("Model list error:", error);
+      }
+    };
+
+    fetchModels();
+  }, [isOpen]);
 
   // Pre-fill on edit, or reset on add
   useEffect(() => {
@@ -200,7 +241,7 @@ export function QuotationDrawer({
       setEmail(quotation.email);
       setAddress(quotation.address);
       setCity(quotation.city);
-      setModel(quotation.model);
+      setModel(String(quotation.model ?? ""));
       setRemark((quotation as any).remark || "");
 
       setVehicleType((quotation as any).vehicleType || "trailer");
@@ -288,8 +329,10 @@ export function QuotationDrawer({
         ),
       );
       {
-        const savedWarranty = (quotation as any).warranty;
-        setWarranty(savedWarranty ? JSON.parse(savedWarranty) : undefined);
+      const savedWarranty = (quotation as any).warranty;
+setWarranty(
+  savedWarranty ? new Delta(JSON.parse(savedWarranty).ops) : undefined,
+);
       }
 
       setDiscountType(quotation.discountType);
@@ -357,12 +400,15 @@ export function QuotationDrawer({
 
     if (!fullLead) return;
 
+    console.log("fullLead.model:", fullLead.model);
+    console.log("modelOptions:", modelOptions);
+
     setCustomerName(fullLead.name || "");
     setMobile(fullLead.number || "");
     setEmail(fullLead.email || "");
     setAddress(fullLead.address || "");
     setCity(fullLead.city || "");
-    setModel(fullLead.model || "");
+    setModel(String(fullLead.model ?? ""));
     setRemark(fullLead.remark || "");
   }, [selectedLead, leadOptions]);
 
@@ -615,7 +661,7 @@ export function QuotationDrawer({
           vehicleType,
 
           trailer: idOf(trailer),
-          chassis: vehicleType === "trailer" ? idOf(chassis) : "",
+          chassis: vehicleType === "trailer" ? idOf(chassis) : null,
           body: idOf(body),
           hydraulic: idOf(hydraulic),
           axle: idOf(axle),
@@ -686,7 +732,7 @@ export function QuotationDrawer({
         (item) => item.type?.trim().toLowerCase() === type.trim().toLowerCase(),
       )
       .map((item) => ({
-        id: String(item.id),
+        id: String(item.createMasterId),
         label: item.description,
         price: Number(item.exShowroom) || 0,
       }));

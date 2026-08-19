@@ -9,154 +9,184 @@ import { Button } from "@/components/ui";
 import { createRowActions } from "../shared/createRowActions";
 import { TextCell } from "../shared/tableCells";
 import { ExportColumn } from "../shared/export";
-import { Quotation } from "./data";
-import {
-  tyreOptions,
-  axleOptions,
-  boxOptions,
-  chassisOptions,
-  hydraulicOptions,
-  getOptionLabel,
-} from "./options";
+import { Quotation } from "../shared/types";
 import { printQuotationHtml } from "./printQuotation";
 
 const RowActions = createRowActions<Quotation>("quotation");
 
-export const columns: ColumnDef<Quotation>[] = [
-  {
-    id: "select",
-    header: SelectHeader,
-    cell: SelectCell,
-    enableSorting: false,
-  },
-  {
-    id: "qNo",
-    accessorKey: "qNo",
-    header: "Q.No",
-    cell: TextCell,
-  },
-  {
-    id: "customerName",
-    accessorKey: "customerName",
-    header: "Customer Name",
-    cell: TextCell,
-  },
-  {
-    id: "mobile",
-    accessorKey: "mobile",
-    header: "Mobile No",
-    cell: TextCell,
-  },
-  {
-    id: "city",
-    accessorKey: "city",
-    header: "City",
-    cell: TextCell,
-  },
-  {
-    id: "tyre",
-    accessorKey: "tyre",
-    header: "Tyre",
-    cell: (info) => getOptionLabel(tyreOptions, info.getValue<string>()),
-  },
-  {
-    id: "axle",
-    accessorKey: "axle",
-    header: "Exel",
-    cell: (info) => getOptionLabel(axleOptions, info.getValue<string>()),
-  },
-  {
-    id: "box",
-    accessorKey: "box",
-    header: "Box",
-    cell: (info) => getOptionLabel(boxOptions, info.getValue<string>()),
-  },
-  {
-    id: "chassis",
-    accessorKey: "chassis",
-    header: "Chassis",
-    cell: (info) => getOptionLabel(chassisOptions, info.getValue<string>()),
-  },
-  {
-    id: "hydraulic",
-    accessorKey: "hydraulic",
-    header: "Hydraulic",
-    cell: (info) => getOptionLabel(hydraulicOptions, info.getValue<string>()),
-  },
-  {
-    id: "finalPrice",
-    accessorKey: "finalPrice",
-    header: "Final Price",
-    cell: (info) =>
-      `₹ ${Number(info.getValue<string>() || 0).toLocaleString("en-IN")}`,
-  },
-  {
-    id: "createdBy",
-    accessorKey: "createdBy",
-    header: "Created By",
-    cell: TextCell,
-  },
-  {
-    id: "position",
-    accessorKey: "position",
-    header: "Position",
-    cell: TextCell,
-  },
-  {
-    id: "print",
-    header: "Print",
-    enableSorting: false,
-    cell: ({ row }) => (
-      <Button
-        variant="flat"
-        isIcon
-        className="size-7 rounded-full"
-        onClick={() => printQuotationHtml(row.original)}
-        title="View / Print Quotation"
-      >
-        <PrinterIcon className="size-4.5" />
-      </Button>
-    ),
-  },
-  {
-    id: "actions",
-    header: "Action",
-    cell: RowActions,
-    enableSorting: false,
-  },
-];
+export interface CreateMasterOption {
+  createMasterId: number;
+  type: string;
+  description: string;
+}
 
-export const exportColumns: ExportColumn<Quotation>[] = [
-  { key: "qNo", header: "Q.No" },
-  { key: "customerName", header: "Customer Name" },
-  { key: "mobile", header: "Mobile No" },
-  { key: "city", header: "City" },
-  {
-    key: "tyre",
-    header: "Tyre",
-    format: (v: unknown) => getOptionLabel(tyreOptions, v as string),
-  },
-  {
-    key: "axle",
-    header: "Exel",
-    format: (v: unknown) => getOptionLabel(axleOptions, v as string),
-  },
-  {
-    key: "box",
-    header: "Box",
-    format: (v: unknown) => getOptionLabel(boxOptions, v as string),
-  },
-  {
-    key: "chassis",
-    header: "Chassis",
-    format: (v: unknown) => getOptionLabel(chassisOptions, v as string),
-  },
-  {
-    key: "hydraulic",
-    header: "Hydraulic",
-    format: (v: unknown) => getOptionLabel(hydraulicOptions, v as string),
-  },
-  { key: "finalPrice", header: "Final Price" },
-  { key: "createdBy", header: "Created By" },
-  { key: "position", header: "Position" },
-];
+const getMasterDescription = (
+  createMasterOptions: CreateMasterOption[],
+  value: unknown,
+) => {
+  const master = createMasterOptions.find(
+    (item) => Number(item.createMasterId) === Number(value),
+  );
+
+  return master?.description || "—";
+};
+
+export function createColumns(
+  createMasterOptions: CreateMasterOption[],
+): ColumnDef<Quotation>[] {
+  return [
+    {
+      id: "select",
+      header: SelectHeader,
+      cell: SelectCell,
+      enableSorting: false,
+    },
+    {
+      id: "qNo",
+      accessorKey: "qNo",
+      header: "Q.No",
+      cell: TextCell,
+    },
+    {
+      id: "customerName",
+      accessorKey: "customerName",
+      header: "Customer Name",
+      cell: TextCell,
+    },
+    {
+      id: "mobile",
+      accessorKey: "mobile",
+      header: "Mobile No",
+      cell: TextCell,
+    },
+    {
+      id: "city",
+      accessorKey: "city",
+      header: "City",
+      cell: TextCell,
+    },
+
+    // =========================
+    // CREATE MASTER FIELDS
+    // =========================
+
+    {
+      id: "tyre",
+      accessorKey: "tyre",
+      header: "Tyre",
+      cell: (info) =>
+        getMasterDescription(createMasterOptions, info.getValue()),
+    },
+    {
+      id: "axle",
+      accessorKey: "axle",
+      header: "Axle",
+      cell: (info) =>
+        getMasterDescription(createMasterOptions, info.getValue()),
+    },
+    {
+      id: "box",
+      accessorKey: "box",
+      header: "Tool Box",
+      cell: (info) =>
+        getMasterDescription(createMasterOptions, info.getValue()),
+    },
+    {
+      id: "chassis",
+      accessorKey: "chassis",
+      header: "Chassis",
+      cell: (info) =>
+        getMasterDescription(createMasterOptions, info.getValue()),
+    },
+    {
+      id: "hydraulic",
+      accessorKey: "hydraulic",
+      header: "Hydraulic",
+      cell: (info) =>
+        getMasterDescription(createMasterOptions, info.getValue()),
+    },
+
+    {
+      id: "finalPrice",
+      accessorKey: "finalPrice",
+      header: "Final Price",
+      cell: (info) =>
+        `₹ ${Number(info.getValue<string>() || 0).toLocaleString("en-IN")}`,
+    },
+    {
+      id: "createdBy",
+      accessorKey: "createdBy",
+      header: "Created By",
+      cell: TextCell,
+    },
+
+    {
+      id: "print",
+      header: "Print",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <Button
+          variant="flat"
+          isIcon
+          className="size-7 rounded-full"
+          onClick={() => printQuotationHtml(row.original)}
+          title="View / Print Quotation"
+        >
+          <PrinterIcon className="size-4.5" />
+        </Button>
+      ),
+    },
+
+    {
+      id: "actions",
+      header: "Action",
+      cell: RowActions,
+      enableSorting: false,
+    },
+  ];
+}
+
+export function createExportColumns(
+  createMasterOptions: CreateMasterOption[],
+): ExportColumn<Quotation>[] {
+  return [
+    { key: "qNo", header: "Q.No" },
+    { key: "customerName", header: "Customer Name" },
+    { key: "mobile", header: "Mobile No" },
+    { key: "city", header: "City" },
+
+    {
+      key: "tyre",
+      header: "Tyre",
+      format: (value: unknown) =>
+        getMasterDescription(createMasterOptions, value),
+    },
+    {
+      key: "axle",
+      header: "Axle",
+      format: (value: unknown) =>
+        getMasterDescription(createMasterOptions, value),
+    },
+    {
+      key: "box",
+      header: "Tool Box",
+      format: (value: unknown) =>
+        getMasterDescription(createMasterOptions, value),
+    },
+    {
+      key: "chassis",
+      header: "Chassis",
+      format: (value: unknown) =>
+        getMasterDescription(createMasterOptions, value),
+    },
+    {
+      key: "hydraulic",
+      header: "Hydraulic",
+      format: (value: unknown) =>
+        getMasterDescription(createMasterOptions, value),
+    },
+
+    { key: "finalPrice", header: "Final Price" },
+    { key: "createdBy", header: "Created By" },
+  ];
+}
