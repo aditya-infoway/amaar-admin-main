@@ -22,7 +22,6 @@ import {
   toastsuccessmsg,
 } from "@/ApiHelper";
 
-
 // TEMP: static option lists so the drawer compiles/works standalone.
 // Replace each of these with a real fetch (masterStorage / API) once
 // the backend endpoints for these masters are ready — the rest of the
@@ -329,10 +328,10 @@ export function QuotationDrawer({
         ),
       );
       {
-      const savedWarranty = (quotation as any).warranty;
-setWarranty(
-  savedWarranty ? new Delta(JSON.parse(savedWarranty).ops) : undefined,
-);
+        const savedWarranty = (quotation as any).warranty;
+        setWarranty(
+          savedWarranty ? new Delta(JSON.parse(savedWarranty).ops) : undefined,
+        );
       }
 
       setDiscountType(quotation.discountType);
@@ -1306,21 +1305,27 @@ setWarranty(
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Input
                   label="Basic Cost"
-                  value={`₹ ${basePrice.toLocaleString("en-IN")}`}
+                  value={`₹ ${afterDiscount.toLocaleString("en-IN", {
+                    maximumFractionDigits: 2,
+                  })}`}
                   disabled
                   onChange={() => {}}
                 />
 
                 <Input
                   label="GST 18%"
-                  value={`₹ ${gstAmount.toLocaleString("en-IN")}`}
+                  value={`₹ ${gstAmount.toLocaleString("en-IN", {
+                    maximumFractionDigits: 2,
+                  })}`}
                   disabled
                   onChange={() => {}}
                 />
 
                 <Input
                   label="Final Amount"
-                  value={`₹ ${finalPrice.toLocaleString("en-IN")}`}
+                  value={`₹ ${finalPrice.toLocaleString("en-IN", {
+                    maximumFractionDigits: 2,
+                  })}`}
                   disabled
                   onChange={() => {}}
                 />

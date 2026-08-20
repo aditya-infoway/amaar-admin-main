@@ -22,6 +22,7 @@ interface MasterToolbarProps<T> {
   onExportExcel: () => void;
   onExportPdf: () => void;
   filterPanel?: ReactNode;
+    filterTypeButtons?: ReactNode;
 }
 
 export function MasterToolbar<T>({
@@ -35,6 +36,7 @@ export function MasterToolbar<T>({
   onExportExcel,
   onExportPdf,
   filterPanel,
+   filterTypeButtons,
 }: MasterToolbarProps<T>) {
   return (
     <div className="table-toolbar px-(--margin-x) pt-4">
@@ -69,6 +71,9 @@ export function MasterToolbar<T>({
             <DocumentArrowDownIcon className="size-4 text-error-600" />
             <span>PDF</span>
           </Button>
+
+
+
           <Button
             color="primary"
             className="h-9 gap-2 rounded-md px-4 text-sm"
@@ -91,6 +96,14 @@ export function MasterToolbar<T>({
           placeholder={searchPlaceholder}
         />
       </div>
+
+        {filterTypeButtons && (
+    <div className="mt-4 flex w-full justify-end pr-1">
+      <div className="flex items-center gap-2">
+        {filterTypeButtons}
+      </div>
+    </div>
+  )}
 
       {showFilters && filterPanel && (
         <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-500 dark:bg-dark-600">
