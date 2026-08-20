@@ -486,7 +486,7 @@ export default function BillOfMaterials() {
               {headerFields.map(f => (
                 <div key={f.label}>
                   <label className="block text-xs font-semibold text-slate-900 mb-1.5">{f.label}</label>
-                  <Input placeholder={f.placeholder} value="" />
+                  <Input placeholder={f.placeholder} defaultValue="" />
                 </div>
               ))}
               {/* Status */}
