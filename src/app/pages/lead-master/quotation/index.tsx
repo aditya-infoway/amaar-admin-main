@@ -23,7 +23,7 @@ import {
 } from "./columns";
 import { emptyQuotation } from "./data";
 import { Quotation } from "../shared/types";
-import { Get } from "@/ApiHelper";
+import { Get, Delete, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 
 export default function QuotationPage() {
   const [data, setData] = useState<Quotation[]>([]);
@@ -125,18 +125,48 @@ export default function QuotationPage() {
     state: { globalFilter, sorting, rowSelection },
     enableRowSelection: true,
     getRowId: (row) => row.id,
-    meta: {
+     meta: {
       openEditDrawer: (row: Quotation) => {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
+           deleteRow: async (row) => {
+        try {
+          const response = await Delete(`quotation/${row.original.id}`, {}, false);
+
+          if (response?.data?.success || response?.data?.status === 200) {
+            persist(data.filter((item) => item.id !== row.original.id));
+            toastsuccessmsg(response?.data?.message || "Quotation deleted successfully");
+          } else {
+            toasterrormsg(response?.data?.message || "Failed to delete quotation.");
+          }
+        } catch (error: any) {
+          console.error("Quotation delete error:", error);
+          toasterrormsg(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Something went wrong while deleting quotation.",
+          );
+        }
       },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
+      deleteRows: async (rows) => {
+        try {
+          const ids = rows.map((r) => r.original.id);
+
+          await Promise.all(ids.map((id) => Delete(`quotation/${id}`, {}, false)));
+
+          const idSet = new Set(ids);
+          persist(data.filter((item) => !idSet.has(item.id)));
+          setRowSelection({});
+          toastsuccessmsg("Selected quotations deleted successfully");
+        } catch (error: any) {
+          console.error("Quotation bulk delete error:", error);
+          toasterrormsg(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Something went wrong while deleting quotations.",
+          );
+        }
       },
     },
     filterFns: { fuzzy: fuzzyFilter },

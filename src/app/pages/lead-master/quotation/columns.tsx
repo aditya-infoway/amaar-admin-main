@@ -70,17 +70,17 @@ export function createColumns(
     // CREATE MASTER FIELDS
     // =========================
 
-    {
-      id: "tyre",
-      accessorKey: "tyre",
-      header: "Tyre",
+      {
+      id: "body",
+      accessorKey: "body",
+      header: "Body",
       cell: (info) =>
         getMasterDescription(createMasterOptions, info.getValue()),
     },
     {
-      id: "axle",
-      accessorKey: "axle",
-      header: "Axle",
+      id: "kingPin",
+      accessorKey: "kingPin",
+      header: "King Pin",
       cell: (info) =>
         getMasterDescription(createMasterOptions, info.getValue()),
     },
@@ -155,15 +155,15 @@ export function createExportColumns(
     { key: "mobile", header: "Mobile No" },
     { key: "city", header: "City" },
 
-    {
-      key: "tyre",
-      header: "Tyre",
+       {
+      key: "body",
+      header: "Body",
       format: (value: unknown) =>
         getMasterDescription(createMasterOptions, value),
     },
     {
-      key: "axle",
-      header: "Axle",
+      key: "kingPin",
+      header: "King Pin",
       format: (value: unknown) =>
         getMasterDescription(createMasterOptions, value),
     },

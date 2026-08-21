@@ -414,7 +414,14 @@ export function QuotationDrawer({
   // When switching to Tipper, clear the Main Chassis selection since it's hidden
   useEffect(() => {
     if (vehicleType === "tipper") {
-      setChassis([]);
+      setAxle([]);
+      setSuspension([]);
+      setTyre([]);
+      setRim([]);
+      setLandingLeg([]);
+      setBrakeSystem([]);
+      setElectricalTapes([]);
+      setSpareWheelCarrier([]);
     }
   }, [vehicleType]);
 
@@ -425,7 +432,7 @@ export function QuotationDrawer({
 
     return (
       getPrice(trailer) +
-      (vehicleType === "trailer" ? getPrice(chassis) : 0) +
+      getPrice(chassis) +
       getPrice(body) +
       getPrice(hydraulic) +
       getPrice(axle) +
@@ -522,24 +529,28 @@ export function QuotationDrawer({
     }
     if (!qNo) nextErrors.qNo = "Quotation No is required";
     if (trailer.length === 0) nextErrors.trailer = "Select Trailer";
-    if (vehicleType === "trailer" && chassis.length === 0)
-      nextErrors.chassis = "Select Main Chassis";
+    if (chassis.length === 0) nextErrors.chassis = "Select Main Chassis";
     if (body.length === 0) nextErrors.body = "Select Body";
     if (hydraulic.length === 0) nextErrors.hydraulic = "Select Hydraulic";
-    if (axle.length === 0) nextErrors.axle = "Select Axle";
-    if (suspension.length === 0) nextErrors.suspension = "Select Suspension";
-    if (tyre.length === 0) nextErrors.tyre = "Select Tyre";
-    if (rim.length === 0) nextErrors.rim = "Select Rim";
+    if (vehicleType === "trailer" && axle.length === 0)
+      nextErrors.axle = "Select Axle";
+    if (vehicleType === "trailer" && suspension.length === 0)
+      nextErrors.suspension = "Select Suspension";
+    if (vehicleType === "trailer" && tyre.length === 0)
+      nextErrors.tyre = "Select Tyre";
+    if (vehicleType === "trailer" && rim.length === 0)
+      nextErrors.rim = "Select Rim";
     if (kingPin.length === 0) nextErrors.kingPin = "Select King Pin";
-    if (landingLeg.length === 0) nextErrors.landingLeg = "Select Landing Leg";
-    if (brakeSystem.length === 0)
+    if (vehicleType === "trailer" && landingLeg.length === 0)
+      nextErrors.landingLeg = "Select Landing Leg";
+    if (vehicleType === "trailer" && brakeSystem.length === 0)
       nextErrors.brakeSystem = "Select Brake System";
     if (mudguard.length === 0) nextErrors.mudguard = "Select Mudguard";
-    if (electricalTapes.length === 0)
+    if (vehicleType === "trailer" && electricalTapes.length === 0)
       nextErrors.electricalTapes = "Select Electrical & Reflective Tapes";
     if (supdRupd.length === 0) nextErrors.supdRupd = "Select SUPD & RUPD";
     if (box.length === 0) nextErrors.box = "Select Tool Box";
-    if (spareWheelCarrier.length === 0)
+    if (vehicleType === "trailer" && spareWheelCarrier.length === 0)
       nextErrors.spareWheelCarrier = "Select Spare Wheel Carrier";
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -591,7 +602,7 @@ export function QuotationDrawer({
 
       trailer: idOf(trailer),
 
-      chassis: vehicleType === "trailer" ? idOf(chassis) : null,
+      chassis: idOf(chassis),
 
       body: idOf(body),
       hydraulic: idOf(hydraulic),
@@ -660,7 +671,7 @@ export function QuotationDrawer({
           vehicleType,
 
           trailer: idOf(trailer),
-          chassis: vehicleType === "trailer" ? idOf(chassis) : null,
+          chassis: idOf(chassis),
           body: idOf(body),
           hydraulic: idOf(hydraulic),
           axle: idOf(axle),
@@ -933,7 +944,7 @@ export function QuotationDrawer({
               {/* Row 5: All 17 technical spec dropdowns, matching sketch order */}
               {/* Row 5: All 17 technical spec dropdowns */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {/* 1 - Trailer */}
+                {/* 1 - Trailer / Tipper (label switches with Vehicle Type) */}
                 <div>
                   <Combobox
                     data={getMasterOptions("Trailer Detail")}
@@ -942,8 +953,16 @@ export function QuotationDrawer({
                     onChange={(value: any) =>
                       handleMasterChange(value, "Trailer Detail", setTrailer)
                     }
-                    placeholder="Select Trailer"
-                    label="Select Trailer"
+                    placeholder={
+                      vehicleType === "tipper"
+                        ? "Select Tipper"
+                        : "Select Trailer"
+                    }
+                    label={
+                      vehicleType === "tipper"
+                        ? "Select Tipper"
+                        : "Select Trailer"
+                    }
                     searchFields={["label"]}
                   />
                   {errors.trailer && (
@@ -951,27 +970,23 @@ export function QuotationDrawer({
                   )}
                 </div>
 
-                {/* 2 - Main Chassis */}
-                {vehicleType === "trailer" && (
-                  <div>
-                    <Combobox
-                      data={getMasterOptions("Main Chassis")}
-                      displayField="label"
-                      value={chassis[0] || null}
-                      onChange={(value: any) =>
-                        handleMasterChange(value, "Main Chassis", setChassis)
-                      }
-                      placeholder="Select Main Chassis"
-                      label="Select Main Chassis"
-                      searchFields={["label"]}
-                    />
-                    {errors.chassis && (
-                      <p className="text-error mt-1 text-xs">
-                        {errors.chassis}
-                      </p>
-                    )}
-                  </div>
-                )}
+                {/* 2 - Main Chassis (shown for both Tipper and Trailer) */}
+                <div>
+                  <Combobox
+                    data={getMasterOptions("Main Chassis")}
+                    displayField="label"
+                    value={chassis[0] || null}
+                    onChange={(value: any) =>
+                      handleMasterChange(value, "Main Chassis", setChassis)
+                    }
+                    placeholder="Select Main Chassis"
+                    label="Select Main Chassis"
+                    searchFields={["label"]}
+                  />
+                  {errors.chassis && (
+                    <p className="text-error mt-1 text-xs">{errors.chassis}</p>
+                  )}
+                </div>
 
                 {/* 3 - Body */}
                 <div>
@@ -1011,79 +1026,87 @@ export function QuotationDrawer({
                   )}
                 </div>
 
-                {/* 5 - Axle */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Axle")}
-                    displayField="label"
-                    value={axle[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(value, "Axle", setAxle)
-                    }
-                    placeholder="Select Axle"
-                    label="Select Axle"
-                    searchFields={["label"]}
-                  />
-                  {errors.axle && (
-                    <p className="text-error mt-1 text-xs">{errors.axle}</p>
-                  )}
-                </div>
+                {/* 5 - Axle (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Axle")}
+                      displayField="label"
+                      value={axle[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(value, "Axle", setAxle)
+                      }
+                      placeholder="Select Axle"
+                      label="Select Axle"
+                      searchFields={["label"]}
+                    />
+                    {errors.axle && (
+                      <p className="text-error mt-1 text-xs">{errors.axle}</p>
+                    )}
+                  </div>
+                )}
 
-                {/* 6 - Suspension */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Suspension")}
-                    displayField="label"
-                    value={suspension[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(value, "Suspension", setSuspension)
-                    }
-                    placeholder="Select Suspension"
-                    label="Select Suspension"
-                    searchFields={["label"]}
-                  />
-                  {errors.suspension && (
-                    <p className="text-error mt-1 text-xs">
-                      {errors.suspension}
-                    </p>
-                  )}
-                </div>
+                {/* 6 - Suspension (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Suspension")}
+                      displayField="label"
+                      value={suspension[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(value, "Suspension", setSuspension)
+                      }
+                      placeholder="Select Suspension"
+                      label="Select Suspension"
+                      searchFields={["label"]}
+                    />
+                    {errors.suspension && (
+                      <p className="text-error mt-1 text-xs">
+                        {errors.suspension}
+                      </p>
+                    )}
+                  </div>
+                )}
 
-                {/* 7 - Tyre */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Tyre")}
-                    displayField="label"
-                    value={tyre[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(value, "Tyre", setTyre)
-                    }
-                    placeholder="Select Tyre"
-                    label="Select Tyre"
-                    searchFields={["label"]}
-                  />
-                  {errors.tyre && (
-                    <p className="text-error mt-1 text-xs">{errors.tyre}</p>
-                  )}
-                </div>
+                {/* 7 - Tyre (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Tyre")}
+                      displayField="label"
+                      value={tyre[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(value, "Tyre", setTyre)
+                      }
+                      placeholder="Select Tyre"
+                      label="Select Tyre"
+                      searchFields={["label"]}
+                    />
+                    {errors.tyre && (
+                      <p className="text-error mt-1 text-xs">{errors.tyre}</p>
+                    )}
+                  </div>
+                )}
 
-                {/* 8 - Rim */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Rim")}
-                    displayField="label"
-                    value={rim[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(value, "Rim", setRim)
-                    }
-                    placeholder="Select Rim"
-                    label="Select Rim"
-                    searchFields={["label"]}
-                  />
-                  {errors.rim && (
-                    <p className="text-error mt-1 text-xs">{errors.rim}</p>
-                  )}
-                </div>
+                {/* 8 - Rim (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Rim")}
+                      displayField="label"
+                      value={rim[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(value, "Rim", setRim)
+                      }
+                      placeholder="Select Rim"
+                      label="Select Rim"
+                      searchFields={["label"]}
+                    />
+                    {errors.rim && (
+                      <p className="text-error mt-1 text-xs">{errors.rim}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* 9 - King Pin */}
                 <div>
@@ -1103,45 +1126,53 @@ export function QuotationDrawer({
                   )}
                 </div>
 
-                {/* 10 - Landing Leg */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Landing Leg")}
-                    displayField="label"
-                    value={landingLeg[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(value, "Landing Leg", setLandingLeg)
-                    }
-                    placeholder="Select Landing Leg"
-                    label="Select Landing Leg"
-                    searchFields={["label"]}
-                  />
-                  {errors.landingLeg && (
-                    <p className="text-error mt-1 text-xs">
-                      {errors.landingLeg}
-                    </p>
-                  )}
-                </div>
+                {/* 10 - Landing Leg (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Landing Leg")}
+                      displayField="label"
+                      value={landingLeg[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(value, "Landing Leg", setLandingLeg)
+                      }
+                      placeholder="Select Landing Leg"
+                      label="Select Landing Leg"
+                      searchFields={["label"]}
+                    />
+                    {errors.landingLeg && (
+                      <p className="text-error mt-1 text-xs">
+                        {errors.landingLeg}
+                      </p>
+                    )}
+                  </div>
+                )}
 
-                {/* 11 - Brake System */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Brake system")}
-                    displayField="label"
-                    value={brakeSystem[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(value, "Brake system", setBrakeSystem)
-                    }
-                    placeholder="Select Brake System"
-                    label="Select Brake System"
-                    searchFields={["label"]}
-                  />
-                  {errors.brakeSystem && (
-                    <p className="text-error mt-1 text-xs">
-                      {errors.brakeSystem}
-                    </p>
-                  )}
-                </div>
+                {/* 11 - Brake System (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Brake system")}
+                      displayField="label"
+                      value={brakeSystem[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(
+                          value,
+                          "Brake system",
+                          setBrakeSystem,
+                        )
+                      }
+                      placeholder="Select Brake System"
+                      label="Select Brake System"
+                      searchFields={["label"]}
+                    />
+                    {errors.brakeSystem && (
+                      <p className="text-error mt-1 text-xs">
+                        {errors.brakeSystem}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* 12 - Mudguard */}
                 <div>
@@ -1176,29 +1207,31 @@ export function QuotationDrawer({
                   />
                 </div>
 
-                {/* 14 - Electrical & Reflective Tapes */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Electrical & Reflective tapes")}
-                    displayField="label"
-                    value={electricalTapes[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(
-                        value,
-                        "Electrical & Reflective tapes",
-                        setElectricalTapes,
-                      )
-                    }
-                    placeholder="Electrical & Reflective Tapes"
-                    label="Electrical & Reflective Tapes"
-                    searchFields={["label"]}
-                  />
-                  {errors.electricalTapes && (
-                    <p className="text-error mt-1 text-xs">
-                      {errors.electricalTapes}
-                    </p>
-                  )}
-                </div>
+                {/* 14 - Electrical & Reflective Tapes (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Electrical & Reflective tapes")}
+                      displayField="label"
+                      value={electricalTapes[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(
+                          value,
+                          "Electrical & Reflective tapes",
+                          setElectricalTapes,
+                        )
+                      }
+                      placeholder="Electrical & Reflective Tapes"
+                      label="Electrical & Reflective Tapes"
+                      searchFields={["label"]}
+                    />
+                    {errors.electricalTapes && (
+                      <p className="text-error mt-1 text-xs">
+                        {errors.electricalTapes}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* 15 - SUPD & RUPD */}
                 <div>
@@ -1236,29 +1269,31 @@ export function QuotationDrawer({
                   )}
                 </div>
 
-                {/* 17 - Spare Wheel Carrier */}
-                <div>
-                  <Combobox
-                    data={getMasterOptions("Spare Wheel Carrier")}
-                    displayField="label"
-                    value={spareWheelCarrier[0] || null}
-                    onChange={(value: any) =>
-                      handleMasterChange(
-                        value,
-                        "Spare Wheel Carrier",
-                        setSpareWheelCarrier,
-                      )
-                    }
-                    placeholder="Spare Wheel Carrier"
-                    label="Spare Wheel Carrier"
-                    searchFields={["label"]}
-                  />
-                  {errors.spareWheelCarrier && (
-                    <p className="text-error mt-1 text-xs">
-                      {errors.spareWheelCarrier}
-                    </p>
-                  )}
-                </div>
+                {/* 17 - Spare Wheel Carrier (Trailer only) */}
+                {vehicleType === "trailer" && (
+                  <div>
+                    <Combobox
+                      data={getMasterOptions("Spare Wheel Carrier")}
+                      displayField="label"
+                      value={spareWheelCarrier[0] || null}
+                      onChange={(value: any) =>
+                        handleMasterChange(
+                          value,
+                          "Spare Wheel Carrier",
+                          setSpareWheelCarrier,
+                        )
+                      }
+                      placeholder="Spare Wheel Carrier"
+                      label="Spare Wheel Carrier"
+                      searchFields={["label"]}
+                    />
+                    {errors.spareWheelCarrier && (
+                      <p className="text-error mt-1 text-xs">
+                        {errors.spareWheelCarrier}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Warranty - rich text editor */}

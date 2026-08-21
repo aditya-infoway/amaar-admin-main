@@ -23,6 +23,7 @@ interface MasterToolbarProps<T> {
   onExportPdf: () => void;
   filterPanel?: ReactNode;
     filterTypeButtons?: ReactNode;
+    importButton?: ReactNode;
 }
 
 export function MasterToolbar<T>({
@@ -37,6 +38,7 @@ export function MasterToolbar<T>({
   onExportPdf,
   filterPanel,
    filterTypeButtons,
+     importButton,
 }: MasterToolbarProps<T>) {
   return (
     <div className="table-toolbar px-(--margin-x) pt-4">
@@ -55,6 +57,7 @@ export function MasterToolbar<T>({
             />
             <span>Filter</span>
           </Button>
+         {importButton}
           <Button
             variant="outlined"
             className="h-9 gap-2 rounded-md px-3 text-sm"
