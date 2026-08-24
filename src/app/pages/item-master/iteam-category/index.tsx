@@ -10,17 +10,35 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/components/shared/Page";
-import { Input } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
-import { Get, Post, Put, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import {
+  Get,
+  Post,
+  Put,
+  Delete,
+  toastsuccessmsg,
+  toasterrormsg,
+} from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { statusOptions } from "../shared/constants";
 import { ItemCategoryDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
-import { emptyItemCategory, mapApiItemCategoryToItemCategory, ItemCategory } from "./data";
+import {
+  emptyItemCategory,
+  mapApiItemCategoryToItemCategory,
+  ItemCategory,
+} from "./data";
+import {
+  HomeIcon,
+  Cog6ToothIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
+import { Tab, TabGroup, TabList } from "@headlessui/react";
+import clsx from "clsx";
 
 export default function ItemCategoryPage() {
   const [data, setData] = useState<ItemCategory[]>([]);
@@ -34,6 +52,7 @@ export default function ItemCategoryPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterType, setFilterType] = useState("all");
 
   // ---- Fetch item categories ----
   const fetchAll = async () => {
@@ -41,9 +60,13 @@ export default function ItemCategoryPage() {
     try {
       const response = await Get("master/itemcategory/list", {}, false);
       if (response.data?.success) {
-        setData((response.data.data || []).map(mapApiItemCategoryToItemCategory));
+        setData(
+          (response.data.data || []).map(mapApiItemCategoryToItemCategory),
+        );
       } else {
-        toasterrormsg(response.data?.message || "Failed to fetch item categories.");
+        toasterrormsg(
+          response.data?.message || "Failed to fetch item categories.",
+        );
       }
     } catch (error) {
       toasterrormsg("Something went wrong while fetching item category data.");
@@ -62,12 +85,21 @@ export default function ItemCategoryPage() {
       if (
         filterName &&
         !item.categoryName.toLowerCase().includes(filterName.toLowerCase())
-      )
+      ) {
         return false;
-      if (filterStatus && item.status !== filterStatus) return false;
+      }
+
+      if (filterStatus && item.status !== filterStatus) {
+        return false;
+      }
+
+      if (filterType !== "all" && item.type !== filterType) {
+        return false;
+      }
+
       return true;
     });
-  }, [data, filterName, filterStatus]);
+  }, [data, filterName, filterStatus, filterType]);
 
   // ---- Save (create or update) via API ----
   const handleSave = async (item: ItemCategory) => {
@@ -81,21 +113,33 @@ export default function ItemCategoryPage() {
         const response = await Put(
           "master/itemcategory/update",
           { itemCategoryId: Number(item.id), ...payload },
-          false
+          false,
         );
         if (response.data?.success) {
-          toastsuccessmsg(response.data?.message || "Item category updated successfully.");
+          toastsuccessmsg(
+            response.data?.message || "Item category updated successfully.",
+          );
           fetchAll();
         } else {
-          toasterrormsg(response.data?.message || "Failed to update item category.");
+          toasterrormsg(
+            response.data?.message || "Failed to update item category.",
+          );
         }
       } else {
-        const response = await Post("master/itemcategory/create", payload, false);
+        const response = await Post(
+          "master/itemcategory/create",
+          payload,
+          false,
+        );
         if (response.data?.success) {
-          toastsuccessmsg(response.data?.message || "Item category created successfully.");
+          toastsuccessmsg(
+            response.data?.message || "Item category created successfully.",
+          );
           fetchAll();
         } else {
-          toasterrormsg(response.data?.message || "Failed to create item category.");
+          toasterrormsg(
+            response.data?.message || "Failed to create item category.",
+          );
         }
       }
     } catch (error) {
@@ -108,13 +152,17 @@ export default function ItemCategoryPage() {
       const response = await Delete(
         "master/itemcategory/delete",
         { itemCategoryId: Number(row.id) },
-        false
+        false,
       );
       if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "Item category deleted successfully.");
+        toastsuccessmsg(
+          response.data?.message || "Item category deleted successfully.",
+        );
         setData((prev) => prev.filter((item) => item.id !== row.id));
       } else {
-        toasterrormsg(response.data?.message || "Failed to delete item category.");
+        toasterrormsg(
+          response.data?.message || "Failed to delete item category.",
+        );
       }
     } catch (error) {
       toasterrormsg("Something went wrong while deleting the item category.");
@@ -128,9 +176,9 @@ export default function ItemCategoryPage() {
           Delete(
             "master/itemcategory/delete",
             { itemCategoryId: Number(r.original.id) },
-            false
-          )
-        )
+            false,
+          ),
+        ),
       );
       const ids = new Set(rows.map((r) => r.original.id));
       setData((prev) => prev.filter((item) => !ids.has(item.id)));
@@ -191,6 +239,7 @@ export default function ItemCategoryPage() {
               "item-categories",
             )
           }
+       
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
@@ -199,6 +248,7 @@ export default function ItemCategoryPage() {
                 onChange={(e) => setFilterName(e.target.value)}
                 placeholder="Filter by name"
               />
+
               <Listbox
                 data={[{ id: "", label: "All" }, ...statusOptions]}
                 value={
@@ -214,6 +264,71 @@ export default function ItemCategoryPage() {
             </div>
           }
         />
+         
+    
+            <TabGroup
+              selectedIndex={
+                filterType === "all" ? 0 : filterType === "manual" ? 1 : 2
+              }
+              onChange={(index) => {
+                if (index === 0) {
+                  setFilterType("all");
+                } else if (index === 1) {
+                  setFilterType("manual");
+                } else {
+                  setFilterType("default");
+                }
+              }}
+            >
+              <div className="hide-scrollbar overflow-x-auto mt-4 pl-6">
+                <div className="border-gray-150 dark:border-dark-500 w-max min-w-full border-b-2">
+                  <TabList className="-mb-0.5 flex">
+                    <Tab
+                      className={({ selected }) =>
+                        clsx(
+                          "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                          selected
+                            ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
+                            : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
+                        )
+                      }
+                    >
+                      <HomeIcon className="inline-block size-4.5" />
+                      <span>All</span>
+                    </Tab>
+
+                    <Tab
+                      className={({ selected }) =>
+                        clsx(
+                          "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                          selected
+                            ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
+                            : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
+                        )
+                      }
+                    >
+                      <Cog6ToothIcon className="inline-block size-4.5" />
+                      <span>Manual</span>
+                    </Tab>
+
+                    <Tab
+                      className={({ selected }) =>
+                        clsx(
+                          "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                          selected
+                            ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
+                            : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
+                        )
+                      }
+                    >
+                      <CheckCircleIcon className="inline-block size-4.5" />
+                      <span>Default</span>
+                    </Tab>
+                  </TabList>
+                </div>
+              </div>
+            </TabGroup>
+       
 
         <MasterTable
           table={table}

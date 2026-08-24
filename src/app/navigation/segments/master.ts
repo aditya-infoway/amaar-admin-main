@@ -60,6 +60,14 @@ export const master: NavigationTree = {
           transKey: "BOM",
           icon: "master.bom",
         },
+        {
+          id: "master.bom2",
+          type: "item",
+          path: "/master/bom2",
+          title: "BOM2",
+          transKey: "BOM2",
+          icon: "master.bom",
+        },
       ],
     },
 

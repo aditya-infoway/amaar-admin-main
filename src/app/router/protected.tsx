@@ -61,6 +61,26 @@ const protectedRoutes: RouteObject = {
               }),
             },
             {
+              path: "bom2",
+              children: [
+                {
+                  index: true,
+                  lazy: async () => ({
+                    Component: (await import("@/app/pages/master/bom2"))
+                      .default,
+                  }),
+                },
+                {
+                  path: "create",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/bom2/form")
+                    ).default,
+                  }),
+                },
+              ],
+            },
+            {
               path: "product-series",
               lazy: async () => ({
                 Component: (await import("@/app/pages/master/product-series"))

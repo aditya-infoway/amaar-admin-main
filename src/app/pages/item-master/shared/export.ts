@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx';
+
 export type ExportColumn<T> = {
   key: keyof T;
   header: string;
@@ -81,4 +83,39 @@ export function exportToPdf<T extends object>(
   printWindow.document.title = filename;
   printWindow.focus();
   printWindow.print();
+}
+
+
+export function importFromExcel<T>(
+  file: File,
+  columnMapping: { [key: string]: keyof T }
+): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        
+        const mappedData = jsonData.map((row: any) => {
+          const mappedRow: any = {};
+          Object.keys(columnMapping).forEach((excelCol) => {
+            const targetKey = columnMapping[excelCol];
+            mappedRow[targetKey] = row[excelCol] || '';
+          });
+          return mappedRow as T;
+        });
+        
+        resolve(mappedData);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = (error) => reject(error);
+    reader.readAsArrayBuffer(file);
+  });
 }

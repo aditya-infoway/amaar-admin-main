@@ -1,49 +1,112 @@
-import { Quotation } from "./data";
-import {
-    tyreOptions,
-    axleOptions,
-    hydraulicOptions,
-    boxOptions,
-    colorOptions,
-    chassisOptions,
-    getOptionLabel,
-} from "./options";
-import { masterStorage, getModelLabel } from "../shared/storage";
+import { Quotation } from "../shared/types";
+import { Get } from "@/ApiHelper";
 
-function escapeHtml(value: string): string {
-    return (value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+function escapeHtml(value?: string | null): string {
+  return (value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
-function formatDate(iso: string): string {
-    if (!iso) return "-";
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return "-";
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yy = String(d.getFullYear()).slice(-2);
-    return `${dd}.${mm}.${yy}`;
+function formatDate(iso?: string | null): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "-";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}.${mm}.${yy}`;
 }
 
 function formatCurrency(value: number): string {
-    return `&#8377; ${Math.round(value).toLocaleString("en-IN")}`;
+  return `&#8377; ${Math.round(value).toLocaleString("en-IN")}`;
 }
 
-export function printQuotationHtml(quotation: Quotation): void {
-    const modelLabel = getModelLabel(masterStorage.getModels(), quotation.model);
-    const tyreLabel = getOptionLabel(tyreOptions, quotation.tyre);
-    const axleLabel = getOptionLabel(axleOptions, quotation.axle);
-    const hydraulicLabel = getOptionLabel(hydraulicOptions, quotation.hydraulic);
-    const boxLabel = getOptionLabel(boxOptions, quotation.box);
-    const colorLabel = getOptionLabel(colorOptions, quotation.color);
-    const chassisLabel = getOptionLabel(chassisOptions, quotation.chassis);
+// Parses a JSON-stringified Quill Delta (saved from the Warranty rich
+// text editor) into escaped HTML with line breaks preserved.
+function warrantyDeltaToHtml(raw?: string | null): string {
+  if (!raw) return "";
 
-    const finalPrice = Number(quotation.finalPrice || 0);
-    const basicCost = finalPrice / 1.18;
-    const gstAmount = finalPrice - basicCost;
-    const html = `
+  try {
+    const parsed = JSON.parse(raw);
+    const ops = parsed?.ops || [];
+
+    const text = ops
+      .map((op: any) => (typeof op.insert === "string" ? op.insert : ""))
+      .join("");
+
+    return escapeHtml(text).replace(/\n/g, "<br>");
+  } catch (error) {
+    console.error("Failed to parse warranty content", error);
+    return "";
+  }
+}
+
+export async function printQuotationHtml(quotation: Quotation): Promise<void> {
+  // --------------------------------------------------------
+  // FETCH LIVE MASTER DATA (same sources the Drawer uses)
+  // --------------------------------------------------------
+  let masterItems: any[] = [];
+  let modelItems: any[] = [];
+
+  try {
+    const [masterRes, modelRes] = await Promise.all([
+      Get("master/createmaster/list", {}, false),
+      Get("master/model/list", {}, false),
+    ]);
+
+    masterItems = masterRes?.data?.data || [];
+    modelItems = modelRes?.data?.data || [];
+  } catch (error) {
+    console.error("Print quotation: failed to load master data", error);
+  }
+
+  const getDesc = (id: any): string => {
+    if (id === null || id === undefined || id === "") return "—";
+
+    const match = masterItems.find(
+      (item) => String(item.createMasterId) === String(id),
+    );
+
+    return match?.description || "—";
+  };
+
+  const modelLabel = (() => {
+    if (!quotation.model) return "—";
+
+    const match = modelItems.find(
+      (item) => String(item.modelId ?? item.id) === String(quotation.model),
+    );
+
+    return match?.modelName ?? match?.label ?? "—";
+  })();
+
+  const trailerLabel = getDesc(quotation.trailer);
+  const chassisLabel = getDesc(quotation.chassis);
+  const bodyLabel = getDesc(quotation.body);
+  const hydraulicLabel = getDesc(quotation.hydraulic);
+  const axleLabel = getDesc(quotation.axle);
+  const suspensionLabel = getDesc(quotation.suspension);
+  const tyreLabel = getDesc(quotation.tyre);
+  const rimLabel = getDesc(quotation.rim);
+  const kingPinLabel = getDesc(quotation.kingPin);
+  const landingLegLabel = getDesc(quotation.landingLeg);
+  const brakeSystemLabel = getDesc(quotation.brakeSystem);
+  const mudguardLabel = getDesc(quotation.mudguard);
+  const colorLabel = getDesc(quotation.color);
+  const electricalTapesLabel = getDesc(quotation.electricalTapes);
+  const supdRupdLabel = getDesc(quotation.supdRupd);
+  const boxLabel = getDesc(quotation.box);
+  const spareWheelCarrierLabel = getDesc(quotation.spareWheelCarrier);
+
+  // --------------------------------------------------------
+  // PRICING — use the values already saved on the quotation
+  // --------------------------------------------------------
+  const basicCost = Number(quotation.basicCost || 0);
+  const gstAmount = Number(quotation.gstAmount || 0);
+  const finalPrice = Number(quotation.finalPrice || 0);
+
+  const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,7 +145,7 @@ export function printQuotationHtml(quotation: Quotation): void {
             <tr>
                 <td style="width: 35%; vertical-align: top;">
                     <div style="font-size: 11px; font-weight: bold; margin-bottom: 2px;">To,</div>
-                    <div style="font-weight: bold; margin-bottom: 2px;">${escapeHtml(quotation.customerName.toUpperCase())}</div>
+                    <div style="font-weight: bold; margin-bottom: 2px;">${escapeHtml((quotation.customerName || "").toUpperCase())}</div>
                     <table style="font-size: 11px; border-collapse: collapse;">
                         <tr>
                             <td style="padding: 1px 4px 1px 0; font-weight: bold; width: 90px;">CONTACT NO.</td>
@@ -90,7 +153,7 @@ export function printQuotationHtml(quotation: Quotation): void {
                         </tr>
                         <tr>
                             <td style="padding: 1px 4px 1px 0; font-weight: bold;">VILLAGE</td>
-                            <td style="padding: 1px 4px;">: ${escapeHtml(quotation.city.toUpperCase())}</td>
+                            <td style="padding: 1px 4px;">: ${escapeHtml((quotation.city || "").toUpperCase())}</td>
                         </tr>
                         <tr>
                             <td style="padding: 1px 4px 1px 0; font-weight: bold;">REF</td>
@@ -116,7 +179,7 @@ export function printQuotationHtml(quotation: Quotation): void {
             Sub:- Price Offer for ${escapeHtml(modelLabel)} with ${escapeHtml(boxLabel)}, ${escapeHtml(hydraulicLabel)} Kit. With ${escapeHtml(tyreLabel)} Tyre ON ${escapeHtml(chassisLabel)}
         </div>
 
-        <!-- Specifications Table (full 18 rows) -->
+        <!-- Specifications Table (full 18/19 rows) -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 14.5px;">
             <thead>
                 <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; background-color: #f2f2f2; -webkit-print-color-adjust: exact;">
@@ -129,7 +192,7 @@ export function printQuotationHtml(quotation: Quotation): void {
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">1</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Trailer Detail</td>
-                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(modelLabel)} (${escapeHtml(boxLabel)})</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(trailerLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">2</td>
@@ -139,22 +202,22 @@ export function printQuotationHtml(quotation: Quotation): void {
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">3</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Body Details</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Floor 5 mm, Side 4 mm, Front Board- 4mm, Tail Door 4mm</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(bodyLabel)}</td>
                 </tr>
                 <tr style="background-color: #e6e6e6; -webkit-print-color-adjust: exact;">
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">4</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Hyd Kit</td>
-                    <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">${escapeHtml(hydraulicLabel)} Kit with Pump, PTO</td>
+                    <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">${escapeHtml(hydraulicLabel)}</td>
                 </tr>
                 <tr style="background-color: #e6e6e6; -webkit-print-color-adjust: exact;">
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">5</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Axle</td>
-                    <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">${escapeHtml(axleLabel)} Make</td>
+                    <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">${escapeHtml(axleLabel)}</td>
                 </tr>
                 <tr style="background-color: #e6e6e6; -webkit-print-color-adjust: exact;">
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">6</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Suspension</td>
-                    <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Front Air Lift &amp; Rear 18T Tandem Mech Suspension with Spread Hanger-York Make</td>
+                    <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">${escapeHtml(suspensionLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">7</td>
@@ -164,68 +227,69 @@ export function printQuotationHtml(quotation: Quotation): void {
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">8</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Rim</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Wheels India-12 Nos (7.5x20)</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(rimLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">9</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">King Pin</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Bolt-on, York make</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(kingPinLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">10</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Landing Leg</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Gear Type, York- 25T</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(landingLegLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">11</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Brake system</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Wabco with ABS Tridem</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(brakeSystemLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">12</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Mudgaurd</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Steel Type</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(mudguardLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">13</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Paint</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Shot blasting+Primer+Finish PU Paint, Color: ${escapeHtml(colorLabel)}</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(colorLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">14</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Electrical &amp; Reflective tapes</td>
-                    <td style="border: 1px solid #000; padding: 3px;">As per CMVR</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(electricalTapesLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">15</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">SUPD &amp; RUPD</td>
-                    <td style="border: 1px solid #000; padding: 3px;">As per CMVR</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(supdRupdLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">16</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Tool Box</td>
-                    <td style="border: 1px solid #000; padding: 3px;">Std- 01 Nos</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(boxLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center;">17</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">Spare Wheel Carrier</td>
-                    <td style="border: 1px solid #000; padding: 3px;">01 Nos</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${escapeHtml(spareWheelCarrierLabel)}</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center; vertical-align: top;">18</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold; vertical-align: top;">Warranty</td>
-                    <td style="border: 1px solid #000; padding: 4px; text-align: justify; line-height: 1.3;">
-                        The quoted trailer &amp; rate is for rated load application only. Standard Warranty against manufacturing defects for 12 months from the date of billing. Consumables, Glass &amp; Rubber parts are not covered under the standard warranty. All other proprietary item warranty will be covered back-to-back with original manufacturer's warranty policy
-                    </td>
+                   <td style="border: 1px solid #000; padding: 4px; text-align: justify; line-height: 1.3;">
+    ${warrantyDeltaToHtml(quotation.warranty) || "—"}
+</td>
                 </tr>
-                ${quotation.remark
-            ? `<tr>
+                ${
+                  quotation.remark
+                    ? `<tr>
                     <td style="border: 1px solid #000; padding: 3px; text-align: center; vertical-align: top;">19</td>
                     <td style="border: 1px solid #000; padding: 3px; font-weight: bold; vertical-align: top;">Remark</td>
                     <td style="border: 1px solid #000; padding: 4px; text-align: justify; line-height: 1.3;">${escapeHtml(quotation.remark)}</td>
                 </tr>`
-            : ""
-        }
+                    : ""
+                }
             </tbody>
         </table>
 
@@ -284,7 +348,7 @@ export function printQuotationHtml(quotation: Quotation): void {
 </html>
 `;
 
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
 }

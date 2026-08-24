@@ -2,19 +2,25 @@ import {
   getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel,
   RowSelectionState, SortingState, useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router";
-
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
+import { Button } from "@/components/ui/Button";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
-import { Get, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
-import { exportToExcel, exportToPdf } from "../master/shared/export";
-import { MasterTable } from "../master/shared/MasterTable";
-import { MasterToolbar } from "../master/shared/MasterToolbar";
+import { Get, Post, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import {
+  exportToExcel,
+  exportToPdf,
+  importFromExcel,
+} from "./shared/export";
+import { MasterTable } from "./shared/MasterTable";
+import { MasterToolbar } from "./shared/MasterToolbar";
 import { columns, exportColumns } from "./columns";
 import { ItemMaster, mapApiItemMasterToItemMaster } from "./data";
+import { Upload } from "lucide-react";
+
 
 export default function ItemMasterListPage() {
   const navigate = useNavigate();
@@ -28,6 +34,8 @@ export default function ItemMasterListPage() {
   const [filterCode, setFilterCode] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const categoryFilterOptions = useMemo(() => {
     const unique = Array.from(new Set(data.map((item) => item.categoryName).filter(Boolean)));
     return [
@@ -35,6 +43,49 @@ export default function ItemMasterListPage() {
       ...unique.map((name) => ({ id: name as string, label: name as string })),
     ];
   }, [data]);
+
+
+
+const handleImportExcel = async (file: File) => {
+  try {
+    const columnMapping = {
+      'Item Code': 'itemCode',
+      'Item Name': 'itemName',
+      'Short Name': 'shortName',
+      'Item Category': 'categoryName',
+      'Group': 'groupName',
+      'Sales Price': 'salesPrice',
+      'MRP': 'mrp',
+      'Barcode': 'barcode',
+    } as const;
+
+    const importedData = await importFromExcel<Partial<ItemMaster>>(file, columnMapping);
+
+    const response = await Post("master/itemmaster/bulk-import", { items: importedData }, false);
+
+    if (response.data?.success) {
+      toastsuccessmsg(response.data?.message || "Items imported successfully.");
+      fetchAll();
+    } else {
+      const errors = response.data?.data;
+      toasterrormsg(
+        Array.isArray(errors) && errors.length > 0
+          ? `Import rejected. ${errors.slice(0, 3).map((e: any) => `Row ${e.row}: ${e.reason}`).join(" | ")}${errors.length > 3 ? " ..." : ""}`
+          : response.data?.message || "Import failed."
+      );
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  } catch (error) {
+    toasterrormsg("Failed to import Excel file. Please check the format.");
+  }
+};
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -126,6 +177,18 @@ export default function ItemMasterListPage() {
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
           onCreate={() => navigate("/item-master/create")}
+
+  importButton={
+    <Button
+      variant="outlined"
+      className="h-9 gap-2 rounded-md px-3 text-sm"
+      onClick={triggerFileUpload}
+    >
+      <Upload className="size-4" />
+      <span>Import Excel</span>
+    </Button>
+  }
+
           onExportExcel={() => exportToExcel(filteredData, exportColumns, "item-master")}
           onExportPdf={() => exportToPdf(filteredData, exportColumns, "Item Master List", "item-master")}
           filterPanel={
@@ -150,6 +213,22 @@ export default function ItemMasterListPage() {
             </div>
           }
         />
+
+     
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              handleImportExcel(file);
+            }
+          }}
+        />
+
         <MasterTable
           table={table}
           columnCount={columns.length}

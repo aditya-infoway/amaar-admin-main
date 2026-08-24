@@ -3,18 +3,23 @@ export interface ItemCategory {
   categoryName: string;
   status: string;
   createdAt?: string;
+  type: "manual" | "default";
 }
 
 export const emptyItemCategory = (): ItemCategory => ({
   id: "",
   categoryName: "",
   status: "active",
+  type: "manual",
 });
 
 // API se aane wale raw row ko frontend Type me map karta hai
-export const mapApiItemCategoryToItemCategory = (item: any): ItemCategory => ({
+export const mapApiItemCategoryToItemCategory = (
+  item: any,
+): ItemCategory => ({
   id: String(item.itemCategoryId),
   categoryName: item.categoryName,
   status: item.status,
   createdAt: item.created,
+   type: item.categoryType, 
 });

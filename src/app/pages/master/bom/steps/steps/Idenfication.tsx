@@ -1,29 +1,22 @@
 import React from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { 
-  PlusIcon, 
-  TrashIcon, 
-  FolderPlusIcon, 
-  DocumentTextIcon, 
-  CircleStackIcon 
+import {
+  PlusIcon,
+  TrashIcon,
+  FolderPlusIcon,
+  DocumentTextIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 
 import { Button, Input } from "@/components/ui";
 import { useKYCFormContext } from "../KYCFormContext";
-
-export interface BoxChildItem {
-  name: string;
-  type: "item";
-  quantity: number;
-  cost: number;
-}
 
 export interface BoxParentItem {
   name: string;
   type: "assembly" | "item";
   quantity: number;
   cost: number;
-  children: BoxChildItem[];
+  children: BoxParentItem[];
 }
 
 export interface BoxBOMFormType {
@@ -37,41 +30,58 @@ interface BoxProps {
 export function Idenfication({ setCurrentStep }: BoxProps) {
   const kycFormCtx = useKYCFormContext();
 
-  const currentValues = (kycFormCtx.state.formData as any).identifyDocument as unknown as BoxBOMFormType;
+  const currentValues = (kycFormCtx.state.formData as any)
+    .identifyDocument as unknown as BoxBOMFormType;
 
-  const { register, control, handleSubmit, watch, setValue } = useForm<BoxBOMFormType>({
-    defaultValues: currentValues || {
-      bom: [
-        {
-          name: "Main Frame Assembly",
-          type: "assembly",
-          quantity: 1,
-          cost: 0,
-          children: [
-            { name: "Side Wall Panel", type: "item", quantity: 2, cost: 8500 },
-            { name: "Front Wall Panel", type: "item", quantity: 1, cost: 4200 },
-          ],
-        },
-        {
-          name: "Rear Door Unit",
-          type: "assembly",
-          quantity: 1,
-          cost: 0,
-          children: [
-            { name: "Door Sheet", type: "item", quantity: 2, cost: 3100 },
-            { name: "Locking Rod System", type: "item", quantity: 2, cost: 1450 },
-          ],
-        },
-        {
-          name: "Floor Sheet (Checker Plate)",
-          type: "item",
-          quantity: 1,
-          cost: 11200,
-          children: [],
-        },
-      ],
-    },
-  });
+  const { register, control, handleSubmit, watch, setValue } =
+    useForm<BoxBOMFormType>({
+      defaultValues: currentValues || {
+        bom: [
+          {
+            name: "Main Frame Assembly",
+            type: "assembly",
+            quantity: 1,
+            cost: 0,
+            children: [
+              {
+                name: "Side Wall Panel",
+                type: "item",
+                quantity: 2,
+                cost: 8500,
+              },
+              {
+                name: "Front Wall Panel",
+                type: "item",
+                quantity: 1,
+                cost: 4200,
+              },
+            ],
+          },
+          {
+            name: "Rear Door Unit",
+            type: "assembly",
+            quantity: 1,
+            cost: 0,
+            children: [
+              { name: "Door Sheet", type: "item", quantity: 2, cost: 3100 },
+              {
+                name: "Locking Rod System",
+                type: "item",
+                quantity: 2,
+                cost: 1450,
+              },
+            ],
+          },
+          {
+            name: "Floor Sheet (Checker Plate)",
+            type: "item",
+            quantity: 1,
+            cost: 11200,
+            children: [],
+          },
+        ],
+      },
+    });
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -96,190 +106,189 @@ export function Idenfication({ setCurrentStep }: BoxProps) {
     }
   };
 
-  const addSubItem = (parentIndex: number) => {
-    const currentBom = watch("bom");
-    const parent = currentBom[parentIndex];
-    const updatedChildren = [...(parent.children || [])];
-    updatedChildren.push({ name: "", type: "item", quantity: 1, cost: 0 });
-    setValue(`bom.${parentIndex}.children`, updatedChildren);
+  const addChild = (path: string) => {
+    const current = watch(path as any) || [];
+
+    setValue(path as any, [
+      ...current,
+      {
+        name: "",
+        type: "item",
+        quantity: 1,
+        cost: 0,
+        children: [],
+      },
+    ]);
   };
 
-  const removeSubItem = (parentIndex: number, childIndex: number) => {
-    const currentBom = watch("bom");
-    const parent = currentBom[parentIndex];
-    const updatedChildren = [...(parent.children || [])];
-    updatedChildren.splice(childIndex, 1);
-    setValue(`bom.${parentIndex}.children`, updatedChildren);
+  const removeChild = (path: string, index: number) => {
+    const current = watch(path as any) || [];
+
+    const updated = [...current];
+    updated.splice(index, 1);
+
+    setValue(path as any, updated);
+  };
+
+  const renderItem = (
+    item: BoxParentItem,
+    path: string,
+    index: number,
+  ): React.ReactNode => {
+    const itemPath = `${path}.${index}`;
+    const childrenPath = `${itemPath}.children`;
+
+    return (
+      <div key={itemPath} className="relative min-w-[720px]">
+        {/* ROW */}
+        <div className="flex min-w-[720px] flex-col justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+          {/* NAME + ICON + PLUS */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {item.type === "assembly" ? (
+              <CircleStackIcon className="h-4 w-4 flex-shrink-0 text-amber-500" />
+            ) : (
+              <DocumentTextIcon className="h-4 w-4 flex-shrink-0 text-blue-500" />
+            )}
+
+            <Input
+              {...register(`${itemPath}.name` as any)}
+              placeholder={
+                item.type === "assembly" ? "Assembly Name" : "Child Item"
+              }
+              className="h-8 min-w-[250px] flex-1 border-none bg-transparent px-1 text-sm font-medium shadow-none"
+            />
+
+            {/* ONE + BUTTON */}
+            <button
+              type="button"
+              onClick={() => addChild(childrenPath)}
+              className="border-primary-300 bg-primary-50 text-primary-600 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded border"
+              title="Add child"
+            >
+              <PlusIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* QTY / COST / DELETE */}
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold text-gray-400">QTY:</span>
+
+              <Input
+                type="number"
+                {...register(`${itemPath}.quantity` as any, {
+                  valueAsNumber: true,
+                })}
+                className="h-7 w-20 text-center text-xs"
+              />
+            </div>
+
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold text-gray-400">COST:</span>
+
+              <Input
+                type="number"
+                {...register(`${itemPath}.cost` as any, {
+                  valueAsNumber: true,
+                })}
+                className="h-7 w-28 text-xs"
+              />
+            </div>
+
+            {/* DELETE */}
+            <button
+              type="button"
+              onClick={() => {
+                if (path === "bom") {
+                  remove(index);
+                } else {
+                  removeChild(path, index);
+                }
+              }}
+              className="p-1 text-gray-400 hover:text-rose-500"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* CHILDREN */}
+        {item.children?.length > 0 && (
+          <div className="mt-2 ml-5 space-y-2 border-l border-dashed border-gray-300 pl-4 sm:ml-8 sm:pl-5">
+            {item.children.map((child, childIndex) =>
+              renderItem(child, childrenPath, childIndex),
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleKeyDown} autoComplete="off" className="w-full mx-auto px-0 sm:px-4">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      onKeyDown={handleKeyDown}
+      autoComplete="off"
+      className="mx-auto w-full px-0 sm:px-4"
+    >
       {/* Action Buttons Top Bar */}
-      <div className="my-4 flex flex-wrap items-center gap-2 border-b border-gray-100 pb-3 dark:border-dark-500">
+      <div className="dark:border-dark-500 my-4 flex flex-wrap items-center gap-2 border-b border-gray-100 pb-3">
         <Button
           type="button"
           variant="outlined"
-          onClick={() => append({ name: "", type: "assembly", quantity: 1, cost: 0, children: [] })}
-          className="flex items-center gap-1 text-xs py-1 h-8 border border-gray-300 dark:border-dark-600"
+          onClick={() =>
+            append({
+              name: "",
+              type: "assembly",
+              quantity: 1,
+              cost: 0,
+              children: [],
+            })
+          }
+          className="dark:border-dark-600 flex h-8 items-center gap-1 border border-gray-300 py-1 text-xs"
         >
           <FolderPlusIcon className="h-3.5 w-3.5 text-amber-500" /> Add Assembly
         </Button>
         <Button
           type="button"
           variant="outlined"
-          onClick={() => append({ name: "", type: "item", quantity: 1, cost: 0, children: [] })}
-          className="flex items-center gap-1 text-xs py-1 h-8 border border-gray-300 dark:border-dark-600"
+          onClick={() =>
+            append({
+              name: "",
+              type: "item",
+              quantity: 1,
+              cost: 0,
+              children: [],
+            })
+          }
+          className="dark:border-dark-600 flex h-8 items-center gap-1 border border-gray-300 py-1 text-xs"
         >
           <PlusIcon className="h-3.5 w-3.5 text-blue-500" /> Add Standalone Item
         </Button>
       </div>
 
       {/* Form Card Content */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50/30 p-2 sm:p-4 dark:border-dark-500 dark:bg-dark-900/10 min-h-[400px]">
-        <div className="relative pl-2 sm:pl-3 space-y-3 before:absolute before:left-5 sm:before:left-6 before:top-0 before:bottom-3 before:w-0.5 before:border-l before:border-dashed before:border-gray-300 dark:before:border-dark-600">
+      <div className="dark:border-dark-500 dark:bg-dark-900/10 h-[400px] w-full overflow-auto rounded-xl border border-gray-200 bg-gray-50/30 p-2 sm:p-4">
+        <div className="relative min-w-max space-y-3 pl-2 sm:pl-3">
           {fields.map((field, parentIndex) => {
             const currentItem = watch(`bom.${parentIndex}`) || field;
-            const isAssembly = currentItem.type === "assembly";
 
-            return (
-              <div key={field.id} className="relative">
-                {/* Horizontal branch line connection */}
-                <div className="absolute -left-2 sm:-left-3 top-5 w-2 sm:w-3 border-t border-dashed border-gray-300 dark:border-dark-600" />
-
-                {/* Parent Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm transition-all hover:border-gray-300 dark:bg-dark-800 dark:border-dark-600">
-
-                  {/* Left Side: Icon, Name Input and Action */}
-                  <div className="flex items-start gap-2 flex-1 w-full">
-                    {isAssembly ? (
-                      <CircleStackIcon className="h-4 w-4 text-amber-500 mt-2 flex-shrink-0" />
-                    ) : (
-                      <DocumentTextIcon className="h-4 w-4 text-blue-500 mt-2 flex-shrink-0" />
-                    )}
-
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 w-full max-w-md">
-                      <Input
-                        {...register(`bom.${parentIndex}.name` as const)}
-                        placeholder={isAssembly ? "Assembly Name (e.g. Main Frame)" : "Item Name (e.g. Floor Sheet)"}
-                        className="font-medium bg-transparent border-none shadow-none focus-visible:ring-1 px-1 h-8 text-sm w-full"
-                      />
-
-                      {isAssembly && (
-                        <button
-                          type="button"
-                          onClick={() => addSubItem(parentIndex)}
-                          className="flex items-center justify-center gap-0.5 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 px-2 py-1 sm:py-0.5 rounded transition-all shadow-sm flex-shrink-0 w-24 sm:w-auto"
-                        >
-                          <PlusIcon className="h-3 w-3 stroke-[2.5]" /> Sub-item
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Side: Qty, Cost & Delete */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-none pt-2 sm:pt-0 border-gray-100 w-full sm:w-auto">
-                    {!isAssembly && (
-                      <div className="flex flex-row items-center gap-2 flex-1 sm:flex-initial">
-                        <div className="w-full sm:w-24 flex items-center gap-1">
-                          <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">QTY:</span>
-                          <Input
-                            type="number"
-                            {...register(`bom.${parentIndex}.quantity` as const, { valueAsNumber: true })}
-                            className="h-7 text-xs px-1.5 text-center bg-gray-50/50 w-full"
-                          />
-                        </div>
-                        <div className="w-full sm:w-32 flex items-center gap-1">
-                          <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">COST:</span>
-                          <Input
-                            type="number"
-                            {...register(`bom.${parentIndex}.cost` as const, { valueAsNumber: true })}
-                            placeholder="0"
-                            className="h-7 text-xs px-1.5 bg-gray-50/50 w-full"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => remove(parentIndex)}
-                      className="p-1 text-gray-400 hover:text-rose-500 rounded hover:bg-gray-50 dark:hover:bg-dark-700 transition-colors ml-auto sm:ml-0"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Nested Sub-items (Children) */}
-                {isAssembly && currentItem.children && currentItem.children.length > 0 && (
-                  <div className="mt-1.5 ml-4 sm:ml-8 pl-3 sm:pl-5 relative space-y-1.5 border-l border-solid border-gray-200 dark:border-dark-700">
-                    {currentItem.children.map((_, childIndex) => (
-                      <div
-                        key={childIndex}
-                        className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50/70 p-2 sm:px-3 sm:py-1 rounded-md border border-gray-200/60 dark:bg-dark-900/40 dark:border-dark-700"
-                      >
-                        <div className="absolute -left-3 sm:-left-5 top-4 w-3 sm:w-5 border-t border-solid border-gray-200 dark:border-dark-700" />
-
-                        {/* Sub-item Header/Input */}
-                        <div className="flex items-center gap-1.5 flex-1 w-full">
-                          <DocumentTextIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                          <Input
-                            {...register(`bom.${parentIndex}.children.${childIndex}.name` as const)}
-                            placeholder="Child Item (e.g. Panel Sheet)"
-                            className="h-7 bg-transparent border-none shadow-none focus-visible:ring-1 px-1 text-xs w-full max-w-xs"
-                          />
-                        </div>
-
-                        {/* Sub-item Qty, Cost & Action */}
-                        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-none pt-1.5 sm:pt-0 border-gray-200/40">
-                          <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                            <div className="w-full sm:w-24 flex items-center gap-1">
-                              <span className="text-[10px] text-gray-400 uppercase font-bold whitespace-nowrap">QTY:</span>
-                              <Input
-                                type="number"
-                                {...register(`bom.${parentIndex}.children.${childIndex}.quantity` as const, { valueAsNumber: true })}
-                                className="h-6 text-xs px-1 text-center bg-white w-full"
-                              />
-                            </div>
-                            <div className="w-full sm:w-32 flex items-center gap-1">
-                              <span className="text-[10px] text-gray-400 uppercase font-bold whitespace-nowrap">COST:</span>
-                              <Input
-                                type="number"
-                                {...register(`bom.${parentIndex}.children.${childIndex}.cost` as const, { valueAsNumber: true })}
-                                className="h-6 text-xs px-1 bg-white w-full"
-                              />
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => removeSubItem(parentIndex, childIndex)}
-                            className="p-0.5 text-gray-400 hover:text-rose-500 transition-colors"
-                          >
-                            <TrashIcon className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
+            return renderItem(currentItem as BoxParentItem, "bom", parentIndex);
           })}
         </div>
       </div>
 
       {/* Footer Controls */}
-      <div className="mt-5 flex justify-end space-x-2 border-t border-gray-100 pt-3 dark:border-dark-500">
-        <Button 
-          type="button" 
-          variant="outlined" 
-          onClick={() => setCurrentStep(1)} 
-          className="px-4 h-8 text-xs border border-gray-300 dark:border-dark-600"
+      <div className="dark:border-dark-500 mt-5 flex justify-end space-x-2 border-t border-gray-100 pt-3">
+        <Button
+          type="button"
+          variant="outlined"
+          onClick={() => setCurrentStep(1)}
+          className="dark:border-dark-600 h-8 border border-gray-300 px-4 text-xs"
         >
           Back
         </Button>
-        <Button type="submit" className="px-5 h-8 text-xs" color="primary">
+        <Button type="submit" className="h-8 px-5 text-xs" color="primary">
           Next
         </Button>
       </div>
