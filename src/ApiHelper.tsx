@@ -15,8 +15,8 @@ export function toastsuccessmsg(message: any) {
 export const URL = {
   uaturl: "",
   productionurl: "",
-  localurl: "http://localhost:8001/",
-  // localurl: "https://api.amaarmechtech.com/",
+  // localurl: "http://localhost:8001/",
+  localurl: "https://api.amaarmechtech.com/",
 };
 
 //get the x-token if store in session
