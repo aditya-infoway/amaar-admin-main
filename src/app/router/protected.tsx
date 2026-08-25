@@ -55,18 +55,11 @@ const protectedRoutes: RouteObject = {
             },
             {
               path: "bom",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/master/bom/form"))
-                  .default,
-              }),
-            },
-            {
-              path: "bom2",
               children: [
                 {
                   index: true,
                   lazy: async () => ({
-                    Component: (await import("@/app/pages/master/bom2"))
+                    Component: (await import("@/app/pages/master/bom"))
                       .default,
                   }),
                 },
@@ -74,7 +67,23 @@ const protectedRoutes: RouteObject = {
                   path: "create",
                   lazy: async () => ({
                     Component: (
-                      await import("@/app/pages/master/bom2/form")
+                      await import("@/app/pages/master/bom/form")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "edit/:id",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/bom/form")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "view/:id",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/bom/BOMViewPage")
                     ).default,
                   }),
                 },

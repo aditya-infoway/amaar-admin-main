@@ -1,847 +1,872 @@
-import { useState, Fragment, useMemo } from 'react';
+import { useState, useMemo, useEffect } from "react";
 import {
-  PlusIcon, PencilSquareIcon, CheckIcon, EllipsisVerticalIcon, CalendarIcon,
-  MagnifyingGlassIcon, ArrowsUpDownIcon, FunnelIcon, ArrowPathIcon,
-  ArrowDownTrayIcon, PrinterIcon, Cog6ToothIcon, ChevronDownIcon, ChevronRightIcon,
-  FolderIcon, DocumentTextIcon, XMarkIcon
-} from '@heroicons/react/24/outline';
-import {
-  Tab, TabGroup, TabList, TabPanel, TabPanels,
-  Menu, MenuButton, MenuItem, MenuItems, Transition
-} from "@headlessui/react";
+  ChevronLeftIcon,
+  ChevronDownIcon,
+  FolderIcon,
+  DocumentTextIcon,
+  XMarkIcon,
+  MagnifyingGlassIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
+import { Link, useNavigate, useParams } from "react-router";
 import clsx from "clsx";
-import { Input, Checkbox, Button, Radio } from "@/components/ui";
-import { DatePicker } from "@/components/shared/form/Datepicker";
-import { FaLayerGroup } from 'react-icons/fa';
-import KYCForm from '../steps';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { Page } from "@/components/shared/Page";
+import { Button, Card, Input, GhostSpinner } from "@/components/ui";
+import { Listbox } from "@/components/shared/form/StyledListbox";
+import { Get, Post, Put, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import { statusOptions } from "../../shared/constants";
 
-interface TreeNode {
+interface BOMItem {
   id: string;
-  label: string;
-  code: string;
-  level: number;
-  children?: TreeNode[];
+  refItemId: string;
+  itemCode: string;
+  itemName: string;
+  quantity: string;
+  unit: string;
+  serialNo?: string;
+  asslyQty?: string;
+  ldDay?: string;
+  psNo?: string;
+  rejPct?: string;
+  pkgNo?: string;
+  mfgCd?: string;
+  modDate?: string;
+  person?: string;
+  status?: string;
+  dtlNo?: string;
+  shapeDim?: string;
+  finQtty?: string;
+  shape?: string;
+  length?: string;
+  width?: string;
+  children: BOMItem[];
 }
 
-interface TableRow {
+interface AvailableItem {
   id: string;
-  indent: number;
-  code: string;
-  name: string;
+  itemCode: string;
+  itemName: string;
+  unit: string;
   type: string;
-  spec: string;
-  uom: string;
-  qty: string;
-  wastage: string;
-  netQty: string;
-  rate: string;
-  amount: string;
-  isHeader: boolean;
+  status: string;
+  balanceQty: string;
 }
 
-interface FilterState {
-  search: string;
-  type: string[];
-  uom: string[];
-  wastageMin: string;
-  wastageMax: string;
-  levelFilter: string;
+// ---------------------------------------------------------------------------
+// Tree helpers (unchanged)
+// ---------------------------------------------------------------------------
+
+function insertItem(items: BOMItem[], parentId: string | null, newItem: BOMItem): BOMItem[] {
+  if (!parentId) return [...items, newItem];
+  return items.map((item) => {
+    if (item.id === parentId) {
+      return { ...item, children: [...item.children, newItem] };
+    }
+    if (item.children.length > 0) {
+      return { ...item, children: insertItem(item.children, parentId, newItem) };
+    }
+    return item;
+  });
 }
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-const initialTreeData: TreeNode[] = [
-  {
-    id: '0', label: 'SIDE WALL ASSEMBLY', code: 'SW-ASM-001', level: 0,
-    children: [
-      {
-        id: '1', label: 'TOP CHANNEL', code: 'TC-001', level: 1,
-        children: [
-          { id: '1.1', label: 'CHANNEL 100X50', code: 'CH-100X50', level: 2 },
-          { id: '1.2', label: 'FLAT PLATE 6MM', code: 'FP-06', level: 2 },
-        ],
-      },
-      {
-        id: '2', label: 'MIDDLE PILLAR', code: 'MP-001', level: 1,
-        children: [
-          { id: '2.1', label: 'CHANNEL 80X40', code: 'CH-80X40', level: 2 },
-          { id: '2.2', label: 'FLAT PLATE 5MM', code: 'FP-05', level: 2 },
-        ],
-      },
-      { id: '3', label: 'BOTTOM CHANNEL', code: 'BC-001', level: 1 },
-      { id: '4', label: 'RIVET 6MM', code: 'RV-06', level: 1 },
-      { id: '5', label: 'PAINT', code: 'PT-001', level: 1 },
-    ],
-  },
-];
-
-const allTableData: Record<string, TableRow[]> = {
-  '0': [
-    { id: '1', indent: 0, code: 'TC-001', name: 'TOP CHANNEL', type: 'Sub Assembly', spec: '-', uom: 'NOS', qty: '1.000', wastage: '0.00', netQty: '1.000', rate: '1,450.00', amount: '1,450.00', isHeader: true },
-    { id: '1.1', indent: 1, code: 'CH-100X50', name: 'CHANNEL 100X50', type: 'Raw Material', spec: '100X50X5', uom: 'MTR', qty: '2.500', wastage: '2.00', netQty: '2.550', rate: '95.00', amount: '242.25', isHeader: false },
-    { id: '1.2', indent: 1, code: 'FP-06', name: 'FLAT PLATE 6MM', type: 'Raw Material', spec: 'PL 6MM', uom: 'KG', qty: '3.200', wastage: '2.00', netQty: '3.264', rate: '78.00', amount: '244.59', isHeader: false },
-    { id: '2', indent: 0, code: 'MP-001', name: 'MIDDLE PILLAR', type: 'Sub Assembly', spec: '-', uom: 'NOS', qty: '2.000', wastage: '0.00', netQty: '2.000', rate: '1,250.00', amount: '2,500.00', isHeader: true },
-    { id: '2.1', indent: 1, code: 'CH-80X40', name: 'CHANNEL 80X40', type: 'Raw Material', spec: '80X40X4', uom: 'MTR', qty: '1.800', wastage: '2.00', netQty: '1.836', rate: '78.00', amount: '143.21', isHeader: false },
-    { id: '2.2', indent: 1, code: 'FP-05', name: 'FLAT PLATE 5MM', type: 'Raw Material', spec: 'PL 5MM', uom: 'KG', qty: '2.500', wastage: '2.00', netQty: '2.550', rate: '72.00', amount: '183.60', isHeader: false },
-    { id: '3', indent: 0, code: 'BC-001', name: 'BOTTOM CHANNEL', type: 'Sub Assembly', spec: '-', uom: 'NOS', qty: '1.000', wastage: '0.00', netQty: '1.000', rate: '1,150.00', amount: '1,150.00', isHeader: true },
-    { id: '4', indent: 0, code: 'RV-06', name: 'RIVET 6MM', type: 'Raw Material', spec: '6X20', uom: 'NOS', qty: '48.000', wastage: '0.00', netQty: '48.000', rate: '1.20', amount: '57.60', isHeader: false },
-    { id: '5', indent: 0, code: 'PT-001', name: 'PAINT', type: 'Raw Material', spec: 'ENAMEL', uom: 'LTR', qty: '1.200', wastage: '0.00', netQty: '1.200', rate: '250.00', amount: '300.00', isHeader: false },
-  ],
-  '1': [
-    { id: '1', indent: 0, code: 'TC-001', name: 'TOP CHANNEL', type: 'Sub Assembly', spec: '-', uom: 'NOS', qty: '1.000', wastage: '0.00', netQty: '1.000', rate: '1,450.00', amount: '1,450.00', isHeader: true },
-    { id: '1.1', indent: 1, code: 'CH-100X50', name: 'CHANNEL 100X50', type: 'Raw Material', spec: '100X50X5', uom: 'MTR', qty: '2.500', wastage: '2.00', netQty: '2.550', rate: '95.00', amount: '242.25', isHeader: false },
-    { id: '1.2', indent: 1, code: 'FP-06', name: 'FLAT PLATE 6MM', type: 'Raw Material', spec: 'PL 6MM', uom: 'KG', qty: '3.200', wastage: '2.00', netQty: '3.264', rate: '78.00', amount: '244.59', isHeader: false },
-  ],
-  '1.1': [{ id: '1.1', indent: 0, code: 'CH-100X50', name: 'CHANNEL 100X50', type: 'Raw Material', spec: '100X50X5', uom: 'MTR', qty: '2.500', wastage: '2.00', netQty: '2.550', rate: '95.00', amount: '242.25', isHeader: false }],
-  '1.2': [{ id: '1.2', indent: 0, code: 'FP-06', name: 'FLAT PLATE 6MM', type: 'Raw Material', spec: 'PL 6MM', uom: 'KG', qty: '3.200', wastage: '2.00', netQty: '3.264', rate: '78.00', amount: '244.59', isHeader: false }],
-  '2': [
-    { id: '2', indent: 0, code: 'MP-001', name: 'MIDDLE PILLAR', type: 'Sub Assembly', spec: '-', uom: 'NOS', qty: '2.000', wastage: '0.00', netQty: '2.000', rate: '1,250.00', amount: '2,500.00', isHeader: true },
-    { id: '2.1', indent: 1, code: 'CH-80X40', name: 'CHANNEL 80X40', type: 'Raw Material', spec: '80X40X4', uom: 'MTR', qty: '1.800', wastage: '2.00', netQty: '1.836', rate: '78.00', amount: '143.21', isHeader: false },
-    { id: '2.2', indent: 1, code: 'FP-05', name: 'FLAT PLATE 5MM', type: 'Raw Material', spec: 'PL 5MM', uom: 'KG', qty: '2.500', wastage: '2.00', netQty: '2.550', rate: '72.00', amount: '183.60', isHeader: false },
-  ],
-  '2.1': [{ id: '2.1', indent: 0, code: 'CH-80X40', name: 'CHANNEL 80X40', type: 'Raw Material', spec: '80X40X4', uom: 'MTR', qty: '1.800', wastage: '2.00', netQty: '1.836', rate: '78.00', amount: '143.21', isHeader: false }],
-  '2.2': [{ id: '2.2', indent: 0, code: 'FP-05', name: 'FLAT PLATE 5MM', type: 'Raw Material', spec: 'PL 5MM', uom: 'KG', qty: '2.500', wastage: '2.00', netQty: '2.550', rate: '72.00', amount: '183.60', isHeader: false }],
-  '3': [{ id: '3', indent: 0, code: 'BC-001', name: 'BOTTOM CHANNEL', type: 'Sub Assembly', spec: '-', uom: 'NOS', qty: '1.000', wastage: '0.00', netQty: '1.000', rate: '1,150.00', amount: '1,150.00', isHeader: true }],
-  '4': [{ id: '4', indent: 0, code: 'RV-06', name: 'RIVET 6MM', type: 'Raw Material', spec: '6X20', uom: 'NOS', qty: '48.000', wastage: '0.00', netQty: '48.000', rate: '1.20', amount: '57.60', isHeader: false }],
-  '5': [{ id: '5', indent: 0, code: 'PT-001', name: 'PAINT', type: 'Raw Material', spec: 'ENAMEL', uom: 'LTR', qty: '1.200', wastage: '0.00', netQty: '1.200', rate: '250.00', amount: '300.00', isHeader: false }],
-};
-
-const summaryByNode: Record<string, { rawMaterials: number; subAssemblies: number; operations: number; totalCost: string; totalWeight: string }> = {
-  '0': { rawMaterials: 24, subAssemblies: 6, operations: 8, totalCost: '₹ 18,745.60', totalWeight: '256.480 KG' },
-  '1': { rawMaterials: 2, subAssemblies: 1, operations: 2, totalCost: '₹ 1,486.84', totalWeight: '42.600 KG' },
-  '1.1': { rawMaterials: 1, subAssemblies: 0, operations: 0, totalCost: '₹ 242.25', totalWeight: '12.750 KG' },
-  '1.2': { rawMaterials: 1, subAssemblies: 0, operations: 0, totalCost: '₹ 244.59', totalWeight: '16.320 KG' },
-  '2': { rawMaterials: 2, subAssemblies: 1, operations: 2, totalCost: '₹ 2,826.81', totalWeight: '38.220 KG' },
-  '2.1': { rawMaterials: 1, subAssemblies: 0, operations: 0, totalCost: '₹ 143.21', totalWeight: '9.180 KG' },
-  '2.2': { rawMaterials: 1, subAssemblies: 0, operations: 0, totalCost: '₹ 183.60', totalWeight: '12.750 KG' },
-  '3': { rawMaterials: 0, subAssemblies: 1, operations: 1, totalCost: '₹ 1,150.00', totalWeight: '68.400 KG' },
-  '4': { rawMaterials: 1, subAssemblies: 0, operations: 0, totalCost: '₹ 57.60', totalWeight: '0.480 KG' },
-  '5': { rawMaterials: 1, subAssemblies: 0, operations: 0, totalCost: '₹ 300.00', totalWeight: '1.200 KG' },
-};
-
-const TABS = ['BOM STRUCTURE', 'BOM DETAILS', 'ROUTING', 'COSTING', 'ATTACHMENTS', 'NOTES', 'HISTORY'];
-const TYPE_OPTIONS = ['Sub Assembly', 'Raw Material', 'Purchased Part', 'Semi-Finished'];
-const UOM_OPTIONS = ['NOS', 'MTR', 'KG', 'LTR', 'SET', 'PCE'];
-const LEVEL_OPTIONS = ['All Levels', 'Level 0', 'Level 1', 'Level 2'];
-
-// ─── Filter Panel ─────────────────────────────────────────────────────────────
-
-interface FilterPanelProps {
-  filters: FilterState;
-  onChange: (f: FilterState) => void;
-  onClose: () => void;
-  onReset: () => void;
+function removeItem(items: BOMItem[], id: string): BOMItem[] {
+  return items
+    .filter((item) => item.id !== id)
+    .map((item) => ({ ...item, children: removeItem(item.children, id) }));
 }
 
-function FilterPanel({ filters, onChange, onClose, onReset }: FilterPanelProps) {
-  const toggleArr = (field: 'type' | 'uom', val: string) => {
-    const arr = filters[field];
-    onChange({ ...filters, [field]: arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val] });
+function findNodeByCode(items: BOMItem[], code: string): BOMItem | null {
+  const target = code.trim().toLowerCase();
+  if (!target) return null;
+  for (const item of items) {
+    if (item.itemCode.toLowerCase() === target) return item;
+    const found = findNodeByCode(item.children, code);
+    if (found) return found;
+  }
+  return null;
+}
+
+function collectIds(items: BOMItem[]): string[] {
+  return items.flatMap((item) => [item.id, ...collectIds(item.children)]);
+}
+
+function countAll(items: BOMItem[]): number {
+  return items.reduce((acc, item) => acc + 1 + countAll(item.children), 0);
+}
+
+const ROW_H = 36;
+const TICK_Y = 18;
+const INDENT = 24;
+
+interface TreeProps {
+  items: BOMItem[];
+  level: number;
+  highlightId: string | null;
+  expanded: Record<string, boolean>;
+  onToggle: (id: string) => void;
+  onPick: (item: BOMItem) => void;
+  onRemove: (id: string) => void;
+}
+
+function BOMTreeList({ items, level, highlightId, expanded, onToggle, onPick, onRemove }: TreeProps) {
+  return (
+    <ul className="relative" style={level > 0 ? { paddingLeft: INDENT } : undefined}>
+      {items.map((item, index) => (
+        <BOMTreeNode
+          key={item.id}
+          item={item}
+          level={level}
+          isLast={index === items.length - 1}
+          highlightId={highlightId}
+          expanded={expanded}
+          onToggle={onToggle}
+          onPick={onPick}
+          onRemove={onRemove}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function BOMTreeNode({
+  item,
+  level,
+  isLast,
+  highlightId,
+  expanded,
+  onToggle,
+  onPick,
+  onRemove,
+}: Omit<TreeProps, "items"> & { item: BOMItem; isLast: boolean }) {
+  const hasChildren = item.children.length > 0;
+  const isOpen = !!expanded[item.id];
+  const isHighlighted = highlightId === item.id;
+
+  return (
+    <li className="relative" style={{ minHeight: ROW_H }}>
+      {level > 0 && (
+        <>
+          <span
+            className="absolute bg-gray-300 dark:bg-dark-500"
+            style={{
+              left: -INDENT + 10,
+              top: 0,
+              width: 1,
+              height: isLast ? TICK_Y : "100%",
+            }}
+          />
+          <span
+            className="absolute bg-gray-300 dark:bg-dark-500"
+            style={{ left: -INDENT + 10, top: TICK_Y, width: INDENT - 10, height: 1 }}
+          />
+        </>
+      )}
+
+      <div
+        onClick={() => onPick(item)}
+        className={clsx(
+          "group flex cursor-pointer items-center gap-2 rounded-md py-2 pl-1 pr-2 transition",
+          isHighlighted
+            ? "bg-primary-50 ring-1 ring-inset ring-primary-400 dark:bg-primary-900/30"
+            : "hover:bg-gray-50 dark:hover:bg-dark-600"
+        )}
+        style={{ minHeight: ROW_H }}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasChildren) onToggle(item.id);
+          }}
+          className="flex size-5 shrink-0 items-center justify-center"
+        >
+          {hasChildren ? (
+            <ChevronDownIcon
+              className={clsx("size-4 text-gray-400 transition-transform", !isOpen && "-rotate-90")}
+            />
+          ) : (
+            <span className="block size-1 rounded-full bg-gray-300 dark:bg-dark-500" />
+          )}
+        </button>
+
+        <span className={clsx("size-5 shrink-0", hasChildren ? "text-primary-600" : "text-gray-400")}>
+          {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+        </span>
+
+        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+          <span className="shrink-0 text-sm font-medium text-gray-900 dark:text-dark-50">{item.itemCode}</span>
+          <span className="truncate text-xs text-gray-500 dark:text-dark-300">{item.itemName}</span>
+        </div>
+
+        <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-dark-300">Qty: {item.quantity}</span>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(item.id);
+          }}
+          className="shrink-0 text-gray-300 opacity-0 transition hover:text-red-500 group-hover:opacity-100"
+        >
+          <XMarkIcon className="size-4" />
+        </button>
+      </div>
+
+      {hasChildren && isOpen && (
+        <BOMTreeList
+          items={item.children}
+          level={level + 1}
+          highlightId={highlightId}
+          expanded={expanded}
+          onToggle={onToggle}
+          onPick={onPick}
+          onRemove={onRemove}
+        />
+      )}
+    </li>
+  );
+}
+
+export default function BOMFormPage() {
+  const navigate = useNavigate();
+
+  // 👇 NEW: id param se edit mode detect hota hai
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = !!id;
+
+  const [loading, setLoading] = useState(true);
+  const [availableItems, setAvailableItems] = useState<AvailableItem[]>([]);
+  const [bomItems, setBomItems] = useState<BOMItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+
+  const [parentCode, setParentCode] = useState<string>("");
+  const [childCode, setChildCode] = useState<string>("");
+
+  const [serialNo, setSerialNo] = useState<string>("");
+  const [asslyQty, setAsslyQty] = useState<string>("");
+  const [ldDay, setLdDay] = useState<string>("");
+  const [psNo, setPsNo] = useState<string>("");
+  const [rejPct, setRejPct] = useState<string>("");
+  const [pkgNo, setPkgNo] = useState<string>("");
+  const [mfgCd, setMfgCd] = useState<string>("");
+  const [modDate, setModDate] = useState<string>("");
+  const [person, setPerson] = useState<string>("");
+  const [dtlNo, setDtlNo] = useState<string>("");
+
+  const [shapeDim, setShapeDim] = useState<string>("");
+  const [finQtty, setFinQtty] = useState<string>("");
+  const [shape, setShape] = useState<string>("");
+  const [length, setLength] = useState<string>("");
+  const [width, setWidth] = useState<string>("");
+  const [qty, setQty] = useState<string>("");
+
+  const [bomName, setBomName] = useState<string>("");
+  const [bomCode, setBomCode] = useState<string>("");
+  const [bomStatus, setBomStatus] = useState<string>("active");
+
+  // ---------------------------------------------------------------------
+  // 👇 NEW: ek hi useEffect me — available items load karo, AUR agar edit
+  // mode hai to existing BOM bhi fetch karke saare fields + tree populate
+  // karo. Dono parallel chalte hain (Promise.all).
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    const mockItems: AvailableItem[] = [
+      { id: "1", itemCode: "002", itemName: "Steel Plate", unit: "KG", type: "Raw Material", status: "Active", balanceQty: "100" },
+      { id: "2", itemCode: "0077", itemName: "Angle Iron", unit: "MTR", type: "Raw Material", status: "Active", balanceQty: "50" },
+      { id: "3", itemCode: "0035", itemName: "Bolt Set", unit: "NOS", type: "Hardware", status: "Active", balanceQty: "200" },
+      { id: "4", itemCode: "00300", itemName: "Welding Rod", unit: "KG", type: "Consumable", status: "Active", balanceQty: "75" },
+      { id: "5", itemCode: "0041", itemName: "Steel Sheet", unit: "SQFT", type: "Raw Material", status: "Active", balanceQty: "30" },
+    ];
+
+    const loadAvailableItems = async () => {
+      try {
+        const response = await Get("master/itemmaster/list", {}, false);
+        if (response.data?.success) {
+          setAvailableItems(
+            (response.data.data || []).map((item: any) => ({
+              id: String(item.itemId),
+              itemCode: item.itemCode || "",
+              itemName: item.itemName || "",
+              unit: item.unit || "NOS",
+              type: "Raw Material",
+              status: item.status || "Active",
+              balanceQty: "0",
+            }))
+          );
+        } else {
+          setAvailableItems(mockItems);
+        }
+      } catch (error) {
+        setAvailableItems(mockItems);
+      }
+    };
+
+    const loadExistingBom = async () => {
+      if (!id) return;
+      try {
+        const response = await Get(`master/bom/${id}`, {}, false);
+        if (response.data?.success) {
+          const data = response.data.data;
+          setBomName(data.bomName || "");
+          setBomCode(data.bomCode || "");
+          setBomStatus(data.status || "active");
+          setBomItems(data.items || []); // backend tree shape BOMItem se match karta hai
+          setExpandedNodes(
+            Object.fromEntries(collectIds(data.items || []).map((nid: string) => [nid, true]))
+          );
+        } else {
+          toasterrormsg(response.data?.message || "Failed to fetch BOM.");
+        }
+      } catch (error) {
+        toasterrormsg("Something went wrong while fetching BOM.");
+      }
+    };
+
+    const load = async () => {
+      setLoading(true);
+      await Promise.all([loadAvailableItems(), loadExistingBom()]);
+      setLoading(false);
+    };
+
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const totalItems = useMemo(() => countAll(bomItems), [bomItems]);
+  const hasBOMItems = bomItems.length > 0;
+
+  const filteredAvailableItems = useMemo(() => {
+    if (!searchQuery.trim()) return availableItems;
+    const query = searchQuery.toLowerCase();
+    return availableItems.filter(
+      (item) =>
+        item.itemCode.toLowerCase().includes(query) ||
+        item.itemName.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query)
+    );
+  }, [availableItems, searchQuery]);
+
+  const matchedParent = useMemo(
+    () => (parentCode.trim() ? findNodeByCode(bomItems, parentCode) : null),
+    [bomItems, parentCode]
+  );
+
+  const findAvailableByCode = (code: string): AvailableItem | undefined =>
+    availableItems.find((i) => i.itemCode.toLowerCase() === code.trim().toLowerCase());
+
+  const parentMasterMatch = useMemo(
+    () => (parentCode.trim() ? findAvailableByCode(parentCode) : undefined),
+    [availableItems, parentCode]
+  );
+
+  const childMasterMatch = useMemo(
+    () => (childCode.trim() ? findAvailableByCode(childCode) : undefined),
+    [availableItems, childCode]
+  );
+
+  const toggleNode = (nid: string) => {
+    setExpandedNodes((prev) => ({ ...prev, [nid]: !prev[nid] }));
   };
 
-  return (
-    <div className="border-b border-slate-200 bg-white px-5 py-4" style={{ animation: 'slideDown 0.15s ease' }}>
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-semibold text-slate-900">Filter Options</span>
-        <div className="flex items-center gap-3">
-          <button onClick={onReset} className="text-xs font-medium text-primary-600 hover:text-primary-700 transition">
-            Reset All
-          </button>
-          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100 transition">
-            <XMarkIcon className="w-4 h-4 text-slate-500" />
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {/* Item Type */}
-        <div>
-          <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide mb-2.5">Item Type</p>
-          <div className="space-y-2">
-            {TYPE_OPTIONS.map(t => (
-              <label key={t} className="flex items-center gap-2.5 cursor-pointer">
-                <Checkbox checked={filters.type.includes(t)} onChange={() => toggleArr('type', t)} />
-                <span className="text-sm text-slate-800">{t}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        {/* UOM */}
-        <div>
-          <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide mb-2.5">Unit of Measure</p>
-          <div className="space-y-2">
-            {UOM_OPTIONS.map(u => (
-              <label key={u} className="flex items-center gap-2.5 cursor-pointer">
-                <Checkbox checked={filters.uom.includes(u)} onChange={() => toggleArr('uom', u)} />
-                <span className="text-sm text-slate-800">{u}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        {/* Wastage */}
-        <div>
-          <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide mb-2.5">Wastage % Range</p>
-          <div className="flex items-center gap-2 mt-1">
-            <input
-              type="number"
-              placeholder="Min"
-              value={filters.wastageMin}
-              onChange={e => onChange({ ...filters, wastageMin: e.target.value })}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition"
-            />
-            <span className="text-slate-400 text-xs shrink-0">–</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={filters.wastageMax}
-              onChange={e => onChange({ ...filters, wastageMax: e.target.value })}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition"
-            />
-          </div>
-        </div>
-        {/* Level */}
-        <div>
-          <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide mb-2.5">BOM Level</p>
-          <div className="space-y-2">
-            {LEVEL_OPTIONS.map(l => (
-              <label key={l} className="flex items-center gap-2.5 cursor-pointer">
-                <Radio
-                  name="bom-level"
-                  checked={filters.levelFilter === l}
-                  onChange={() => onChange({ ...filters, levelFilter: l })}
-                />
-                <span className="text-sm text-slate-800">{l}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+  const handleExpandAll = () => {
+    const ids = collectIds(bomItems);
+    setExpandedNodes(Object.fromEntries(ids.map((nid) => [nid, true])));
+  };
 
-// ─── Active Filter Tags ───────────────────────────────────────────────────────
+  const handleCollapseAll = () => setExpandedNodes({});
 
-function ActiveFilterTags({ filters, onChange }: { filters: FilterState; onChange: (f: FilterState) => void }) {
-  const tags: { label: string; remove: () => void }[] = [];
-  filters.type.forEach(t => tags.push({ label: `Type: ${t}`, remove: () => onChange({ ...filters, type: filters.type.filter(x => x !== t) }) }));
-  filters.uom.forEach(u => tags.push({ label: `UOM: ${u}`, remove: () => onChange({ ...filters, uom: filters.uom.filter(x => x !== u) }) }));
-  if (filters.wastageMin) tags.push({ label: `Wastage ≥ ${filters.wastageMin}%`, remove: () => onChange({ ...filters, wastageMin: '' }) });
-  if (filters.wastageMax) tags.push({ label: `Wastage ≤ ${filters.wastageMax}%`, remove: () => onChange({ ...filters, wastageMax: '' }) });
-  if (filters.levelFilter && filters.levelFilter !== 'All Levels')
-    tags.push({ label: filters.levelFilter, remove: () => onChange({ ...filters, levelFilter: 'All Levels' }) });
-  if (!tags.length) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b border-slate-100 bg-white">
-      <span className="text-xs text-slate-500 mr-1">Active filters:</span>
-      {tags.map((tag, i) => (
-        <span key={i} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 border border-primary-200">
-          {tag.label}
-          <button onClick={tag.remove} className="hover:text-primary-900 transition ml-0.5">
-            <XMarkIcon className="w-3 h-3" />
-          </button>
-        </span>
-      ))}
-    </div>
-  );
-}
+  const handlePickNode = (item: BOMItem) => {
+    setParentCode(item.itemCode);
+    setExpandedNodes((prev) => ({ ...prev, [item.id]: true }));
+  };
 
-// ─── Tree Node ────────────────────────────────────────────────────────────────
+  const handleRemoveNode = (nid: string) => {
+    setBomItems((prev) => removeItem(prev, nid));
+  };
 
-function TreeNodeItem({
-  node, expandedNodes, selectedNodeId, onToggle, onSelect,
-}: {
-  node: TreeNode;
-  expandedNodes: Record<string, boolean>;
-  selectedNodeId: string;
-  onToggle: (id: string) => void;
-  onSelect: (id: string) => void;
-}) {
-  const hasChildren = !!node.children?.length;
-  const isExpanded = !!expandedNodes[node.id];
-  const isSelected = selectedNodeId === node.id;
+  const handlePickReferenceItem = (item: AvailableItem) => {
+    setChildCode(item.itemCode);
+  };
 
-  return (
-    <div className="select-none">
-      <div
-        onClick={() => { onSelect(node.id); if (hasChildren) onToggle(node.id); }}
-        style={{ paddingLeft: `${node.level * 16 + 8}px` }}
-        className={clsx(
-          'flex items-center justify-between py-2 pr-2 rounded-lg cursor-pointer transition-colors',
-          isSelected
-            ? 'bg-primary-50 border border-primary-200'
-            : node.level === 0
-              ? 'bg-slate-50 border border-slate-200 hover:bg-slate-100'
-              : 'border border-transparent hover:bg-slate-50'
-        )}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          {/* Expand arrow */}
-          <span className="w-4 h-4 flex items-center justify-center shrink-0 text-slate-400">
-            {hasChildren
-              ? isExpanded
-                ? <ChevronDownIcon className={clsx('w-3.5 h-3.5', isSelected ? 'text-primary-600' : 'text-slate-500')} />
-                : <ChevronRightIcon className={clsx('w-3.5 h-3.5', isSelected ? 'text-primary-600' : 'text-slate-500')} />
-              : <span className="w-1.5 h-1.5 rounded-full bg-slate-300 block" />
-            }
-          </span>
-          {/* Icon */}
-          <span className={clsx('shrink-0', isSelected ? 'text-primary-600' : 'text-primary-500')}>
-            {node.level === 0
-              ? <FaLayerGroup className="w-3.5 h-3.5" />
-              : hasChildren
-                ? <FolderIcon className="w-3.5 h-3.5" />
-                : <DocumentTextIcon className="w-3.5 h-3.5" />
-            }
-          </span>
-          {/* Label + Code */}
-          <div className="min-w-0">
-            <p className={clsx('text-xs font-semibold uppercase truncate', isSelected ? 'text-primary-800' : 'text-slate-900')}>
-              {node.label}
-            </p>
-            <p className="text-[11px] text-slate-500 truncate">{node.code}</p>
-          </div>
-        </div>
-        {/* Level badge */}
-        <span className={clsx(
-          'text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ml-2 border',
-          node.level === 0
-            ? 'bg-primary-50 text-primary-700 border-primary-200'
-            : node.level === 1
-              ? 'bg-primary-50 text-primary-600 border-primary-100'
-              : 'bg-slate-50 text-slate-600 border-slate-200'
-        )}>
-          Level {node.level}
-        </span>
-      </div>
-
-      {/* Children */}
-      {hasChildren && isExpanded && (
-        <div className="mt-0.5 space-y-0.5 relative before:absolute before:left-[20px] before:top-0 before:bottom-2 before:w-px before:bg-slate-200">
-          {node.children!.map(child => (
-            <TreeNodeItem
-              key={child.id}
-              node={child}
-              expandedNodes={expandedNodes}
-              selectedNodeId={selectedNodeId}
-              onToggle={onToggle}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Toolbar Icon Button ──────────────────────────────────────────────────────
-
-function IconBtn({ icon: Icon, title, onClick }: { icon: React.FC<React.SVGProps<SVGSVGElement>>; title?: string; onClick?: () => void }) {
-  return (
-    <button
-      title={title}
-      onClick={onClick}
-      className="p-1.5 border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition"
-    >
-      <Icon className="w-4 h-4" />
-    </button>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-export default function BillOfMaterials() {
-  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ '0': true, '1': true, '2': true });
-  const [selectedNodeId, setSelectedNodeId] = useState('0');
-  const [showFilter, setShowFilter] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({
-    search: '', type: [], uom: [], wastageMin: '', wastageMax: '', levelFilter: 'All Levels',
-  });
-
-  const toggleNode = (id: string) => setExpandedNodes(p => ({ ...p, [id]: !p[id] }));
-  const expandAll = () => setExpandedNodes({ '0': true, '1': true, '2': true });
-  const collapseAll = () => setExpandedNodes({});
-  const resetFilters = () => setFilters({ search: '', type: [], uom: [], wastageMin: '', wastageMax: '', levelFilter: 'All Levels' });
-
-  const activeFilterCount = useMemo(() => {
-    let n = filters.type.length + filters.uom.length;
-    if (filters.wastageMin) n++;
-    if (filters.wastageMax) n++;
-    if (filters.levelFilter && filters.levelFilter !== 'All Levels') n++;
-    return n;
-  }, [filters]);
-
-  const baseRows = allTableData[selectedNodeId] ?? allTableData['0'];
-
-  const displayRows = useMemo(() => baseRows.filter(row => {
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      if (!row.name.toLowerCase().includes(q) && !row.code.toLowerCase().includes(q)) return false;
+  const handleCalculate = () => {
+    if (length && width && qty) {
+      const calculatedArea = (parseFloat(length) * parseFloat(width) * parseFloat(qty)).toFixed(2);
+      setFinQtty(calculatedArea);
+      toastsuccessmsg("Calculation completed successfully.");
+    } else {
+      toasterrormsg("Please enter Length, Width, and Quantity for calculation.");
     }
-    if (filters.type.length && !filters.type.includes(row.type)) return false;
-    if (filters.uom.length && !filters.uom.includes(row.uom)) return false;
-    const w = parseFloat(row.wastage);
-    if (filters.wastageMin && w < parseFloat(filters.wastageMin)) return false;
-    if (filters.wastageMax && w > parseFloat(filters.wastageMax)) return false;
-    if (filters.levelFilter && filters.levelFilter !== 'All Levels') {
-      const lvl = parseInt(filters.levelFilter.replace('Level ', ''));
-      if (row.indent !== lvl) return false;
+  };
+
+  const buildItem = (code: string): BOMItem | null => {
+    const known = findAvailableByCode(code);
+    if (!known) return null;
+
+    return {
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      refItemId: known.id,
+      itemCode: known.itemCode,
+      itemName: known.itemName,
+      quantity: qty || "1",
+      unit: known.unit || "NOS",
+      serialNo,
+      asslyQty,
+      ldDay,
+      psNo,
+      rejPct,
+      pkgNo,
+      mfgCd,
+      modDate,
+      person,
+      status: bomStatus,
+      dtlNo,
+      shapeDim,
+      finQtty,
+      shape,
+      length,
+      width,
+      children: [],
+    };
+  };
+
+  const resetEntryFields = () => {
+    setSerialNo("");
+    setAsslyQty("");
+    setLdDay("");
+    setPsNo("");
+    setRejPct("");
+    setPkgNo("");
+    setMfgCd("");
+    setModDate("");
+    setPerson("");
+    setDtlNo("");
+    setShapeDim("");
+    setFinQtty("");
+    setShape("");
+    setLength("");
+    setWidth("");
+    setQty("");
+  };
+
+  const handleAddToTree = () => {
+    if (!hasBOMItems) {
+      if (!parentCode.trim()) {
+        toasterrormsg("Please enter an item code.");
+        return;
+      }
+
+      const rootItem = buildItem(parentCode);
+      if (!rootItem) {
+        toasterrormsg(`Item code "${parentCode}" not found in Item Master. Please enter a valid, existing item code.`);
+        return;
+      }
+
+      setBomItems([rootItem]);
+      resetEntryFields();
+      toastsuccessmsg("Root item added to BOM structure.");
+      return;
     }
-    return true;
-  }), [baseRows, filters]);
 
-  const summary = summaryByNode[selectedNodeId] ?? summaryByNode['0'];
+    if (!childCode.trim()) {
+      toasterrormsg("Please enter the Child item code.");
+      return;
+    }
 
-  const totalQty = displayRows.reduce((a, r) => a + parseFloat(r.netQty.replace(/,/g, '')), 0).toFixed(3);
-  const totalAmount = displayRows.reduce((a, r) => a + parseFloat(r.amount.replace(/,/g, '')), 0);
-  const fmtAmount = '₹ ' + totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    let parentId: string | null = null;
 
-  function flattenTree(nodes: TreeNode[]): { node: TreeNode; depth: number }[] {
-    const out: { node: TreeNode; depth: number }[] = [];
-    const walk = (arr: TreeNode[], d: number) => arr.forEach(n => { out.push({ node: n, depth: d }); if (n.children) walk(n.children, d + 1); });
-    walk(nodes, 0);
-    return out;
-  }
-  const flatNodes = flattenTree(initialTreeData);
+    if (parentCode.trim()) {
+      const parentNode = findNodeByCode(bomItems, parentCode);
+      if (!parentNode) {
+        toasterrormsg("Parent item code not found in the BOM structure. Add it first, or leave Parent blank to add a root item.");
+        return;
+      }
+      parentId = parentNode.id;
+    }
 
-  // Header form fields
-  const headerFields = [
-    { label: 'BOM No.', placeholder: 'BOM-2025-001' },
-    { label: 'Item Name', placeholder: 'Side Wall Assembly' },
-    { label: 'Revision No.', placeholder: 'Rev 01' },
-    { label: 'Prepared By', placeholder: 'John Doe' },
-    { label: 'Description', placeholder: 'Main side wall panel' },
-    { label: 'Item Code', placeholder: 'SW-ASM-001' },
-    { label: 'UOM', placeholder: 'NOS' },
-    { label: 'Approved By', placeholder: 'Jane Smith' },
-    { label: 'BOM Type', placeholder: 'Manufacturing' },
-  ];
+    const newItem = buildItem(childCode);
+    if (!newItem) {
+      toasterrormsg(`Item code "${childCode}" not found in Item Master. Please enter a valid, existing item code.`);
+      return;
+    }
 
-  const TABLE_COLS = ['#', 'Item Code', 'Item Name', 'Type', 'Specification', 'UOM', 'Quantity', 'Wastage %', 'Net Qty', 'Rate (₹)', 'Amount (₹)'];
-  const RIGHT_ALIGN = new Set(['Quantity', 'Wastage %', 'Net Qty', 'Rate (₹)', 'Amount (₹)']);
+    setBomItems((prev) => insertItem(prev, parentId, newItem));
 
-  return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-6 font-sans text-slate-900 antialiased">
-      <style>{`
-        @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
+    if (parentId) {
+      setExpandedNodes((prev) => ({ ...prev, [parentId as string]: true }));
+    }
+
+    setChildCode("");
+    resetEntryFields();
+
+    toastsuccessmsg("Item added to BOM structure.");
+  };
+
+  // ---------------------------------------------------------------------
+  // 👇 NEW: Save function ab dono mode handle karta hai — edit mode me
+  // Put("master/bom/update") + bomId body me jaata hai, create mode me
+  // pehle jaisa hi Post("master/bom/create") chalta hai.
+  // ---------------------------------------------------------------------
+  const handleSaveBOM = async () => {
+    if (!bomName) {
+      toasterrormsg("Please enter BOM name.");
+      return;
+    }
+    if (!bomCode) {
+      toasterrormsg("Please enter BOM code.");
+      return;
+    }
+    if (bomItems.length === 0) {
+      toasterrormsg("Please add at least one item to BOM.");
+      return;
+    }
+
+    if (isEditMode) {
+      const payload = {
+        bomId: Number(id),
+        bomName,
+        bomCode,
+        status: bomStatus,
+        items: bomItems,
+      };
+
+      try {
+        const response = await Put("master/bom/update", payload, false);
+        if (response.data?.success) {
+          toastsuccessmsg(response.data?.message || "BOM updated successfully.");
+          navigate("/master/bom");
+        } else {
+          toasterrormsg(response.data?.message || "Failed to update BOM.");
         }
-      `}</style>
+      } catch (error) {
+        toasterrormsg("Something went wrong while updating BOM.");
+      }
+      return;
+    }
 
-      <div className="max-w-[1600px] mx-auto space-y-5">
+    const payload = {
+      bomName,
+      bomCode,
+      status: bomStatus,
+      items: bomItems,
+    };
 
-        {/* ── BOM Header + Summary ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-5 items-start">
+    try {
+      const response = await Post("master/bom/create", payload, false);
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "BOM created successfully.");
+        navigate("/master/bom");
+      } else {
+        toasterrormsg(response.data?.message || "Failed to create BOM.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while creating BOM.");
+    }
+  };
 
-          {/* Header Card */}
-          <div className="xl:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-5">
-            {/* Card title + actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <h1 className="text-base font-semibold text-slate-900">BOM HEADER</h1>
-                <p className="text-xs text-slate-500 mt-0.5">Manage and structure your bill of materials</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button color="primary" className="inline-flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-lg shadow-sm">
-                  <PlusIcon className="w-4 h-4" /> New BOM
-                </Button>
-                <Button color="warning" className="inline-flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-lg">
-                  <PencilSquareIcon className="w-4 h-4" /> Revision
-                </Button>
-                <Button color="success" className="inline-flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-lg">
-                  <CheckIcon className="w-4 h-4" /> Approve
-                </Button>
-                {/* More menu */}
-                {[EllipsisVerticalIcon].map((Icon, i) => (
-                  <Menu key={i} as="div" className="relative">
-                    <MenuButton className="size-9 flex items-center justify-center border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-lg transition">
-                      <Icon className="w-4 h-4" />
-                    </MenuButton>
-                    <Transition as={Fragment}
-                      enter="transition ease-out duration-100" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100"
-                      leave="transition ease-in duration-75" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"
-                    >
-                      <MenuItems className="absolute right-0 z-50 mt-1 min-w-[10rem] rounded-xl border border-slate-200 bg-white py-1 shadow-lg outline-none">
-                        {['Export Excel', 'Export PDF', 'Print Preview'].map(a => (
-                          <MenuItem key={a}>
-                            {({ focus }) => (
-                              <button className={clsx('flex h-9 w-full items-center px-4 text-sm transition-colors', focus ? 'bg-slate-50 text-slate-900' : 'text-slate-700')}>
-                                {a}
-                              </button>
-                            )}
-                          </MenuItem>
-                        ))}
-                      </MenuItems>
-                    </Transition>
-                  </Menu>
-                ))}
-              </div>
-            </div>
+  if (loading) {
+    return (
+      <Page title={isEditMode ? "Edit BOM" : "Create BOM"}>
+        <div className="flex h-64 w-full items-center justify-center">
+          <GhostSpinner className="size-8 border-4" />
+        </div>
+      </Page>
+    );
+  }
 
-            {/* Form grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {headerFields.map(f => (
-                <div key={f.label}>
-                  <label className="block text-xs font-semibold text-slate-900 mb-1.5">{f.label}</label>
-                  <Input placeholder={f.placeholder} defaultValue="" />
-                </div>
-              ))}
-              {/* Status */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-900 mb-1.5">Status</label>
-                <div className="pt-1">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                    Active
-                  </span>
-                </div>
-              </div>
-              {/* Dates */}
-              {['Effective From', 'Effective To'].map(label => (
-                <div key={label}>
-                  <label className="block text-xs font-semibold text-slate-900 mb-1.5">{label}</label>
-                  <div className="relative">
-                    <DatePicker placeholder="Choose date..." />
-                    <CalendarIcon className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+  return (
+    <Page title={isEditMode ? "Edit BOM" : "Create BOM"}>
+      <div className="transition-content mx-auto w-full px-(--margin-x) pb-8">
+        <div className="flex items-center justify-between py-5 lg:py-6">
+          <h2 className="border-b-4 border-primary text-xl font-bold tracking-wide text-primary dark:text-dark-50 lg:text-2xl">
+            {isEditMode ? "Edit BOM" : "Create BOM"}
+          </h2>
+          <Link to="/master/bom">
+            <Button color="primary" variant="outlined">
+              <ChevronLeftIcon className="size-6" />
+              <span>Back</span>
+            </Button>
+          </Link>
+        </div>
+
+        <Card className="mb-6 p-3">
+          <div className="mb-4 border-b border-gray-200 pb-4 dark:border-dark-500">
+            <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">BOM Details</h3>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Input label="BOM Name" value={bomName} onChange={(e) => setBomName(e.target.value)} placeholder="Enter BOM name" />
+            <Input label="BOM Code" value={bomCode} onChange={(e) => setBomCode(e.target.value)} placeholder="Enter BOM code" />
+            <Listbox
+              data={statusOptions}
+              value={statusOptions.find((item) => item.id === bomStatus) || { id: "active", label: "Active" }}
+              onChange={(item) => setBomStatus(item.id)}
+              label="Status"
+              placeholder="Select status"
+              displayField="label"
+            />
+          </div>
+        </Card>
+
+        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-10">
+          <div className="lg:col-span-7">
+            <Card className="h-full p-3">
+              <div className="mb-4 border-b border-gray-200 pb-4 dark:border-dark-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">BOM Structure</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-dark-300">
+                      {totalItems > 0
+                        ? `${totalItems} item${totalItems > 1 ? "s" : ""} — click any item to copy its code into Parent`
+                        : "Tree view of BOM items"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outlined" onClick={handleExpandAll}>
+                      Expand All
+                    </Button>
+                    <Button variant="outlined" onClick={handleCollapseAll}>
+                      Collapse All
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+
+              <div className="max-h-[500px] space-y-1 overflow-y-auto pr-1">
+                {bomItems.length === 0 ? (
+                  <div className="py-8 text-center text-gray-500 dark:text-dark-300">
+                    No items in BOM yet. Enter an Item Code in Parent and click "Add Root Item" to start.
+                  </div>
+                ) : (
+                  <BOMTreeList
+                    items={bomItems}
+                    level={0}
+                    highlightId={matchedParent?.id ?? null}
+                    expanded={expandedNodes}
+                    onToggle={toggleNode}
+                    onPick={handlePickNode}
+                    onRemove={handleRemoveNode}
+                  />
+                )}
+              </div>
+            </Card>
           </div>
 
-          {/* Summary Card */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col h-full">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-1">
-              <h2 className="text-sm font-semibold text-slate-900">BOM SUMMARY</h2>
-              {selectedNodeId !== '0' && (
-                <span className="text-xs font-medium text-primary-600 bg-primary-50 border border-primary-200 px-2 py-0.5 rounded-md">
-                  {allTableData[selectedNodeId]?.[0]?.code}
-                </span>
-              )}
-            </div>
-            <div className="divide-y divide-slate-100 flex-1">
-              {[
-                { label: 'Total Raw Materials', value: summary.rawMaterials },
-                { label: 'Sub Assemblies', value: summary.subAssemblies },
-                { label: 'Operations', value: summary.operations },
-                { label: 'Total Cost', value: summary.totalCost },
-                { label: 'Total Weight', value: summary.totalWeight },
-              ].map(item => (
-                <div key={item.label} className="flex items-center justify-between py-2.5">
-                  <span className="text-sm text-slate-600">{item.label}</span>
-                  <span className="text-sm font-semibold text-slate-900">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          <div className="lg:col-span-3">
+            <Card className="h-full p-3">
+              <div className="mb-4 border-b border-gray-200 pb-4 dark:border-dark-500">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">Standard BOM</h3>
+              </div>
 
-        {/* ── Tab Section ──────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hidden">
-          <TabGroup>
-            {/* Tab list */}
-            <div className="border-b border-slate-200 bg-white">
-              <TabList className="flex overflow-x-auto">
-                {TABS.map(tab => (
-                  <Tab
-                    key={tab}
-                    className={({ selected }) => clsx(
-                      'shrink-0 whitespace-nowrap border-b-2 px-5 py-3 text-sm font-medium transition-all duration-150 focus:outline-none',
-                      selected
-                        ? 'border-primary-600 text-primary-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-200'
-                    )}
-                  >
-                    {tab}
-                  </Tab>
-                ))}
-              </TabList>
-            </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Parent</label>
+                  <Input
+                    value={parentCode}
+                    onChange={(e) => setParentCode(e.target.value)}
+                    placeholder={hasBOMItems ? "Item code of parent (blank = root item)" : "Item code of first item"}
+                  />
 
-            {/* Toolbar */}
-            <div className="px-4 py-3 border-b border-slate-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3">
-              {/* Left: view toggle + search */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
-                  {(['tree', 'list'] as const).map((mode, i) => (
-                    <button
-                      key={mode}
-                      onClick={() => setViewMode(mode)}
+                  <p className="mt-1 text-xs text-gray-400 dark:text-dark-400">
+                    {!hasBOMItems
+                      ? "BOM is empty — this becomes the first (root) item."
+                      : parentCode.trim() === ""
+                        ? "Blank — new item will be added as a root item."
+                        : matchedParent
+                          ? `Found in tree: ${matchedParent.itemName}`
+                          : "Not found yet in the BOM structure."}
+                  </p>
+
+                  {parentCode.trim() !== "" && (
+                    <p
                       className={clsx(
-                        'px-3.5 py-2 text-sm font-medium transition flex items-center gap-1.5',
-                        i === 0 ? 'border-r border-slate-200' : '',
-                        viewMode === mode ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+                        "mt-1 flex items-center gap-1 text-xs font-medium",
+                        parentMasterMatch ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
                       )}
                     >
-                      {mode === 'tree' ? '⊞ Tree View' : '☰ List View'}
-                    </button>
-                  ))}
+                      {parentMasterMatch ? (
+                        <>
+                          <CheckCircleIcon className="size-3.5" />
+                          In Item Master: {parentMasterMatch.itemName} ({parentMasterMatch.unit})
+                        </>
+                      ) : (
+                        <>
+                          <ExclamationTriangleIcon className="size-3.5" />
+                          Not found in Item Master — cannot be added
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
-                <div className="relative w-52 sm:w-72">
-                  <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search Item..."
-                    value={filters.search}
-                    onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
 
-              {/* Right: actions */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  onClick={expandAll}
-                  className="inline-flex items-center gap-1.5 border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg text-sm font-medium transition"
+                {hasBOMItems && (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Child</label>
+                    <Input
+                      value={childCode}
+                      onChange={(e) => setChildCode(e.target.value)}
+                      placeholder="Item code to add under Parent"
+                    />
+
+                    {childCode.trim() !== "" && (
+                      <p
+                        className={clsx(
+                          "mt-1 flex items-center gap-1 text-xs font-medium",
+                          childMasterMatch ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
+                        )}
+                      >
+                        {childMasterMatch ? (
+                          <>
+                            <CheckCircleIcon className="size-3.5" />
+                            In Item Master: {childMasterMatch.itemName} ({childMasterMatch.unit})
+                          </>
+                        ) : (
+                          <>
+                            <ExclamationTriangleIcon className="size-3.5" />
+                            Not found in Item Master — cannot be added
+                          </>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Serial#</label>
+                    <Input value={serialNo} onChange={(e) => setSerialNo(e.target.value)} placeholder="Serial#" />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Assly Qty</label>
+                    <Input value={asslyQty} onChange={(e) => setAsslyQty(e.target.value)} placeholder="Assly Qty" />
+                  </div>
+                </div>
+
+                <div className="mt-4 border-t border-gray-200 pt-4 dark:border-dark-500">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Length(mm)</label>
+                      <Input type="number" value={length} onChange={(e) => setLength(e.target.value)} placeholder="Length(mm)" />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Width(mm)</label>
+                      <Input type="number" value={width} onChange={(e) => setWidth(e.target.value)} placeholder="Width(mm)" />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Qtty</label>
+                      <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qtty" />
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  color="success"
+                  onClick={handleAddToTree}
+                  className="mt-4 w-full"
+                  disabled={hasBOMItems ? !childMasterMatch : !parentMasterMatch}
                 >
-                  <PlusIcon className="w-3.5 h-3.5 text-slate-500" /> Expand All
-                </button>
-                <button
-                  onClick={collapseAll}
-                  className="inline-flex items-center gap-1.5 border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg text-sm font-medium transition"
-                >
-                  <ArrowsUpDownIcon className="w-3.5 h-3.5 text-slate-500" /> Collapse All
-                </button>
-                <div className="h-5 w-px bg-slate-200 mx-0.5 hidden md:block" />
-                <button
-                  onClick={() => setShowFilter(p => !p)}
-                  className={clsx(
-                    'inline-flex items-center gap-1.5 border px-3 py-2 rounded-lg text-sm font-medium transition relative',
-                    showFilter
-                      ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'
-                  )}
-                >
-                  <FunnelIcon className="w-3.5 h-3.5" /> Filter
-                  {activeFilterCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary-600 text-white text-[10px] font-semibold flex items-center justify-center">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-                <IconBtn icon={ArrowPathIcon} title="Refresh" onClick={resetFilters} />
-                <IconBtn icon={ArrowDownTrayIcon} title="Download" />
-                <IconBtn icon={PrinterIcon} title="Print" />
-                <IconBtn icon={Cog6ToothIcon} title="Settings" />
+                  {hasBOMItems ? "Add to BOM Structure" : "Add Root Item"}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <div className="my-6 flex justify-end gap-3">
+          <Link to="/master/bom">
+            <Button variant="outlined" color="secondary">
+              Cancel
+            </Button>
+          </Link>
+          <Button color="primary" onClick={handleSaveBOM}>
+            {isEditMode ? "Update BOM" : "Create BOM"}
+          </Button>
+        </div>
+
+        <Card>
+          <div className="mb-4 border-b border-gray-200 p-4 dark:border-dark-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">All Available Items</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-dark-300">Click a row to copy its code into Child</p>
+              </div>
+              <div className="relative w-64">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search items..."
+                  className="pl-9"
+                />
               </div>
             </div>
+          </div>
 
-            {/* Filter panel */}
-            {showFilter && (
-              <FilterPanel filters={filters} onChange={setFilters} onClose={() => setShowFilter(false)} onReset={resetFilters} />
-            )}
-
-            {/* Active filter chips */}
-            <ActiveFilterTags filters={filters} onChange={setFilters} />
-
-            {/* Tab Panels */}
-            <TabPanels>
-              {TABS.map(tab => (
-                <TabPanel key={tab} className="focus:outline-none p-4">
-                  {viewMode === 'tree' ? (
-                    /* Tree + Table layout */
-                    <div className="grid grid-cols-1 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 min-h-[480px]">
-
-                      {/* Left: Tree */}
-                      <div className="p-2 overflow-y-auto max-h-[620px] space-y-0.5">
-                        {initialTreeData.map(node => (
-                          <TreeNodeItem
-                            key={node.id}
-                            node={node}
-                            expandedNodes={expandedNodes}
-                            selectedNodeId={selectedNodeId}
-                            onToggle={toggleNode}
-                            onSelect={setSelectedNodeId}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Right: Table */}
-                      <div className="lg:col-span-3 lg:pl-4 flex flex-col pt-3 lg:pt-0">
-                        {/* Breadcrumb */}
-                        <div className="flex items-center gap-1 mb-3 text-xs text-slate-500">
-                          <span>SW-ASM-001</span>
-                          {selectedNodeId !== '0' && (
-                            <>
-                              <ChevronRightIcon className="w-3 h-3" />
-                              <span className="text-primary-600 font-medium">{allTableData[selectedNodeId]?.[0]?.code}</span>
-                            </>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50 dark:border-dark-500 dark:bg-dark-600">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-dark-50">Item Code</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-dark-50">Item Name</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-dark-50">Type</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-dark-50">Balance Qty</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-dark-50">Unit</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-dark-50">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-dark-500">
+                {filteredAvailableItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-dark-300">
+                      {searchQuery ? "No items match your search" : "No items available"}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAvailableItems.map((item) => (
+                    <tr
+                      key={item.id}
+                      onClick={() => handlePickReferenceItem(item)}
+                      className={clsx(
+                        "cursor-pointer transition hover:bg-gray-50 dark:hover:bg-dark-600",
+                        childCode === item.itemCode && "bg-primary-50 dark:bg-primary-900/20"
+                      )}
+                    >
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-dark-50">{item.itemCode}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-dark-50">{item.itemName}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-dark-700 dark:text-dark-200">
+                          {item.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-dark-50">{item.balanceQty}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-dark-50">{item.unit}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={clsx(
+                            "inline-flex rounded px-2 py-1 text-xs font-medium",
+                            item.status === "Active"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                              : "bg-gray-100 text-gray-800 dark:bg-dark-700 dark:text-dark-200"
                           )}
-                        </div>
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
 
-                        {/* Table */}
-                        <div className="flex-1 overflow-x-auto">
-                          <table className="w-full text-left border-collapse text-sm">
-                            <thead>
-                              <tr className="border-b border-slate-200 bg-slate-50">
-                                <th className="py-2.5 px-3 w-8">
-                                  <Checkbox defaultChecked />
-                                </th>
-                                {TABLE_COLS.map(col => (
-                                  <th
-                                    key={col}
-                                    className={clsx(
-                                      'py-2.5 px-3 text-xs font-semibold text-slate-900 whitespace-nowrap',
-                                      RIGHT_ALIGN.has(col) ? 'text-right' : 'text-left'
-                                    )}
-                                  >
-                                    {col}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {displayRows.length === 0 ? (
-                                <tr>
-                                  <td colSpan={12} className="py-10 text-center text-sm text-slate-500">
-                                    No items match the current filters.
-                                  </td>
-                                </tr>
-                              ) : displayRows.map(row => (
-                                <tr
-                                  key={row.id}
-                                  className={clsx(
-                                    'transition-colors hover:bg-slate-50',
-                                    row.isHeader ? 'bg-primary-50/40' : ''
-                                  )}
-                                >
-                                  <td className="py-2.5 px-3"><Checkbox defaultChecked /></td>
-
-                                  {/* # */}
-                                  <td className="py-2.5 px-3 text-slate-900 text-sm">{row.id}</td>
-
-                                  {/* Item Code */}
-                                  <td className={clsx('py-2.5 px-3 text-sm', row.isHeader ? 'text-primary-600 font-medium' : 'text-slate-900')}>
-                                    {row.code}
-                                  </td>
-
-                                  {/* Item Name — indented */}
-                                  <td className="py-2.5 px-3 text-sm text-slate-900">
-                                    <div style={{ paddingLeft: `${row.indent * 16}px` }} className="flex items-center gap-1.5">
-                                      {row.indent > 0 && <span className="w-3 h-px bg-slate-300 shrink-0 inline-block" />}
-                                      <span className={row.isHeader ? 'font-medium' : ''}>{row.name}</span>
-                                    </div>
-                                  </td>
-
-                                  {/* Type badge */}
-                                  <td className="py-2.5 px-3">
-                                    <span className={clsx(
-                                      'inline-flex px-2 py-0.5 rounded text-xs font-medium border',
-                                      row.type === 'Sub Assembly'
-                                        ? 'bg-primary-50 text-primary-700 border-primary-200'
-                                        : 'bg-slate-50 text-slate-700 border-slate-200'
-                                    )}>
-                                      {row.type}
-                                    </span>
-                                  </td>
-
-                                  {/* Specification */}
-                                  <td className="py-2.5 px-3 text-sm text-slate-900">{row.spec}</td>
-
-                                  {/* UOM */}
-                                  <td className="py-2.5 px-3 text-sm text-slate-900">{row.uom}</td>
-
-                                  {/* Quantity */}
-                                  <td className="py-2.5 px-3 text-sm text-slate-900 text-right">{row.qty}</td>
-
-                                  {/* Wastage % */}
-                                  <td className="py-2.5 px-3 text-sm text-slate-900 text-right">{row.wastage}</td>
-
-                                  {/* Net Qty */}
-                                  <td className="py-2.5 px-3 text-sm text-slate-900 text-right">{row.netQty}</td>
-
-                                  {/* Rate */}
-                                  <td className="py-2.5 px-3 text-sm text-slate-900 text-right">{row.rate}</td>
-
-                                  {/* Amount */}
-                                  <td className={clsx(
-                                    'py-2.5 px-3 text-sm text-right',
-                                    row.isHeader ? 'text-primary-600 font-medium' : 'text-slate-900'
-                                  )}>
-                                    {row.amount}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* Footer totals */}
-                        <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <span className="text-sm text-slate-700">
-                            Total Items: <span className="font-semibold text-primary-600">{displayRows.length}</span>
-                          </span>
-                          <div className="flex items-center gap-6">
-                            <div className="text-sm text-slate-700">
-                              Total Qty: <span className="font-semibold text-slate-900 ml-1">{totalQty}</span>
-                            </div>
-                            <div className="text-sm font-semibold text-primary-700 bg-primary-50 border border-primary-200 px-4 py-2 rounded-lg">
-                              Total Amount: <span className="ml-1">{fmtAmount}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                  ) : (
-                    /* List View */
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-sm">
-                        <thead>
-                          <tr className="border-b border-slate-200 bg-slate-50">
-                            <th className="py-2.5 px-3 w-8"><Checkbox defaultChecked /></th>
-                            {['Code', 'Label', 'Level', 'Has Children'].map(col => (
-                              <th key={col} className="py-2.5 px-4 text-xs font-semibold text-slate-900">{col}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {flatNodes.map(({ node, depth }) => (
-                            <tr
-                              key={node.id}
-                              onClick={() => setSelectedNodeId(node.id)}
-                              className={clsx(
-                                'cursor-pointer hover:bg-slate-50 transition-colors',
-                                selectedNodeId === node.id ? 'bg-primary-50/40 border-l-2 border-l-primary-500' : ''
-                              )}
-                            >
-                              <td className="py-2.5 px-3"><Checkbox /></td>
-                              <td className="py-2.5 px-4 text-primary-600 font-medium text-sm">{node.code}</td>
-                              <td className="py-2.5 px-4 text-sm text-slate-900">
-                                <div style={{ paddingLeft: `${depth * 16}px` }}>{node.label}</div>
-                              </td>
-                              <td className="py-2.5 px-4">
-                                <span className={clsx(
-                                  'inline-flex px-2 py-0.5 rounded text-xs font-medium border',
-                                  node.level === 0
-                                    ? 'bg-primary-50 text-primary-700 border-primary-200'
-                                    : node.level === 1
-                                      ? 'bg-primary-50 text-primary-600 border-primary-100'
-                                      : 'bg-slate-50 text-slate-700 border-slate-200'
-                                )}>
-                                  Level {node.level}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-4 text-sm text-slate-900">
-                                {node.children?.length ? `Yes (${node.children.length})` : 'No'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </TabPanel>
-              ))}
-            </TabPanels>
-          </TabGroup>
-        </div>
-        <KYCForm />
       </div>
-    </div>
+    </Page>
   );
 }
