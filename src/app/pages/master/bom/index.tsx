@@ -7,66 +7,75 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
+import { Get, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
+import { statusOptions } from "../shared/constants";
 import { columns, exportColumns } from "./columns";
-import { VariantStructure } from "./data";
+import { emptyBOM2, mapApiBOM2ToBOM2, BOM2 } from "./data";
 
-export default function VariantStructurePage() {
+export default function BOM2Page() {
   const navigate = useNavigate();
-  const [data, setData] = useState<VariantStructure[]>(() =>
-    masterStorage.getVariantStructures(),
-  );
+  const [data, setData] = useState<BOM2[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [showFilters, setShowFilters] = useState(false);
-  const [filterCode, setFilterCode] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
-  const [filterModel, setFilterModel] = useState("");
+  const [filterItemName, setFilterItemName] = useState("");
+  const [filterBOMName, setFilterBOMName] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
-  const categoryOptions = useMemo(
-    () =>
-      [...new Set(data.map((item) => item.categoryName))]
-        .filter(Boolean)
-        .map((name) => ({ id: name, label: name })),
-    [data],
-  );
+  // ---- Fetch BOM2 items ----
+  const fetchAll = async () => {
+  setLoading(true);
+  try {
+    // 👇 FIX: was "master/bom2/list" — no such route exists.
+    // Your router mounts everything under /master/bom (see bom.routes.js).
+    const response = await Get("master/bom/list", {}, false);
+    if (response.data?.success) {
+      setData((response.data.data || []).map(mapApiBOM2ToBOM2));
+    } else {
+      toasterrormsg(response.data?.message || "Failed to fetch BOM items.");
+    }
+  } catch (error) {
+    toasterrormsg("Something went wrong while fetching BOM2 data.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const modelOptions = useMemo(
-    () =>
-      [...new Set(data.map((item) => item.modelName))]
-        .filter(Boolean)
-        .map((name) => ({ id: name, label: name })),
-    [data],
-  );
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       if (
-        filterCode &&
-        !item.variantCode.toLowerCase().includes(filterCode.toLowerCase())
+        filterItemName &&
+        !item.itemName.toLowerCase().includes(filterItemName.toLowerCase())
       )
         return false;
-      if (filterCategory && item.categoryName !== filterCategory) return false;
-      if (filterModel && item.modelName !== filterModel) return false;
+      if (
+        filterBOMName &&
+        !item.bomName.toLowerCase().includes(filterBOMName.toLowerCase())
+      )
+        return false;
+      if (filterStatus && item.status !== filterStatus) return false;
       return true;
     });
-  }, [data, filterCode, filterCategory, filterModel]);
+  }, [data, filterItemName, filterBOMName, filterStatus]);
 
-  const persist = (next: VariantStructure[]) => {
-    setData(next);
-    masterStorage.saveVariantStructures(next);
-  };
 
   const table = useReactTable({
     data: filteredData,
@@ -75,14 +84,17 @@ export default function VariantStructurePage() {
     enableRowSelection: true,
     getRowId: (row) => row.id,
     meta: {
-      openEditDrawer: (row: VariantStructure) =>
-        navigate(`/master/variant-structure/edit/${row.id}`),
-      deleteRow: (row) =>
-        persist(data.filter((item) => item.id !== row.original.id)),
+      viewRow: (row: BOM2) => navigate(`/master/bom/view/${row.bomId}`),
+
+      openEditDrawer: (row: BOM2) => navigate(`/master/bom/edit/${row.bomId}`),
+      
+      deleteRow: (row) => {
+        // TODO: Implement delete functionality
+        console.log("Delete row:", row.original);
+      },
       deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
+        // TODO: Implement bulk delete functionality
+        console.log("Delete rows:", rows);
       },
     },
     filterFns: { fuzzy: fuzzyFilter },
@@ -97,57 +109,51 @@ export default function VariantStructurePage() {
   });
 
   return (
-    <Page title="Variant Structure">
+    <Page title="BOM">
       <div className="transition-content w-full pb-5">
         <MasterToolbar
-          title="Variant Structure"
-          createLabel="Create Variant Structure"
-          searchPlaceholder="Search variant structures..."
+          title="BOM"
+          createLabel="Create BOM"
+          searchPlaceholder="Search BOM items..."
           table={table}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
-          onCreate={() => navigate("/master/variant-structure/create")}
+          onCreate={() => navigate("/master/bom/create")}
           onExportExcel={() =>
-            exportToExcel(filteredData, exportColumns, "variant-structures")
+            exportToExcel(filteredData, exportColumns, "bom2")
           }
           onExportPdf={() =>
             exportToPdf(
               filteredData,
               exportColumns,
-              "Variant Structure List",
-              "variant-structures",
+              "BOM2 List",
+              "bom2",
             )
           }
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
-                label="Variant Code"
-                value={filterCode}
-                onChange={(e) => setFilterCode(e.target.value)}
-                placeholder="Filter by variant code"
+                label="Item Name"
+                value={filterItemName}
+                onChange={(e) => setFilterItemName(e.target.value)}
+                placeholder="Filter by item name"
+              />
+              <Input
+                label="BOM Name"
+                value={filterBOMName}
+                onChange={(e) => setFilterBOMName(e.target.value)}
+                placeholder="Filter by BOM name"
               />
               <Listbox
-                data={[{ id: "", label: "All" }, ...categoryOptions]}
+                data={[{ id: "", label: "All" }, ...statusOptions]}
                 value={
-                  [{ id: "", label: "All" }, ...categoryOptions].find(
-                    (item) => item.id === filterCategory,
+                  [{ id: "", label: "All" }, ...statusOptions].find(
+                    (item) => item.id === filterStatus,
                   ) || { id: "", label: "All" }
                 }
-                onChange={(item) => setFilterCategory(item.id)}
-                label="Category Name"
-                placeholder="All categories"
-                displayField="label"
-              />
-              <Listbox
-                data={[{ id: "", label: "All" }, ...modelOptions]}
-                value={
-                  [{ id: "", label: "All" }, ...modelOptions].find(
-                    (item) => item.id === filterModel,
-                  ) || { id: "", label: "All" }
-                }
-                onChange={(item) => setFilterModel(item.id)}
-                label="Model Name"
-                placeholder="All models"
+                onChange={(item) => setFilterStatus(item.id)}
+                label="Status"
+                placeholder="All statuses"
                 displayField="label"
               />
             </div>
@@ -157,7 +163,11 @@ export default function VariantStructurePage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No variant structures found. Click Create Variant Structure to add one."
+          emptyMessage={
+            loading
+              ? "Loading BOM2 items..."
+              : "No BOM items found. Click Create BOM2 to add one."
+          }
         />
       </div>
     </Page>

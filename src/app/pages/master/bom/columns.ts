@@ -5,12 +5,13 @@ import {
   SelectHeader,
 } from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../shared/createRowActions";
-import { TextCell } from "../shared/tableCells";
-import { VariantStructure } from "./data";
+import { StatusCell, TextCell } from "../shared/tableCells";
+import { ExportColumn } from "../shared/export";
+import { BOM2 } from "./data";
 
-const RowActions = createRowActions<VariantStructure>("variant structure");
+const RowActions = createRowActions<BOM2>("bom2");
 
-export const columns: ColumnDef<VariantStructure>[] = [
+export const columns: ColumnDef<BOM2>[] = [
   {
     id: "select",
     header: SelectHeader,
@@ -18,46 +19,55 @@ export const columns: ColumnDef<VariantStructure>[] = [
     enableSorting: false,
   },
   {
-    id: "variantCode",
-    accessorKey: "variantCode",
-    header: "Variant Code",
+    id: "itemName",
+    accessorKey: "itemName",
+    header: "Item Name",
     cell: TextCell,
   },
   {
-    id: "categoryName",
-    accessorKey: "categoryName",
-    header: "Category Name",
+    id: "itemCode",
+    accessorKey: "itemCode",
+    header: "Item Code",
     cell: TextCell,
   },
   {
-    id: "seriesName",
-    accessorKey: "seriesName",
-    header: "Series Name",
+    id: "bomCode",
+    accessorKey: "bomCode",
+    header: "BOM Code",
     cell: TextCell,
   },
   {
-    id: "modelName",
-    accessorKey: "modelName",
-    header: "Model Name",
+    id: "bomName",
+    accessorKey: "bomName",
+    header: "BOM Name",
     cell: TextCell,
   },
   {
-    id: "bodyType",
-    accessorKey: "bodyType",
-    header: "Body Type",
+    id: "quantity",
+    accessorKey: "quantity",
+    header: "Quantity",
     cell: TextCell,
   },
   {
-    id: "targetCost",
-    accessorKey: "targetCost",
-    header: "Target Cost",
+    id: "unit",
+    accessorKey: "unit",
+    header: "Unit",
     cell: TextCell,
   },
   {
-    id: "sellingMarkup",
-    accessorKey: "sellingMarkup",
-    header: "Selling Markup",
-    cell: TextCell,
+    id: "createdAt",
+    accessorKey: "createdAt",
+    header: "Created On",
+    cell: (info) => {
+      const value = info.getValue<string>();
+      return value ? new Date(value).toLocaleDateString() : "—";
+    },
+  },
+  {
+    id: "status",
+    accessorKey: "status",
+    header: "Status",
+    cell: StatusCell,
   },
   {
     id: "actions",
@@ -67,24 +77,22 @@ export const columns: ColumnDef<VariantStructure>[] = [
   },
 ];
 
-export const exportColumns = [
-  { key: "variantCode" as const, header: "Variant Code" },
-  { key: "categoryCode" as const, header: "Category Code" },
-  { key: "categoryName" as const, header: "Category Name" },
-  { key: "seriesCode" as const, header: "Series Code" },
-  { key: "seriesName" as const, header: "Series Name" },
-  { key: "modelCode" as const, header: "Model Code" },
-  { key: "modelName" as const, header: "Model Name" },
-  { key: "capacity" as const, header: "Capacity" },
-  { key: "axleType" as const, header: "Axle Type" },
-  { key: "bodyLength" as const, header: "Body Length" },
-  { key: "bodyWidth" as const, header: "Body Width" },
-  { key: "bodyHeight" as const, header: "Body Height" },
-  { key: "standardWeight" as const, header: "Standard Weight" },
-  { key: "bodyType" as const, header: "Body Type" },
-  { key: "axleBrand" as const, header: "Axle Brand" },
-  { key: "hydraulicBrand" as const, header: "Hydraulic Brand" },
-  { key: "tyreBrand" as const, header: "Tyre Brand" },
-  { key: "targetCost" as const, header: "Target Cost" },
-  { key: "sellingMarkup" as const, header: "Selling Markup" },
+export const exportColumns: ExportColumn<BOM2>[] = [
+  { key: "itemName", header: "Item Name" },
+  { key: "itemCode", header: "Item Code" },
+  { key: "bomCode", header: "BOM Code" },
+  { key: "bomName", header: "BOM Name" },
+  { key: "quantity", header: "Quantity" },
+  { key: "unit", header: "Unit" },
+  {
+    key: "createdAt",
+    header: "Created On",
+    format: (value: unknown) =>
+      value ? new Date(value as string).toLocaleDateString() : "",
+  },
+  {
+    key: "status",
+    header: "Status",
+    format: (value: unknown) => (value === "active" ? "Active" : "Inactive"),
+  },
 ];

@@ -6,6 +6,8 @@ import {
   DocumentTextIcon,
   XMarkIcon,
   MagnifyingGlassIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useNavigate } from "react-router";
 import clsx from "clsx";
@@ -18,8 +20,9 @@ import { statusOptions } from "../../shared/constants";
 
 interface BOMItem {
   id: string;
-  itemCode: string;
-  itemName: string;
+  refItemId: string; // 👈 itemmaster.itemId — authoritative reference, this is what gets saved
+  itemCode: string;  // display only, not persisted by backend
+  itemName: string;  // display only, not persisted by backend
   quantity: string;
   unit: string;
   serialNo?: string;
@@ -230,7 +233,7 @@ function BOMTreeNode({
 }
 
 
-export default function BOM2CreatePage() {
+export default function BOMCreatePage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -326,6 +329,24 @@ export default function BOM2CreatePage() {
     [bomItems, parentCode]
   );
 
+  // -------------------------------------------------------------------
+  // 👇 ITEM MASTER EXISTENCE CHECK — is entered code Item Master me hai?
+  // Ye Parent aur Child dono inputs ke liye reused hota hai, live hint ke
+  // saath (matched item name dikhata hai ya "not found" warning).
+  // -------------------------------------------------------------------
+  const findAvailableByCode = (code: string): AvailableItem | undefined =>
+    availableItems.find((i) => i.itemCode.toLowerCase() === code.trim().toLowerCase());
+
+  const parentMasterMatch = useMemo(
+    () => (parentCode.trim() ? findAvailableByCode(parentCode) : undefined),
+    [availableItems, parentCode]
+  );
+
+  const childMasterMatch = useMemo(
+    () => (childCode.trim() ? findAvailableByCode(childCode) : undefined),
+    [availableItems, childCode]
+  );
+
   const toggleNode = (id: string) => {
     setExpandedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
   };
@@ -361,14 +382,22 @@ export default function BOM2CreatePage() {
     }
   };
 
-  const buildItem = (code: string): BOMItem => {
-    const known = availableItems.find((i) => i.itemCode.toLowerCase() === code.trim().toLowerCase());
+  // -------------------------------------------------------------------
+  // 👇 Ab buildItem sirf tabhi item banata hai jab code Item Master me
+  // mila ho. Nahi mila to null return karta hai — caller (handleAddToTree)
+  // isse check karke error dikhata hai aur add hone hi nahi deta.
+  // -------------------------------------------------------------------
+  const buildItem = (code: string): BOMItem | null => {
+    const known = findAvailableByCode(code);
+    if (!known) return null;
+
     return {
-      id: Date.now().toString(),
-      itemCode: code.trim(),
-      itemName: known?.itemName || code.trim(),
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      refItemId: known.id, // 👈 yehi backend ko jayega, save hoga
+      itemCode: known.itemCode,
+      itemName: known.itemName,
       quantity: qty || "1",
-      unit: known?.unit || "NOS",
+      unit: known.unit || "NOS",
       serialNo,
       asslyQty,
       ldDay,
@@ -415,7 +444,13 @@ export default function BOM2CreatePage() {
         return;
       }
 
+      // 👇 HARD BLOCK: Item Master me exist nahi karta to root bhi add nahi hoga
       const rootItem = buildItem(parentCode);
+      if (!rootItem) {
+        toasterrormsg(`Item code "${parentCode}" not found in Item Master. Please enter a valid, existing item code.`);
+        return;
+      }
+
       setBomItems([rootItem]);
       resetEntryFields();
       toastsuccessmsg("Root item added to BOM structure.");
@@ -438,7 +473,12 @@ export default function BOM2CreatePage() {
       parentId = parentNode.id;
     }
 
+    // 👇 HARD BLOCK: child code bhi Item Master me exist karna chahiye
     const newItem = buildItem(childCode);
+    if (!newItem) {
+      toasterrormsg(`Item code "${childCode}" not found in Item Master. Please enter a valid, existing item code.`);
+      return;
+    }
 
     setBomItems((prev) => insertItem(prev, parentId, newItem));
 
@@ -471,21 +511,21 @@ export default function BOM2CreatePage() {
       bomName,
       bomCode,
       status: bomStatus,
-      items: bomItems,
+      items: bomItems, // har node me refItemId already set hai (buildItem se)
     };
 
     try {
-      const response = await Post("master/bom2/create", payload, false);
+      const response = await Post("master/bom/create", payload, false);
       if (response.data?.success) {
         toastsuccessmsg(response.data?.message || "BOM created successfully.");
-        navigate("/master/bom2");
+        navigate("/master/bom");
       } else {
         toasterrormsg(response.data?.message || "Failed to create BOM.");
       }
     } catch (error) {
       console.log("API call failed, using mock save:", payload);
       toastsuccessmsg("BOM created successfully (demo mode).");
-      setTimeout(() => navigate("/master/bom2"), 1000);
+      setTimeout(() => navigate("/master/bom"), 1000);
     }
   };
 
@@ -506,7 +546,7 @@ export default function BOM2CreatePage() {
           <h2 className="border-b-4 border-primary text-xl font-bold tracking-wide text-primary dark:text-dark-50 lg:text-2xl">
             Create BOM
           </h2>
-          <Link to="/master/bom2">
+          <Link to="/master/bom">
             <Button color="primary" variant="outlined">
               <ChevronLeftIcon className="size-6" />
               <span>Back</span>
@@ -596,6 +636,8 @@ export default function BOM2CreatePage() {
                     onChange={(e) => setParentCode(e.target.value)}
                     placeholder={hasBOMItems ? "Item code of parent (blank = root item)" : "Item code of first item"}
                   />
+
+                  {/* Tree-membership hint (unchanged) */}
                   <p className="mt-1 text-xs text-gray-400 dark:text-dark-400">
                     {!hasBOMItems
                       ? "BOM is empty — this becomes the first (root) item."
@@ -605,6 +647,28 @@ export default function BOM2CreatePage() {
                           ? `Found in tree: ${matchedParent.itemName}`
                           : "Not found yet in the BOM structure."}
                   </p>
+
+                  {/* 👇 Item Master existence hint — this is the hard-block check */}
+                  {parentCode.trim() !== "" && (
+                    <p
+                      className={clsx(
+                        "mt-1 flex items-center gap-1 text-xs font-medium",
+                        parentMasterMatch ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
+                      )}
+                    >
+                      {parentMasterMatch ? (
+                        <>
+                          <CheckCircleIcon className="size-3.5" />
+                          In Item Master: {parentMasterMatch.itemName} ({parentMasterMatch.unit})
+                        </>
+                      ) : (
+                        <>
+                          <ExclamationTriangleIcon className="size-3.5" />
+                          Not found in Item Master — cannot be added
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 {/* Child — only appears once at least one item exists */}
@@ -616,6 +680,28 @@ export default function BOM2CreatePage() {
                       onChange={(e) => setChildCode(e.target.value)}
                       placeholder="Item code to add under Parent"
                     />
+
+                    {/* 👇 Item Master existence hint for Child too */}
+                    {childCode.trim() !== "" && (
+                      <p
+                        className={clsx(
+                          "mt-1 flex items-center gap-1 text-xs font-medium",
+                          childMasterMatch ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
+                        )}
+                      >
+                        {childMasterMatch ? (
+                          <>
+                            <CheckCircleIcon className="size-3.5" />
+                            In Item Master: {childMasterMatch.itemName} ({childMasterMatch.unit})
+                          </>
+                        ) : (
+                          <>
+                            <ExclamationTriangleIcon className="size-3.5" />
+                            Not found in Item Master — cannot be added
+                          </>
+                        )}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -661,15 +747,15 @@ export default function BOM2CreatePage() {
                       <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-dark-300">Qtty</label>
                       <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qtty" />
                     </div>
-                    <div className="flex items-end">
-                      <Button color="primary" onClick={handleCalculate} className="w-full">
-                        Calculate
-                      </Button>
-                    </div>
                   </div>
                 </div>
 
-                <Button color="success" onClick={handleAddToTree} className="mt-4 w-full">
+                <Button
+                  color="success"
+                  onClick={handleAddToTree}
+                  className="mt-4 w-full"
+                  disabled={hasBOMItems ? !childMasterMatch : !parentMasterMatch}
+                >
                   {hasBOMItems ? "Add to BOM Structure" : "Add Root Item"}
                 </Button>
               </div>
@@ -757,7 +843,7 @@ export default function BOM2CreatePage() {
 
         {/* Action Buttons */}
         <div className="mt-6 flex justify-end gap-3">
-          <Link to="/master/bom2">
+          <Link to="/master/bom">
             <Button variant="outlined" color="secondary">
               Cancel
             </Button>
