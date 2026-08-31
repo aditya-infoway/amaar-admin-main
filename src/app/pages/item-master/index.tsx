@@ -54,8 +54,8 @@ const handleImportExcel = async (file: File) => {
       'Short Name': 'shortName',
       'Item Category': 'categoryName',
       'Group': 'groupName',
-      'Sales Price': 'salesPrice',
-      'MRP': 'mrp',
+      // 'Sales Price': 'salesPrice',
+      // 'MRP': 'mrp',
       'Barcode': 'barcode',
     } as const;
 

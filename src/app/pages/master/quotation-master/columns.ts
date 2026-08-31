@@ -15,12 +15,13 @@ export interface CreateMasterItem {
   companyId: number;
   type: string;
   description: string;
-  actualItem: {
-    id: string;
-    name: string;
-  }[];
-  exShowroom: string;
-  effectiveDate: string;
+ actualItem: {
+  id: string;
+  name: string;
+  weight: number;
+}[];
+  code: string;
+totalWeight: string;
   status: string;
   created?: string;
 }
@@ -62,25 +63,19 @@ export const columns: ColumnDef<CreateMasterItem>[] = [
     },
   },
 
-  {
-    id: "exShowroom",
-    accessorKey: "exShowroom",
-    header: "Ex-Showroom",
-    cell: TextCell,
-  },
+ {
+  id: "code",
+  accessorKey: "code",
+  header: "Code",
+  cell: TextCell,
+},
 
-  {
-    id: "effectiveDate",
-    accessorKey: "effectiveDate",
-    header: "Effective Date",
-    cell: (info) => {
-      const value = info.getValue<string>();
-
-      if (!value) return "—";
-
-      return value;
-    },
-  },
+{
+  id: "totalWeight",
+  accessorKey: "totalWeight",
+  header: "Total Weight",
+  cell: TextCell,
+},
 
   {
     id: "actions",
@@ -114,18 +109,13 @@ export const exportColumns: ExportColumn<CreateMasterItem>[] = [
     },
   },
 
-  {
-    key: "exShowroom",
-    header: "Ex-Showroom",
-  },
+ {
+  key: "code",
+  header: "Code",
+},
 
-  {
-    key: "effectiveDate",
-    header: "Effective Date",
-    format: (value: unknown) => {
-      if (!value) return "";
-
-      return String(value);
-    },
-  },
+{
+  key: "totalWeight",
+  header: "Total Weight",
+},
 ];

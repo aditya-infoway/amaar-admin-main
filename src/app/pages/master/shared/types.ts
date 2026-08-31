@@ -82,7 +82,7 @@ export interface ItemMaster {
   maxQty: string;
   itemType: string;
   suppliers: string[];
-  purchasePrice: string;
+   purchasePrice?: string | number;
   actualPurchasePrice: string;
   salesPrice: string;
   mrp: string;

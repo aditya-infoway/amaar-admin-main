@@ -125,9 +125,9 @@ export interface ItemMaster {
   maxQty: string;
   itemType: string;
   suppliers: string[];
-  purchasePrice: string;
-  actualPurchasePrice: string;
-  salesPrice: string;
-  mrp: string;
+  // purchasePrice: string;
+  // actualPurchasePrice: string;
+  // salesPrice: string;
+  // mrp: string;
   barcode: string;
 }

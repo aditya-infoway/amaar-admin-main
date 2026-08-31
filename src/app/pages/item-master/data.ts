@@ -14,10 +14,10 @@ export interface ItemMaster {
   stockMapping: boolean;
   minQty: string;
   maxQty: string;
-  purchasePrice: string;
-  actualPurchasePrice: string;
-  salesPrice: string;
-  mrp: string;
+  // purchasePrice: string;
+  // actualPurchasePrice: string;
+  // salesPrice: string;
+  // mrp: string;
   barcodeType: "manual" | "generate";
   barcode: string;
   status: string;
@@ -38,10 +38,10 @@ export const emptyItem = (): ItemMaster => ({
   stockMapping: false,
   minQty: "",
   maxQty: "",
-  purchasePrice: "",
-  actualPurchasePrice: "",
-  salesPrice: "",
-  mrp: "",
+  // purchasePrice: "",
+  // actualPurchasePrice: "",
+  // salesPrice: "",
+  // mrp: "",
   barcodeType: "manual",
   barcode: "",
   status: "active",
@@ -63,10 +63,10 @@ export const mapApiItemMasterToItemMaster = (item: any): ItemMaster => ({
   stockMapping: Boolean(item.stockMapping),
   minQty: item.minQty != null ? String(item.minQty) : "",
   maxQty: item.maxQty != null ? String(item.maxQty) : "",
-  purchasePrice: item.purchasePrice != null ? String(item.purchasePrice) : "",
-  actualPurchasePrice: item.actualPurchasePrice != null ? String(item.actualPurchasePrice) : "",
-  salesPrice: item.salesPrice != null ? String(item.salesPrice) : "",
-  mrp: item.mrp != null ? String(item.mrp) : "",
+  // purchasePrice: item.purchasePrice != null ? String(item.purchasePrice) : "",
+  // actualPurchasePrice: item.actualPurchasePrice != null ? String(item.actualPurchasePrice) : "",
+  // salesPrice: item.salesPrice != null ? String(item.salesPrice) : "",
+  // mrp: item.mrp != null ? String(item.mrp) : "",
   barcodeType: item.barcodeType || "manual",
   barcode: item.barcode || "",
   status: item.status || "active",
