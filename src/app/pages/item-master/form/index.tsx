@@ -20,13 +20,17 @@ interface ItemMasterFormValues {
   groupId: string;
   unit: string;
   taxSlab: string;
+  thickness: string;
+  length: string;
+  width: string;
+  weight: string;
   stockMapping: boolean;
   minQty: string;
   maxQty: string;
-  purchasePrice: string;
-  actualPurchasePrice: string;
-  salesPrice: string;
-  mrp: string;
+  // purchasePrice: string;
+  // actualPurchasePrice: string;
+  // salesPrice: string;
+  // mrp: string;
   barcodeType: "manual" | "generate";
   barcode: string;
   status: string;
@@ -42,13 +46,17 @@ const emptyFormValues: ItemMasterFormValues = {
   groupId: "",
   unit: "",
   taxSlab: "",
+  thickness: "",
+  length: "",
+  width: "",
+  weight: "",
   stockMapping: false,
   minQty: "",
   maxQty: "",
-  purchasePrice: "",
-  actualPurchasePrice: "",
-  salesPrice: "",
-  mrp: "",
+  // purchasePrice: "",
+  // actualPurchasePrice: "",
+  // salesPrice: "",
+  // mrp: "",
   barcodeType: "manual",
   barcode: "",
   status: "active",
@@ -92,6 +100,23 @@ export default function ItemMasterFormPage() {
   const stockMapping = watch("stockMapping");
   const barcodeType = watch("barcodeType");
   const selectedCategoryId = watch("itemCategoryId");
+  const thickness = watch("thickness");
+  const length = watch("length");
+  const width = watch("width");
+
+  // ---- Weight auto-calc: (thickness * length * width * 7.85) / 10,00,000 ----
+  useEffect(() => {
+    const t = parseFloat(thickness);
+    const l = parseFloat(length);
+    const w = parseFloat(width);
+
+    if (!isNaN(t) && !isNaN(l) && !isNaN(w)) {
+      const calculatedWeight = (t * l * w * 7.85) / 1000000;
+      setValue("weight", calculatedWeight.toFixed(3), { shouldValidate: true });
+    } else {
+      setValue("weight", "", { shouldValidate: false });
+    }
+  }, [thickness, length, width, setValue]);
 
   // ---- Item Category — dynamic from Item Category master ----
   useEffect(() => {
@@ -101,7 +126,10 @@ export default function ItemMasterFormPage() {
         const res = await Get("master/itemcategory/list", {}, false);
         const list = res?.data?.data || [];
         setCategoryOptions(
-          list.map((c: any) => ({ id: String(c.itemCategoryId), label: c.categoryName }))
+          list.map((c: any) => ({
+            id: String(c.itemCategoryId),
+            label: c.categoryName,
+          })),
         );
       } catch (err) {
         toasterrormsg("Failed to load item categories");
@@ -122,8 +150,9 @@ export default function ItemMasterFormPage() {
           list.map((g: any) => ({
             id: String(g.itemGroupId),
             label: g.groupName,
-            itemCategoryId: g.itemCategoryId != null ? String(g.itemCategoryId) : "",
-          }))
+            itemCategoryId:
+              g.itemCategoryId != null ? String(g.itemCategoryId) : "",
+          })),
         );
       } catch (err) {
         toasterrormsg("Failed to load groups");
@@ -137,7 +166,7 @@ export default function ItemMasterFormPage() {
   const filteredGroupOptions = useMemo(() => {
     if (!selectedCategoryId) return [];
     return allGroupOptions.filter(
-      (g) => g.itemCategoryId === selectedCategoryId
+      (g) => g.itemCategoryId === selectedCategoryId,
     );
   }, [allGroupOptions, selectedCategoryId]);
 
@@ -156,18 +185,27 @@ export default function ItemMasterFormPage() {
             shortName: item.shortName || "",
             hsnCode: item.hsnCode || "",
             itemLocation: item.itemLocation || "",
-            itemCategoryId: item.itemCategoryId ? String(item.itemCategoryId) : "",
+            itemCategoryId: item.itemCategoryId
+              ? String(item.itemCategoryId)
+              : "",
             groupId: item.groupId ? String(item.groupId) : "",
             unit: item.unit || "",
             taxSlab: item.taxSlab || "",
+            thickness: item.thickness != null ? String(item.thickness) : "",
+            length: item.length != null ? String(item.length) : "",
+            width: item.width != null ? String(item.width) : "",
+            weight: item.weight != null ? String(item.weight) : "",
             stockMapping: Boolean(item.stockMapping),
             minQty: item.minQty != null ? String(item.minQty) : "",
             maxQty: item.maxQty != null ? String(item.maxQty) : "",
-            purchasePrice: item.purchasePrice != null ? String(item.purchasePrice) : "",
-            actualPurchasePrice:
-              item.actualPurchasePrice != null ? String(item.actualPurchasePrice) : "",
-            salesPrice: item.salesPrice != null ? String(item.salesPrice) : "",
-            mrp: item.mrp != null ? String(item.mrp) : "",
+            // purchasePrice:
+            //   item.purchasePrice != null ? String(item.purchasePrice) : "",
+            // actualPurchasePrice:
+            //   item.actualPurchasePrice != null
+            //     ? String(item.actualPurchasePrice)
+            //     : "",
+            // salesPrice: item.salesPrice != null ? String(item.salesPrice) : "",
+            // mrp: item.mrp != null ? String(item.mrp) : "",
             barcodeType: item.barcodeType || "manual",
             barcode: item.barcode || "",
             status: item.status || "active",
@@ -218,10 +256,18 @@ export default function ItemMasterFormPage() {
         groupId: Number(data.groupId),
         minQty: data.stockMapping ? data.minQty : null,
         maxQty: data.stockMapping ? data.maxQty : null,
+        thickness: data.thickness ? Number(data.thickness) : null,
+        length: data.length ? Number(data.length) : null,
+        width: data.width ? Number(data.width) : null,
+        weight: data.weight ? Number(data.weight) : null,
       };
 
       if (isEdit && id) {
-        const res = await Put("master/itemmaster/update", { itemId: Number(id), ...payload }, false);
+        const res = await Put(
+          "master/itemmaster/update",
+          { itemId: Number(id), ...payload },
+          false,
+        );
         if (res?.data?.status === 400 || res?.data?.success === false) {
           toasterrormsg(extractErrorMessage(res, "Something went wrong."));
           return;
@@ -238,7 +284,12 @@ export default function ItemMasterFormPage() {
 
       navigate("/item-master");
     } catch (err: any) {
-      toasterrormsg(extractErrorMessage(err?.response, "Something went wrong. Please try again."));
+      toasterrormsg(
+        extractErrorMessage(
+          err?.response,
+          "Something went wrong. Please try again.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -248,7 +299,7 @@ export default function ItemMasterFormPage() {
     <Page title={isEdit ? "Edit Item" : "Create Item"}>
       <div className="transition-content w-full px-(--margin-x) pb-8">
         <div className="flex items-center justify-between py-5 lg:py-6">
-          <h2 className="dark:text-dark-50 text-xl font-bold tracking-wide text-primary border-b-4 border-primary lg:text-2xl">
+          <h2 className="dark:text-dark-50 text-primary border-primary border-b-4 text-xl font-bold tracking-wide lg:text-2xl">
             {isEdit ? "Edit Item Master" : "Create Item Master"}
           </h2>
           <Link to="/item-master">
@@ -269,8 +320,14 @@ export default function ItemMasterFormPage() {
                 <Input
                   {...register("itemCode", {
                     required: "Item code is required",
-                    minLength: { value: 2, message: "Item code must be at least 2 characters" },
-                    maxLength: { value: 30, message: "Item code must not exceed 30 characters" },
+                    minLength: {
+                      value: 2,
+                      message: "Item code must be at least 2 characters",
+                    },
+                    maxLength: {
+                      value: 30,
+                      message: "Item code must not exceed 30 characters",
+                    },
                   })}
                   label="Item Code"
                   placeholder="Enter item code"
@@ -279,7 +336,10 @@ export default function ItemMasterFormPage() {
                 <Input
                   {...register("itemName", {
                     required: "Item name is required",
-                    maxLength: { value: 150, message: "Item name must not exceed 150 characters" },
+                    maxLength: {
+                      value: 150,
+                      message: "Item name must not exceed 150 characters",
+                    },
                   })}
                   label="Item Name"
                   placeholder="Enter item name"
@@ -288,7 +348,10 @@ export default function ItemMasterFormPage() {
                 <Input
                   {...register("shortName", {
                     required: "Short name is required",
-                    maxLength: { value: 50, message: "Short name must not exceed 50 characters" },
+                    maxLength: {
+                      value: 50,
+                      message: "Short name must not exceed 50 characters",
+                    },
                   })}
                   label="Short Name"
                   placeholder="Enter short name"
@@ -321,7 +384,10 @@ export default function ItemMasterFormPage() {
                   render={({ field: { value, onChange } }) => (
                     <Combobox
                       data={categoryOptions}
-                      value={categoryOptions.find((item) => item.id === value) || null}
+                      value={
+                        categoryOptions.find((item) => item.id === value) ||
+                        null
+                      }
                       onChange={(item: any) => {
                         onChange(item.id);
                         // Category badalte hi purani Group selection clear karo
@@ -329,7 +395,11 @@ export default function ItemMasterFormPage() {
                         clearErrors("groupId");
                       }}
                       label="Item Category"
-                      placeholder={loadingCategories ? "Loading..." : "Select item category"}
+                      placeholder={
+                        loadingCategories
+                          ? "Loading..."
+                          : "Select item category"
+                      }
                       displayField="label"
                       error={errors.itemCategoryId?.message}
                       searchFields={["label"]}
@@ -345,17 +415,21 @@ export default function ItemMasterFormPage() {
                   render={({ field: { value, onChange } }) => (
                     <Combobox
                       data={filteredGroupOptions}
-                      value={filteredGroupOptions.find((item) => item.id === value) || null}
+                      value={
+                        filteredGroupOptions.find(
+                          (item) => item.id === value,
+                        ) || null
+                      }
                       onChange={(item: any) => onChange(item.id)}
                       label="Group"
                       placeholder={
                         !selectedCategoryId
                           ? "Select item category first"
                           : loadingGroups
-                          ? "Loading..."
-                          : filteredGroupOptions.length === 0
-                          ? "No groups in this category"
-                          : "Select group"
+                            ? "Loading..."
+                            : filteredGroupOptions.length === 0
+                              ? "No groups in this category"
+                              : "Select group"
                       }
                       displayField="label"
                       error={errors.groupId?.message}
@@ -365,23 +439,66 @@ export default function ItemMasterFormPage() {
                   )}
                 />
 
-                <Controller
-                  control={control}
-                  name="unit"
-                  rules={{ required: "Unit is required" }}
-                  render={({ field: { value, onChange, ...rest } }) => (
-                    <Listbox
-                      data={uomOptions}
-                      value={uomOptions.find((item) => item.id === value) || null}
-                      onChange={(item) => onChange(item.id)}
-                      label="Unit / UOM"
-                      placeholder="Select unit"
-                      displayField="label"
-                      error={errors.unit?.message}
-                      {...rest}
-                    />
-                  )}
+                                <Controller
+                   control={control}
+                   name="unit"
+                   rules={{ required: "Unit is required" }}
+                   render={({ field: { value, onChange, ...rest } }) => (
+                     <Listbox
+                       data={uomOptions}
+                       value={uomOptions.find((item) => item.id === value) || null}
+                       onChange={(item) => onChange(item.id)}
+                       label="Unit / UOM"
+                       placeholder="Select unit"
+                       displayField="label"
+                       error={errors.unit?.message}
+                       {...rest}
+                     />
+                   )}
+                 />
+
+               <Input
+                  {...register("thickness", {
+                    required: "Thickness is required",
+                    min: { value: 0, message: "Thickness cannot be negative" },
+                  })}
+                  label="Thickness (mm)"
+                  type="number"
+                  step="any"
+                  placeholder="Enter thickness"
+                  error={errors.thickness?.message}
                 />
+                <Input
+                  {...register("length", {
+                    required: "Length is required",
+                   min: { value: 0, message: "Length cannot be negative" },
+                  })}
+                  label="Length (mm)"
+                  type="number"
+                  step="any"
+                  placeholder="Enter length"
+                  error={errors.length?.message}
+                />
+                <Input
+                  {...register("width", {
+                    required: "Width is required",
+                    min: { value: 0, message: "Width cannot be negative" },
+                 })}
+                  label="Width (mm)"
+                  type="number"
+                  step="any"
+                  placeholder="Enter width"
+                  error={errors.width?.message}
+                />
+                <Input
+                  {...register("weight")}
+                  label="Weight (kg)"
+                  type="number"
+                  placeholder="Auto calculated"
+                  readOnly
+                  className="bg-gray-50 cursor-not-allowed dark:bg-dark-700/50"
+                  error={errors.weight?.message}
+               />
               </div>
             </section>
 
@@ -397,7 +514,9 @@ export default function ItemMasterFormPage() {
                   render={({ field: { value, onChange, ...rest } }) => (
                     <Listbox
                       data={taxSlabOptions}
-                      value={taxSlabOptions.find((item) => item.id === value) || null}
+                      value={
+                        taxSlabOptions.find((item) => item.id === value) || null
+                      }
                       onChange={(item) => onChange(item.id)}
                       label="Tax Slab"
                       placeholder="Select tax slab"
@@ -425,7 +544,10 @@ export default function ItemMasterFormPage() {
                     <Input
                       {...register("minQty", {
                         required: stockMapping ? "Min qty is required" : false,
-                        min: { value: 0, message: "Min qty cannot be negative" },
+                        min: {
+                          value: 0,
+                          message: "Min qty cannot be negative",
+                        },
                       })}
                       label="Min Qty"
                       type="number"
@@ -435,7 +557,10 @@ export default function ItemMasterFormPage() {
                     <Input
                       {...register("maxQty", {
                         required: stockMapping ? "Max qty is required" : false,
-                        min: { value: 0, message: "Max qty cannot be negative" },
+                        min: {
+                          value: 0,
+                          message: "Max qty cannot be negative",
+                        },
                       })}
                       label="Max Qty"
                       type="number"
@@ -447,7 +572,7 @@ export default function ItemMasterFormPage() {
               </div>
             </section>
 
-            <section>
+            {/* <section>
               <h3 className="dark:text-dark-100 mb-4 text-lg font-medium text-gray-800">
                 Pricing
               </h3>
@@ -493,7 +618,7 @@ export default function ItemMasterFormPage() {
                   error={errors.mrp?.message}
                 />
               </div>
-            </section>
+            </section> */}
 
             <section>
               <h3 className="dark:text-dark-100 mb-4 text-lg font-medium text-gray-800">
@@ -501,19 +626,19 @@ export default function ItemMasterFormPage() {
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                     <Radio
                       checked={barcodeType === "manual"}
                       onChange={() => handleBarcodeTypeChange("manual")}
-                      className="size-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-dark-400"
+                      className="text-primary-600 focus:ring-primary-500 dark:border-dark-400 size-4 border-gray-300"
                     />
                     Manually
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                     <Radio
                       checked={barcodeType === "generate"}
                       onChange={() => handleBarcodeTypeChange("generate")}
-                      className="size-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-dark-400"
+                      className="text-primary-600 focus:ring-primary-500 dark:border-dark-400 size-4 border-gray-300"
                     />
                     Generate Automatically
                   </label>
@@ -523,11 +648,18 @@ export default function ItemMasterFormPage() {
                   <div className="max-w-md">
                     <Input
                       {...register("barcode", {
-                        minLength: { value: 4, message: "Barcode must be at least 4 characters" },
-                        maxLength: { value: 30, message: "Barcode must not exceed 30 characters" },
+                        minLength: {
+                          value: 4,
+                          message: "Barcode must be at least 4 characters",
+                        },
+                        maxLength: {
+                          value: 30,
+                          message: "Barcode must not exceed 30 characters",
+                        },
                         pattern: {
                           value: /^[A-Za-z0-9-]+$/,
-                          message: "Barcode can only contain letters, numbers, and hyphens",
+                          message:
+                            "Barcode can only contain letters, numbers, and hyphens",
                         },
                       })}
                       label="Barcode Number"
@@ -536,12 +668,14 @@ export default function ItemMasterFormPage() {
                     />
                   </div>
                 ) : (
-                  <div className="rounded-md border border-dashed border-gray-300 bg-gray-50/50 p-4 dark:border-dark-400 dark:bg-dark-700/50 max-w-md">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <div className="dark:border-dark-400 dark:bg-dark-700/50 max-w-md rounded-md border border-dashed border-gray-300 bg-gray-50/50 p-4">
+                    <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
                       System Generated Unique Barcode
                     </span>
-                    <p className="mt-1 font-mono text-lg font-bold text-gray-900 dark:text-dark-50">
-                      {generatingBarcode ? "Generating..." : watch("barcode") || "—"}
+                    <p className="dark:text-dark-50 mt-1 font-mono text-lg font-bold text-gray-900">
+                      {generatingBarcode
+                        ? "Generating..."
+                        : watch("barcode") || "—"}
                     </p>
                     <input type="hidden" {...register("barcode")} />
                   </div>
@@ -549,12 +683,16 @@ export default function ItemMasterFormPage() {
               </div>
             </section>
 
-            <div className="flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-dark-500">
+            <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 pt-4">
               <Button type="button" onClick={() => navigate("/item-master")}>
                 Cancel
               </Button>
               <Button type="submit" color="primary" disabled={submitting}>
-                {submitting ? "Saving..." : isEdit ? "Update Item" : "Create Item"}
+                {submitting
+                  ? "Saving..."
+                  : isEdit
+                    ? "Update Item"
+                    : "Create Item"}
               </Button>
             </div>
           </Card>
