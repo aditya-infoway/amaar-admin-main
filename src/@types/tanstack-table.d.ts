@@ -2,6 +2,7 @@ import { Row, RowData } from "@tanstack/react-table";
 import { TableSettings } from "@/components/shared/table/TableSettings";
 import { Dispatch, SetStateAction } from "react";
 import { ItemViewType } from "@/components/shared/table/ItemViewTypeSelect";
+import { BOMComponent } from "@/pages/master/bom/types";
 declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface TableMeta<TData extends RowData> {
@@ -13,7 +14,16 @@ declare module "@tanstack/react-table" {
     setTableSettings?: Dispatch<SetStateAction<TableSettings>>;
     setToolbarFilters?: Dispatch<SetStateAction<string[] | undefined>>;
     setViewType?: Dispatch<SetStateAction<ItemViewType>>;
+    
+    
+    createBOMWithFirstComponent?: (
+      item: TData,
+      mainParent: string,
+      component: BOMComponent,
+    ) => void;
+    addBOMComponent?: (item: TData, component: BOMComponent) => void;
   }
+
 
   interface TableState {
     tableSettings?: TableSettings;

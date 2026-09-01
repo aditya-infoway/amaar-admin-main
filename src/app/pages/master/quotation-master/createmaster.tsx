@@ -54,6 +54,7 @@ import { columns, exportColumns, CreateMasterItem } from "./columns";
 interface MultiSelectOption {
   id: string;
   name: string;
+  weight: number;
 }
 
 interface ItemMasterItem {
@@ -74,6 +75,8 @@ export default function CreateMaster() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<CreateMasterItem | null>(null);
+  const [codeExists, setCodeExists] = useState(false);
+  const [checkingCode, setCheckingCode] = useState(false);
 
   const [itemMasterData, setItemMasterData] = useState<ItemMasterItem[]>([]);
   const [itemCategoryData, setItemCategoryData] = useState<any[]>([]);
@@ -84,14 +87,14 @@ export default function CreateMaster() {
     type: string;
     description: string;
     actualItem: MultiSelectOption[];
-    exShowroom: string;
-    effectiveDate: string;
+    code: string;
+    totalWeight: string;
   }>({
     type: "",
     description: "",
     actualItem: [],
-    exShowroom: "",
-    effectiveDate: "",
+    code: "",
+    totalWeight: "",
   });
 
   // ─── HANDLERS ────────────────────────────────────────────────────────────
@@ -142,6 +145,8 @@ export default function CreateMaster() {
     }));
   };
 
+  
+
   const formatDateForApi = (date: string): string => {
     if (!date) return "";
 
@@ -155,18 +160,57 @@ export default function CreateMaster() {
 
   const handleOpenEditDrawer = (item: CreateMasterItem) => {
     setEditing(item);
+
+    const selectedItems: MultiSelectOption[] = Array.isArray(item.actualItem)
+      ? (item.actualItem
+          .map((selected: any) => {
+            const itemId = String(selected?.id ?? selected?.itemId ?? selected);
+
+            const masterItem = itemMasterData.find(
+              (master: ItemMasterItem) => String(master.itemId) === itemId,
+            );
+
+            if (!masterItem) {
+              return null;
+            }
+
+            return {
+              id: String(masterItem.itemId),
+              name: masterItem.itemName,
+              weight: Number(masterItem.weight ?? 0),
+            };
+          })
+          .filter(Boolean) as MultiSelectOption[])
+      : [];
+
+    // Always calculate weight from selected actual items
+    const calculatedWeight = selectedItems.reduce(
+      (total, selected) => total + Number(selected.weight || 0),
+      0,
+    );
+
     setFormData({
-      type: item.type,
-      description: item.description,
-      actualItem: Array.isArray(item.actualItem) ? item.actualItem : [],
-      exShowroom: String(item.exShowroom ?? ""),
-      effectiveDate: formatDateForPicker(item.effectiveDate),
+      type: String(item.type ?? ""),
+      description: String(item.description ?? ""),
+      actualItem: selectedItems,
+      code: String(item.code ?? ""),
+      totalWeight: String(calculatedWeight),
     });
+
+    // Existing code is allowed while editing.
+    // API will exclude current createMasterId from duplicate check.
+    setCodeExists(false);
+    setCheckingCode(false);
+
     setDrawerOpen(true);
   };
 
-  const handleSave = async (item: CreateMasterItem) => {
+  const handleSave = async (item: CreateMasterItem | null) => {
     try {
+      // ============================================================
+      // VALIDATION
+      // ============================================================
+
       if (!formData.type.trim()) {
         toasterrormsg("Type is required");
         return;
@@ -182,26 +226,60 @@ export default function CreateMaster() {
         return;
       }
 
-      if (!formData.exShowroom.trim()) {
-        toasterrormsg("Ex-Showroom is required");
+      if (!formData.code.trim()) {
+        toasterrormsg("Code is required");
         return;
       }
 
-      if (!formData.effectiveDate) {
-        toasterrormsg("Effective Date is required");
+      if (checkingCode) {
+        toasterrormsg("Please wait while checking code");
         return;
       }
+
+      if (codeExists) {
+        toasterrormsg("This code already exists");
+        return;
+      }
+
+      // Calculate weight again before saving.
+      // Do not depend only on the input value.
+      const totalWeight = formData.actualItem.reduce(
+        (total, item) => total + Number(item.weight || 0),
+        0,
+      );
+
+      if (totalWeight <= 0) {
+        toasterrormsg("Total Weight is required");
+        return;
+      }
+
+      // ============================================================
+      // PAYLOAD
+      // ============================================================
 
       const payload = {
         type: formData.type.trim(),
         description: formData.description.trim(),
-        actualItem: formData.actualItem,
-        exShowroom: Number(formData.exShowroom),
-        effectiveDate: formatDateForApi(formData.effectiveDate),
+
+        // Send only the required item information
+        actualItem: formData.actualItem.map((item) => ({
+          id: item.id,
+          name: item.name,
+          weight: Number(item.weight || 0),
+        })),
+
+        code: formData.code.trim(),
+
+        totalWeight,
+
         status: "active",
       };
 
       setLoading(true);
+
+      // ============================================================
+      // UPDATE
+      // ============================================================
 
       if (item?.createMasterId) {
         await Put(
@@ -212,24 +290,41 @@ export default function CreateMaster() {
           },
           false,
         );
+
         toastsuccessmsg("Create Master updated successfully");
-      } else {
+      }
+
+      // ============================================================
+      // CREATE
+      // ============================================================
+      else {
         await Post("master/createmaster/create", payload, false);
+
         toastsuccessmsg("Create Master created successfully");
       }
 
+      // ============================================================
+      // RESET
+      // ============================================================
+
       setDrawerOpen(false);
+
       setFormData({
         type: "",
         description: "",
         actualItem: [],
-        exShowroom: "",
-        effectiveDate: "",
+        code: "",
+        totalWeight: "",
       });
+
       setEditing(null);
+      setCodeExists(false);
+      setCheckingCode(false);
+
       await fetchCreateMasterList();
     } catch (error: any) {
       console.error("Create Master save error:", error);
+
       toasterrormsg(error?.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -238,8 +333,6 @@ export default function CreateMaster() {
 
   const handleDeleteOne = async (row: CreateMasterItem) => {
     // Show confirmation dialog
-   
-   
 
     try {
       setLoading(true);
@@ -251,7 +344,9 @@ export default function CreateMaster() {
         false,
       );
       toastsuccessmsg("Create Master deleted successfully");
-      setData((prev) => prev.filter((item) => item.createMasterId !== row.createMasterId));
+      setData((prev) =>
+        prev.filter((item) => item.createMasterId !== row.createMasterId),
+      );
     } catch (error: any) {
       console.error("Delete Create Master error:", error);
       toasterrormsg(
@@ -263,8 +358,6 @@ export default function CreateMaster() {
   };
 
   const handleDeleteMany = async (rows: { original: CreateMasterItem }[]) => {
-
-
     try {
       setLoading(true);
       await Promise.all(
@@ -361,6 +454,51 @@ export default function CreateMaster() {
     fetchItemCategoryList();
   }, []);
 
+  useEffect(() => {
+    const code = formData.code.trim();
+
+    // Nothing to check
+    if (!code) {
+      setCodeExists(false);
+      setCheckingCode(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setCheckingCode(true);
+
+        const response = await Get(
+          "master/createmaster/check-code",
+          {
+            code,
+
+            // Important:
+            // when editing, backend should ignore this current record
+            // while checking duplicate code.
+            createMasterId: editing?.createMasterId ?? undefined,
+          },
+          false,
+        );
+
+        const exists = response?.data?.data?.exists === true;
+
+        setCodeExists(exists);
+      } catch (error) {
+        console.error("Check Create Master code error:", error);
+
+        // Don't block user because checking API failed.
+        setCodeExists(false);
+      } finally {
+        setCheckingCode(false);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [formData.code, editing?.createMasterId]);
+
   // ─── TABLE SETUP ──────────────────────────────────────────────────────────
 
   const table = useReactTable({
@@ -406,12 +544,15 @@ export default function CreateMaster() {
     .map((item) => ({
       id: String(item.itemId),
       name: item.itemName,
+      weight: Number(item.weight ?? 0),
     }));
 
   const typeOptions = itemCategoryData
     .filter(
       (item) =>
-        String(item.categoryType ?? "").trim().toLowerCase() === "default",
+        String(item.categoryType ?? "")
+          .trim()
+          .toLowerCase() === "default",
     )
     .map((item) => ({
       id: String(item.itemCategoryId),
@@ -433,14 +574,12 @@ export default function CreateMaster() {
             type: "",
             description: "",
             actualItem: [],
-            exShowroom: "",
-            effectiveDate: "",
+            code: "",
+            totalWeight: "",
           });
           setDrawerOpen(true);
         }}
-        onExportExcel={() =>
-          exportToExcel(data, exportColumns, "createmaster")
-        }
+        onExportExcel={() => exportToExcel(data, exportColumns, "createmaster")}
         onExportPdf={() =>
           exportToPdf(data, exportColumns, "Create Master List", "createmaster")
         }
@@ -517,9 +656,8 @@ export default function CreateMaster() {
                       data={typeOptions}
                       displayField="name"
                       value={
-                        typeOptions.find(
-                          (opt) => opt.name === formData.type,
-                        ) || null
+                        typeOptions.find((opt) => opt.name === formData.type) ||
+                        null
                       }
                       onChange={(selected: any) => {
                         setFormData({
@@ -538,15 +676,37 @@ export default function CreateMaster() {
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Actual Item <span className="text-red-500">*</span>
                     </label>
+
                     <MultiSelect
                       data={actualItemOptions}
                       displayField="name"
                       value={formData.actualItem}
-                      onChange={(selected: any) => {
-                        setFormData({
-                          ...formData,
-                          actualItem: selected,
-                        });
+                      onChange={(selected) => {
+                        const items: MultiSelectOption[] = (selected || []).map(
+                          (item) => {
+                            const masterItem = itemMasterData.find(
+                              (master: ItemMasterItem) =>
+                                String(master.itemId) === String(item.id),
+                            );
+
+                            return {
+                              id: String(item.id),
+                              name: item.name,
+                              weight: Number(masterItem?.weight ?? 0),
+                            };
+                          },
+                        );
+
+                        const totalWeight = items.reduce(
+                          (total, item) => total + Number(item.weight || 0),
+                          0,
+                        );
+
+                        setFormData((prev) => ({
+                          ...prev,
+                          actualItem: items,
+                          totalWeight: String(totalWeight),
+                        }));
                       }}
                       placeholder={
                         formData.type
@@ -557,34 +717,52 @@ export default function CreateMaster() {
                     />
                   </div>
 
-                  {/* Ex-Showroom */}
+                  {/* Code */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Ex-Showroom <span className="text-red-500">*</span>
+                      Code <span className="text-red-500">*</span>
                     </label>
+
                     <Input
                       type="text"
-                      placeholder="Enter ex-showroom price"
-                      value={formData.exShowroom}
-                      onChange={(e) =>
+                      placeholder="Enter code"
+                      value={formData.code}
+                      onChange={(e) => {
                         setFormData({
                           ...formData,
-                          exShowroom: e.target.value,
-                        })
-                      }
-                      className="w-full"
+                          code: e.target.value,
+                        });
+
+                        setCodeExists(false);
+                      }}
+                      className={`w-full ${codeExists ? "border-red-500" : ""}`}
                     />
+
+                    {checkingCode && (
+                      <p className="mt-1 text-sm text-gray-500">
+                        Checking code...
+                      </p>
+                    )}
+
+                    {codeExists && (
+                      <p className="mt-1 text-sm text-red-500">
+                        This code is already exist
+                      </p>
+                    )}
                   </div>
 
-                  {/* Effective Date */}
+                  {/* Total Weight */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Effective Date <span className="text-red-500">*</span>
+                      Total Weight
                     </label>
-                    <DatePicker
-                      placeholder="Select effective date"
-                      value={getDatePickerValue(formData.effectiveDate)}
-                      onChange={handleEffectiveDateChange}
+
+                    <Input
+                      type="number"
+                      placeholder="Auto calculated"
+                      value={formData.totalWeight}
+                      readOnly
+                      className="w-full bg-gray-100 dark:bg-gray-800"
                     />
                   </div>
 

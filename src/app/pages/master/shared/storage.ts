@@ -6,6 +6,7 @@ import {
   Variant,
   VariantStructure,
 } from "./types";
+import { BOMItem } from "../bom/types";
 import {
   SEED_CATEGORIES,
   SEED_ITEMS,
@@ -24,6 +25,7 @@ const KEYS = {
   variants: "amaar_master_variants",
   variantStructures: "amaar_master_variant_structures",
   items: "amaar_master_items",
+  bomItems: "amaar_master_bom_items",
   seedVersion: "amaar_master_seed_version",
 } as const;
 
@@ -92,6 +94,11 @@ export const masterStorage = {
     return read<ItemMaster>(KEYS.items);
   },
   saveItems: (data: ItemMaster[]) => write(KEYS.items, data),
+
+   getBOMItems: () => {
+    return read<BOMItem>(KEYS.bomItems);
+  },
+  saveBOMItems: (data: BOMItem[]) => write(KEYS.bomItems, data),
 
   resetToSeedData: () => {
     write(KEYS.categories, SEED_CATEGORIES);
