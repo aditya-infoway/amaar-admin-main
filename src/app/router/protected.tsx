@@ -196,6 +196,14 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+             {
+              path: "createpricing",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/master/quotation-master/createpricing")
+                ).default,
+              }),
+            },
           ],
         },
 

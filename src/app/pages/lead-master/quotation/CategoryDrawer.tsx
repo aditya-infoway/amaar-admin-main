@@ -146,6 +146,10 @@ export function QuotationDrawer({
     CreateMasterOption[]
   >([]);
 
+const [createPricingData, setCreatePricingData] = useState<{ code: string; exShowroomPrice: number }[]>([]);
+
+
+
   // Refreshed every time the drawer opens so newly added leads show up
   useEffect(() => {
     const fetchLeads = async () => {
@@ -736,16 +740,45 @@ export function QuotationDrawer({
     fetchCreateMaster();
   }, []);
 
-  const getMasterOptions = (type: string): DropdownOption[] => {
+  useEffect(() => {
+  const fetchCreatePricing = async () => {
+    try {
+      const response = await Get("master/createpricing/list", {}, false);
+
+      if (response?.data?.status === 200 || response?.data?.success) {
+        setCreatePricingData(response?.data?.data || []);
+      }
+    } catch (error) {
+      console.error("Create Pricing list error:", error);
+    }
+  };
+
+  fetchCreatePricing();
+}, []);
+
+   const getMasterOptions = (type: string): DropdownOption[] => {
+    // Build a code -> price lookup once per call (cheap; list sizes here are small)
+    const priceByCode = new Map<string, number>();
+
+    createPricingData.forEach((p: any) => {
+      if (p.code) {
+        priceByCode.set(String(p.code).trim().toLowerCase(), Number(p.exShowroomPrice) || 0);
+      }
+    });
+
     return createMasterData
       .filter(
         (item) => item.type?.trim().toLowerCase() === type.trim().toLowerCase(),
       )
-      .map((item) => ({
-        id: String(item.createMasterId),
-        label: item.description,
-        price: Number(item.exShowroom) || 0,
-      }));
+      .map((item: any) => {
+        const codeKey = String(item.code || "").trim().toLowerCase();
+
+        return {
+          id: String(item.createMasterId),
+          label: item.description,
+          price: codeKey ? (priceByCode.get(codeKey) ?? 0) : 0,
+        };
+      });
   };
 
   const handleMasterChange = (

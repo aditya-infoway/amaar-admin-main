@@ -145,6 +145,8 @@ export default function CreateMaster() {
     }));
   };
 
+  
+
   const formatDateForApi = (date: string): string => {
     if (!date) return "";
 
@@ -716,7 +718,6 @@ export default function CreateMaster() {
                   </div>
 
                   {/* Code */}
-                  {/* Code */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Code <span className="text-red-500">*</span>
@@ -751,7 +752,6 @@ export default function CreateMaster() {
                   </div>
 
                   {/* Total Weight */}
-                  {/* Total Weight */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Total Weight
@@ -765,6 +765,7 @@ export default function CreateMaster() {
                       className="w-full bg-gray-100 dark:bg-gray-800"
                     />
                   </div>
+
                   {/* Description */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
