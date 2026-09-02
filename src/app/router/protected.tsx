@@ -686,12 +686,12 @@ const protectedRoutes: RouteObject = {
 
           ],
         },
-      ],
-    },
-    // The app layout supports only the main layout. Avoid using it for other layouts.
-    {
-      Component: AppLayout,
-      children: [
+
+
+        
+           // ============================================================
+        // SETTINGS
+        // ============================================================
         {
           path: "settings",
           lazy: async () => ({
@@ -700,8 +700,9 @@ const protectedRoutes: RouteObject = {
           children: [
             {
               index: true,
-              element: <Navigate to="/settings/general" />,
+              element: <Navigate to="/settings/general" replace />,
             },
+
             {
               path: "general",
               lazy: async () => ({
@@ -710,6 +711,7 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+
             {
               path: "appearance",
               lazy: async () => ({
@@ -718,6 +720,7 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+
             {
               path: "prefix",
               lazy: async () => ({
@@ -730,6 +733,16 @@ const protectedRoutes: RouteObject = {
         },
       ],
     },
+
+    // ============================================================
+    // APP LAYOUT SETTINGS ROUTE REMOVED
+    // ============================================================
+    // {
+    //   Component: AppLayout,
+    //   children: [
+    //     ...
+    //   ],
+    // },
   ],
 };
 

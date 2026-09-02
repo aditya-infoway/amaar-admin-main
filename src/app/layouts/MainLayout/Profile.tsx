@@ -17,6 +17,10 @@ import { Link } from "react-router";
 import { Avatar, Button } from "@/components/ui";
 import { APP_FAVICON, APP_NAME, ColorType } from "@/constants/app";
 
+import { useAuthContext } from "@/app/contexts/auth/context";
+import { GHOST_ENTRY_PATH } from "@/constants/app";
+import { useNavigate } from "react-router";
+
 // Define Link Types
 interface LinkItem {
   id: string;
@@ -72,7 +76,21 @@ const links: LinkItem[] = [
 
 // ----------------------------------------------------------------------
 
+
 export function Profile() {
+  const { logout } = useAuthContext();
+  const navigate = useNavigate();
+
+  const handleLogout = async (close: () => void) => {
+    try {
+      await logout();
+      close();
+      navigate(GHOST_ENTRY_PATH);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <Popover className="relative">
       <PopoverButton
@@ -84,6 +102,7 @@ export function Profile() {
         classNames={{ image: "object-contain p-0.5" }}
         className="cursor-pointer"
       />
+
       <Transition
         enter="duration-200 ease-out"
         enterFrom="translate-x-2 opacity-0"
@@ -106,6 +125,7 @@ export function Profile() {
                   alt={APP_NAME}
                   classNames={{ image: "object-contain p-1" }}
                 />
+
                 <div>
                   <Link
                     className="text-base font-medium text-gray-700 hover:text-primary-600 focus:text-primary-600 dark:text-dark-100 dark:hover:text-primary-400 dark:focus:text-primary-400"
@@ -113,6 +133,7 @@ export function Profile() {
                   >
                     Travis Fuller
                   </Link>
+
                   <p className="mt-0.5 text-xs text-gray-400 dark:text-dark-300">
                     Product Designer
                   </p>
@@ -135,10 +156,12 @@ export function Profile() {
                     >
                       <link.Icon className="size-4.5" />
                     </Avatar>
+
                     <div>
                       <h2 className="font-medium text-gray-800 transition-colors group-hover:text-primary-600 group-focus:text-primary-600 dark:text-dark-100 dark:group-hover:text-primary-400 dark:group-focus:text-primary-400">
                         {link.title}
                       </h2>
+
                       <div className="truncate text-xs text-gray-400 dark:text-dark-300">
                         {link.description}
                       </div>
@@ -148,7 +171,11 @@ export function Profile() {
 
                 {/* Logout Button */}
                 <div className="px-4 pt-4">
-                  <Button className="w-full gap-2">
+                  <Button
+                    type="button"
+                    className="w-full gap-2"
+                    onClick={() => handleLogout(close)}
+                  >
                     <ArrowLeftStartOnRectangleIcon className="size-4.5" />
                     <span>Logout</span>
                   </Button>
@@ -161,3 +188,4 @@ export function Profile() {
     </Popover>
   );
 }
+
