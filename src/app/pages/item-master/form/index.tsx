@@ -9,6 +9,7 @@ import { Button, Card, Input, Radio, Switch } from "@/components/ui";
 import { taxSlabOptions, uomOptions } from "../../master/shared/constants";
 import { Get, Post, Put, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
+import { useUnsavedChanges } from "@/app/contexts/unsavedChanges/context";
 
 interface ItemMasterFormValues {
   itemCode: string;
@@ -92,10 +93,20 @@ export default function ItemMasterFormPage() {
     watch,
     reset,
     clearErrors,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ItemMasterFormValues>({
     defaultValues: emptyFormValues,
   });
+
+  const { setDirty, requestNavigation } = useUnsavedChanges();
+
+  useEffect(() => {
+    setDirty(isDirty);
+
+    return () => {
+      setDirty(false);
+    };
+  }, [isDirty, setDirty]);
 
   const stockMapping = watch("stockMapping");
   const barcodeType = watch("barcodeType");
@@ -220,21 +231,34 @@ export default function ItemMasterFormPage() {
 
   // ---- Barcode type switch — generate karte hi API call ----
   const handleBarcodeTypeChange = async (type: "manual" | "generate") => {
-    setValue("barcodeType", type, { shouldValidate: true });
+    setValue("barcodeType", type, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
 
     if (type === "generate") {
       setGeneratingBarcode(true);
+
       try {
         const res = await Get("master/itemmaster/generate-barcode", {}, false);
+
         const nextBarcode = res?.data?.data?.barcode || "";
-        setValue("barcode", nextBarcode, { shouldValidate: true });
+
+        setValue("barcode", nextBarcode, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
       } catch (err) {
         toasterrormsg("Failed to generate barcode");
       } finally {
         setGeneratingBarcode(false);
       }
     } else {
-      setValue("barcode", "", { shouldValidate: true });
+      setValue("barcode", "", {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+
       clearErrors("barcode");
     }
   };
@@ -268,19 +292,26 @@ export default function ItemMasterFormPage() {
           { itemId: Number(id), ...payload },
           false,
         );
+
         if (res?.data?.status === 400 || res?.data?.success === false) {
           toasterrormsg(extractErrorMessage(res, "Something went wrong."));
           return;
         }
+
         toastsuccessmsg(extractErrorMessage(res, "Item updated successfully"));
       } else {
         const res = await Post("master/itemmaster/create", payload, false);
+
         if (res?.data?.status === 400 || res?.data?.success === false) {
           toasterrormsg(extractErrorMessage(res, "Something went wrong."));
           return;
         }
+
         toastsuccessmsg(extractErrorMessage(res, "Item created successfully"));
       }
+
+      // Save successful → no unsaved changes anymore
+      setDirty(false);
 
       navigate("/item-master");
     } catch (err: any) {
@@ -302,12 +333,19 @@ export default function ItemMasterFormPage() {
           <h2 className="dark:text-dark-50 text-primary border-primary border-b-4 text-xl font-bold tracking-wide lg:text-2xl">
             {isEdit ? "Edit Item Master" : "Create Item Master"}
           </h2>
-          <Link to="/item-master">
-            <Button color="primary" variant="outlined">
-              <ChevronLeftIcon className="size-6" />
-              <span>Back</span>
-            </Button>
-          </Link>
+          <Button
+            type="button"
+            color="primary"
+            variant="outlined"
+            onClick={() => {
+              requestNavigation(() => {
+                navigate("/item-master");
+              });
+            }}
+          >
+            <ChevronLeftIcon className="size-6" />
+            <span>Back</span>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -439,25 +477,27 @@ export default function ItemMasterFormPage() {
                   )}
                 />
 
-                                <Controller
-                   control={control}
-                   name="unit"
-                   rules={{ required: "Unit is required" }}
-                   render={({ field: { value, onChange, ...rest } }) => (
-                     <Listbox
-                       data={uomOptions}
-                       value={uomOptions.find((item) => item.id === value) || null}
-                       onChange={(item) => onChange(item.id)}
-                       label="Unit / UOM"
-                       placeholder="Select unit"
-                       displayField="label"
-                       error={errors.unit?.message}
-                       {...rest}
-                     />
-                   )}
-                 />
+                <Controller
+                  control={control}
+                  name="unit"
+                  rules={{ required: "Unit is required" }}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Listbox
+                      data={uomOptions}
+                      value={
+                        uomOptions.find((item) => item.id === value) || null
+                      }
+                      onChange={(item) => onChange(item.id)}
+                      label="Unit / UOM"
+                      placeholder="Select unit"
+                      displayField="label"
+                      error={errors.unit?.message}
+                      {...rest}
+                    />
+                  )}
+                />
 
-               <Input
+                <Input
                   {...register("thickness", {
                     required: "Thickness is required",
                     min: { value: 0, message: "Thickness cannot be negative" },
@@ -471,7 +511,7 @@ export default function ItemMasterFormPage() {
                 <Input
                   {...register("length", {
                     required: "Length is required",
-                   min: { value: 0, message: "Length cannot be negative" },
+                    min: { value: 0, message: "Length cannot be negative" },
                   })}
                   label="Length (mm)"
                   type="number"
@@ -483,7 +523,7 @@ export default function ItemMasterFormPage() {
                   {...register("width", {
                     required: "Width is required",
                     min: { value: 0, message: "Width cannot be negative" },
-                 })}
+                  })}
                   label="Width (mm)"
                   type="number"
                   step="any"
@@ -496,9 +536,9 @@ export default function ItemMasterFormPage() {
                   type="number"
                   placeholder="Auto calculated"
                   readOnly
-                  className="bg-gray-50 cursor-not-allowed dark:bg-dark-700/50"
+                  className="dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
                   error={errors.weight?.message}
-               />
+                />
               </div>
             </section>
 
@@ -684,7 +724,14 @@ export default function ItemMasterFormPage() {
             </section>
 
             <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 pt-4">
-              <Button type="button" onClick={() => navigate("/item-master")}>
+              <Button
+                type="button"
+                onClick={() => {
+                  requestNavigation(() => {
+                    navigate("/item-master");
+                  });
+                }}
+              >
                 Cancel
               </Button>
               <Button type="submit" color="primary" disabled={submitting}>
