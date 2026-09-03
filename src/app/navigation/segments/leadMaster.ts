@@ -18,5 +18,12 @@ export const leadMaster: NavigationTree = {
             title: "Quotation",
             icon: "quotation.list",
         },
+          {
+            id: "leadMaster.sales-order",
+            type: "item",
+            path: "/lead-master/sales-order",
+            title: "Sales Order",
+            icon: "quotation.list",
+        },
     ],
 };

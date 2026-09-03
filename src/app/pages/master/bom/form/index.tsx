@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef  } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ChevronLeftIcon,
   ChevronDownIcon,
@@ -21,6 +21,7 @@ import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Get, Post, Put, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { statusOptions } from "../../shared/constants";
 import { useUnsavedChanges } from "@/app/contexts/unsavedChanges/context";
+import { Combobox } from "@/components/shared/form/StyledCombobox";
 
 interface BOMItem {
   id: string;
@@ -30,6 +31,9 @@ interface BOMItem {
   quantity: string;
   unit: string;
   serialNo?: string;
+
+    nextChildSerial?: number;
+
   asslyQty?: string;
   ldDay?: string;
   psNo?: string;
@@ -125,6 +129,16 @@ function findNodeByCode(items: BOMItem[], code: string): BOMItem | null {
   for (const item of items) {
     if (item.itemCode.toLowerCase() === target) return item;
     const found = findNodeByCode(item.children, code);
+    if (found) return found;
+  }
+  return null;
+}
+
+
+function findNodeById(items: BOMItem[], id: string): BOMItem | null {
+  for (const item of items) {
+    if (item.id === id) return item;
+    const found = findNodeById(item.children, id);
     if (found) return found;
   }
   return null;
@@ -303,13 +317,13 @@ function BOMTreeNode({
 export default function BOMFormPage() {
   const navigate = useNavigate();
 
-    const { setDirty, requestNavigation } = useUnsavedChanges();
+  const { setDirty, requestNavigation } = useUnsavedChanges();
 
-    const handleProtectedNavigation = (path: string) => {
-  requestNavigation(() => {
-    navigate(path);
-  });
-};
+  const handleProtectedNavigation = (path: string) => {
+    requestNavigation(() => {
+      navigate(path);
+    });
+  };
 
   // 👇 NEW: id param se edit mode detect hota hai
   const { id } = useParams<{ id: string }>();
@@ -355,19 +369,26 @@ export default function BOMFormPage() {
   const [bomCode, setBomCode] = useState<string>("");
   const [bomStatus, setBomStatus] = useState<string>("active");
 
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  
+   const isLoadingFieldsRef = useRef(false);
 
-  const isLoadingFieldsRef = useRef(false);
+
 
   const [isBOMDirty, setIsBOMDirty] = useState(false);
+  const [finishedGoodsItemId, setFinishedGoodsItemId] = useState<string>("");
+  const [finishedGoodsItems, setFinishedGoodsItems] = useState<any[]>([]);
+
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+
+
 
   useEffect(() => {
-  setDirty(isBOMDirty);
+    setDirty(isBOMDirty);
 
-  return () => {
-    setDirty(false);
-  };
-}, [isBOMDirty, setDirty]);
+    return () => {
+      setDirty(false);
+    };
+  }, [isBOMDirty, setDirty]);
 
 
   // ---------------------------------------------------------------------
@@ -455,22 +476,57 @@ export default function BOMFormPage() {
       } catch (error) {
         toasterrormsg("Something went wrong while fetching BOM.");
       }
-        finally {
-       requestAnimationFrame(() => {
-         isLoadingFieldsRef.current = false;
-       });
+      finally {
+        requestAnimationFrame(() => {
+          isLoadingFieldsRef.current = false;
+        });
+      }
+    };
+
+    const loadFinishedGoodsItems = async () => {
+      try {
+        const response = await Get(
+          "master/itemmaster/finished-goods/list",
+          {},
+          false
+        );
+
+        console.log("Finished Goods API Response:", response);
+
+        if (response.data?.success) {
+          console.log("Finished Goods Data:", response.data.data);
+
+          setFinishedGoodsItems(response.data.data || []);
+        } else {
+          setFinishedGoodsItems([]);
+          toasterrormsg(
+            response.data?.message || "Failed to load Finished Goods."
+          );
+        }
+      } catch (error) {
+        console.error("Finished Goods API Error:", error);
+        setFinishedGoodsItems([]);
+        toasterrormsg("Something went wrong while loading Finished Goods.");
       }
     };
 
     const load = async () => {
       setLoading(true);
-      await Promise.all([loadAvailableItems(), loadExistingBom()]);
+
+      await Promise.all([
+        loadAvailableItems(),
+        loadFinishedGoodsItems(),
+        loadExistingBom(),
+      ]);
+
       setLoading(false);
     };
-
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+
+
 
   const totalItems = useMemo(() => countAll(bomItems), [bomItems]);
   const hasBOMItems = bomItems.length > 0;
@@ -493,53 +549,53 @@ export default function BOMFormPage() {
   const endIndex = Math.min(startIndex + itemsPerPage, totalItemsCount);
   const currentItems = filteredAvailableItems.slice(startIndex, endIndex);
 
-  const handleUpdateItem = () => {
-    if (!editingItemId) {
-      toasterrormsg("Please select an item from the BOM structure.");
-      return;
-    }
+  // const handleUpdateItem = () => {
+  //   if (!editingItemId) {
+  //     toasterrormsg("Please select an item from the BOM structure.");
+  //     return;
+  //   }
 
-    if (!qty) {
-      toasterrormsg("Please enter Qty.");
-      return;
-    }
+  //   if (!qty) {
+  //     toasterrormsg("Please enter Qty.");
+  //     return;
+  //   }
 
-    const updatedFields: Partial<BOMItem> = {
-      quantity: qty,
-      serialNo,
-      asslyQty,
-      ldDay,
-      psNo,
-      rejPct,
-      pkgNo,
-      mfgCd,
-      modDate,
-      person,
-      dtlNo,
+  //   const updatedFields: Partial<BOMItem> = {
+  //     quantity: qty,
+  //     serialNo,
+  //     asslyQty,
+  //     ldDay,
+  //     psNo,
+  //     rejPct,
+  //     pkgNo,
+  //     mfgCd,
+  //     modDate,
+  //     person,
+  //     dtlNo,
 
-      shapeDim,
-      finQtty,
-      shape,
+  //     shapeDim,
+  //     finQtty,
+  //     shape,
 
-      thickness,
-      length,
-      width,
-      weight,
-    };
+  //     thickness,
+  //     length,
+  //     width,
+  //     weight,
+  //   };
 
-   setBomItems((prev) => updateItem(prev, editingItemId, updatedFields));
-setIsBOMDirty(true);
+  //   setBomItems((prev) => updateItem(prev, editingItemId, updatedFields));
+  //   setIsBOMDirty(true);
 
-    toastsuccessmsg("BOM item updated successfully.");
+  //   toastsuccessmsg("BOM item updated successfully.");
 
-    // Exit edit mode
-    setEditingItemId(null);
+  //   // Exit edit mode
+  //   setEditingItemId(null);
 
-    // Clear form
-    setParentCode("");
-    setChildCode("");
-    resetEntryFields();
-  };
+  //   // Clear form
+  //   setParentCode("");
+  //   setChildCode("");
+  //   resetEntryFields();
+  // };
 
   // 👇 NEW: Reset to first page when search query changes
   useEffect(() => {
@@ -613,88 +669,79 @@ setIsBOMDirty(true);
   const handleCollapseAll = () => setExpandedNodes({});
 
   const handlePickNode = (item: BOMItem) => {
+    // Clicking a tree item means:
+    // "I want to use this item as Parent"
+    // NOT "I want to edit this item"
 
-     isLoadingFieldsRef.current = true;
-    // Enter edit mode
-    setEditingItemId(item.id);
+    isLoadingFieldsRef.current = true;
 
-    // Show selected item code
+    setSelectedParentId(item.id);
+
+    // Set selected item as parent
     setParentCode(item.itemCode);
 
-    // Load all existing values into the form
+    // Clear child field so user can enter/select new child
     setChildCode("");
 
-    setSerialNo(item.serialNo || "");
-    setAsslyQty(item.asslyQty || "");
-    setLdDay(item.ldDay || "");
-    setPsNo(item.psNo || "");
-    setRejPct(item.rejPct || "");
-    setPkgNo(item.pkgNo || "");
-    setMfgCd(item.mfgCd || "");
-    setModDate(item.modDate || "");
-    setPerson(item.person || "");
-    setDtlNo(item.dtlNo || "");
+    // Exit item edit mode
+    setEditingItemId(null);
 
-    setShapeDim(item.shapeDim || "");
-    setFinQtty(item.finQtty || "");
-    setShape(item.shape || "");
+    // Clear old item values
+    resetEntryFields();
 
-    setThickness(item.thickness || "");
-    setLength(item.length || "");
-    setWidth(item.width || "");
-    setWeight(item.weight || "");
-
-    setQty(item.quantity || "");
-
-    // Open selected node
+    // Open selected parent
     setExpandedNodes((prev) => ({
       ...prev,
       [item.id]: true,
     }));
+
+    requestAnimationFrame(() => {
+      isLoadingFieldsRef.current = false;
+    });
   };
 
   requestAnimationFrame(() => {
-     isLoadingFieldsRef.current = false;
-   });
+    isLoadingFieldsRef.current = false;
+  });
 
 
-    const markBOMDirty = () => {
+  const markBOMDirty = () => {
     setIsBOMDirty(true);
   };
 
- // Single source of truth: any change to the entry-panel fields marks
- // the form dirty, UNLESS we're programmatically loading values
- // (handlePickNode / loadExistingBom set the ref to skip this).
- useEffect(() => {
-   if (isLoadingFieldsRef.current) return;
-   markBOMDirty();
- }, [
-   parentCode,
-   childCode,
-   serialNo,
-   asslyQty,
-   ldDay,
-   psNo,
-   rejPct,
-   pkgNo,
-   mfgCd,
-   modDate,
-   person,
-   dtlNo,
-   shapeDim,
-   finQtty,
-   shape,
-   thickness,
-   length,
-   width,
-   weight,
-   qty,
- ]);
+  // Single source of truth: any change to the entry-panel fields marks
+  // the form dirty, UNLESS we're programmatically loading values
+  // (handlePickNode / loadExistingBom set the ref to skip this).
+  useEffect(() => {
+    if (isLoadingFieldsRef.current) return;
+    markBOMDirty();
+  }, [
+    parentCode,
+    childCode,
+    serialNo,
+    asslyQty,
+    ldDay,
+    psNo,
+    rejPct,
+    pkgNo,
+    mfgCd,
+    modDate,
+    person,
+    dtlNo,
+    shapeDim,
+    finQtty,
+    shape,
+    thickness,
+    length,
+    width,
+    weight,
+    qty,
+  ]);
 
-const handleRemoveNode = (nid: string) => {
-  setBomItems((prev) => removeItem(prev, nid));
-  setIsBOMDirty(true);
-};
+  const handleRemoveNode = (nid: string) => {
+    setBomItems((prev) => removeItem(prev, nid));
+    setIsBOMDirty(true);
+  };
 
   const handlePickReferenceItem = (item: AvailableItem) => {
     setChildCode(item.itemCode);
@@ -718,19 +765,16 @@ const handleRemoveNode = (nid: string) => {
     }
   };
 
-  const fillItemDimensions = (item: AvailableItem, asslyQtyValue?: string) => {
-    const assly = parseFloat(asslyQtyValue || asslyQty || "1");
-
-    const safeAsslyQty = !isNaN(assly) && assly > 0 ? assly : 1;
-
+  const fillItemDimensions = (item: AvailableItem) => {
     setThickness(item.thickness || "");
     setLength(item.length || "");
     setWidth(item.width || "");
 
     const baseWeight = parseFloat(item.weight || "");
+    const currentQty = parseFloat(qty || "");
 
-    if (!isNaN(baseWeight)) {
-      setWeight((baseWeight * safeAsslyQty).toFixed(3));
+    if (!isNaN(baseWeight) && !isNaN(currentQty) && currentQty > 0) {
+      setWeight((baseWeight * currentQty).toFixed(3));
     } else {
       setWeight("");
     }
@@ -797,91 +841,186 @@ const handleRemoveNode = (nid: string) => {
     setQty("");
   };
 
-  const handleAddToTree = () => {
-    if (!hasBOMItems) {
-      if (!parentCode.trim()) {
-        toasterrormsg("Please enter an item code.");
-        return;
-      }
 
-      const rootItem = buildItem(parentCode);
-      if (!rootItem) {
-        toasterrormsg(
-          `Item code "${parentCode}" not found in Item Master. Please enter a valid, existing item code.`,
-        );
-        return;
-      }
+ const getNextSerialNo = (parentId: string | null): string => {
+  // Root level: count of existing top-level items
+  if (!parentId) {
+    return String(bomItems.length + 1).padStart(2, "0");
+  }
 
-      setBomItems([rootItem]);
-      setIsBOMDirty(true);
-      resetEntryFields();
-      toastsuccessmsg("Root item added to BOM structure.");
+  // Child level: count of existing children under this specific parent
+  const parentNode = findNodeById(bomItems, parentId);
+  const existingCount = parentNode ? parentNode.children.length : 0;
+
+  return String(existingCount + 1).padStart(2, "0");
+};
+
+
+ const handleAddToTree = () => {
+  // =========================
+  // FIRST ROOT ITEM
+  // =========================
+  if (!hasBOMItems) {
+    if (!parentCode.trim()) {
+      toasterrormsg("Please enter an item code.");
       return;
     }
 
-    if (!childCode.trim()) {
-      toasterrormsg("Please enter the Child item code.");
-      return;
-    }
+    const rootItem = buildItem(parentCode);
 
-    let parentId: string | null = null;
-
-    if (parentCode.trim()) {
-      const parentNode = findNodeByCode(bomItems, parentCode);
-      if (!parentNode) {
-        toasterrormsg(
-          "Parent item code not found in the BOM structure. Add it first, or leave Parent blank to add a root item.",
-        );
-        return;
-      }
-      parentId = parentNode.id;
-    }
-
-    const newItem = buildItem(childCode);
-    if (!newItem) {
+    if (!rootItem) {
       toasterrormsg(
-        `Item code "${childCode}" not found in Item Master. Please enter a valid, existing item code.`,
+        `Item code "${parentCode}" not found in Item Master. Please enter a valid, existing item code.`,
       );
       return;
     }
 
-  setBomItems((prev) => insertItem(prev, parentId, newItem));
-setIsBOMDirty(true);
+    // Root serial: 01, 02, 03...
+    const rootSerial = getNextSerialNo(null);
 
-    if (parentId) {
-      setExpandedNodes((prev) => ({ ...prev, [parentId as string]: true }));
-    }
+    rootItem.serialNo = rootSerial;
 
-    setChildCode("");
+    setBomItems([rootItem]);
+
+    // This root is now the selected parent
+    setSelectedParentId(rootItem.id);
+    setParentCode(rootItem.itemCode);
+
+    setIsBOMDirty(true);
+
     resetEntryFields();
 
-    toastsuccessmsg("Item added to BOM structure.");
-  };
+    toastsuccessmsg(
+      `Root item added with Serial# ${rootSerial}.`,
+    );
+
+    return;
+  }
+
+  // =========================
+  // CHILD ITEM
+  // =========================
+
+  if (!childCode.trim()) {
+    toasterrormsg("Please enter the Child item code.");
+    return;
+  }
+
+  if (!selectedParentId) {
+    toasterrormsg(
+      "Please select a Parent item before adding a Child.",
+    );
+    return;
+  }
+
+  const newItem = buildItem(childCode);
+
+  if (!newItem) {
+    toasterrormsg(
+      `Item code "${childCode}" not found in Item Master. Please enter a valid, existing item code.`,
+    );
+    return;
+  }
+
+  // Child serial depends on selected parent
+  const newSerialNo = getNextSerialNo(selectedParentId);
+
+  newItem.serialNo = newSerialNo;
+
+  // Add child inside selected parent
+  setBomItems((prev) =>
+    insertItem(
+      prev,
+      selectedParentId,
+      newItem,
+    ),
+  );
+
+  setIsBOMDirty(true);
+
+  // Keep parent expanded
+  setExpandedNodes((prev) => ({
+    ...prev,
+    [selectedParentId]: true,
+  }));
+
+  // Keep SAME parent selected
+  setChildCode("");
+  resetEntryFields();
+
+  toastsuccessmsg(
+    `Child item added with Serial# ${newSerialNo}.`,
+  );
+};
+
+
+
+
+
+
 
   // ---------------------------------------------------------------------
   // 👇 NEW: Save function ab dono mode handle karta hai — edit mode me
   // Put("master/bom/update") + bomId body me jaata hai, create mode me
   // pehle jaisa hi Post("master/bom/create") chalta hai.
   // ---------------------------------------------------------------------
-const handleSaveBOM = async () => {
-  if (!bomName) {
-    toasterrormsg("Please enter BOM name.");
-    return;
-  }
+  const handleSaveBOM = async () => {
+    if (!bomName) {
+      toasterrormsg("Please enter BOM name.");
+      return;
+    }
 
-  if (!bomCode) {
-    toasterrormsg("Please enter BOM code.");
-    return;
-  }
+    if (!bomCode) {
+      toasterrormsg("Please enter BOM code.");
+      return;
+    }
 
-  if (bomItems.length === 0) {
-    toasterrormsg("Please add at least one item to BOM.");
-    return;
-  }
+    if (bomItems.length === 0) {
+      toasterrormsg("Please add at least one item to BOM.");
+      return;
+    }
 
-  if (isEditMode) {
+    if (isEditMode) {
+      const payload = {
+        bomId: Number(id),
+        bomName,
+        bomCode,
+        status: bomStatus,
+        items: bomItems,
+      };
+
+      try {
+        const response = await Put(
+          "master/bom/update",
+          payload,
+          false,
+        );
+
+        if (response.data?.success) {
+          toastsuccessmsg(
+            response.data?.message || "BOM updated successfully.",
+          );
+
+          // IMPORTANT: BOM is now saved
+          setDirty(false);
+          setIsBOMDirty(false);
+
+          navigate("/master/bom");
+        } else {
+          toasterrormsg(
+            response.data?.message || "Failed to update BOM.",
+          );
+        }
+      } catch (error) {
+        toasterrormsg(
+          "Something went wrong while updating BOM.",
+        );
+      }
+
+      return;
+    }
+
     const payload = {
-      bomId: Number(id),
       bomName,
       bomCode,
       status: bomStatus,
@@ -889,15 +1028,15 @@ const handleSaveBOM = async () => {
     };
 
     try {
-      const response = await Put(
-        "master/bom/update",
+      const response = await Post(
+        "master/bom/create",
         payload,
         false,
       );
 
       if (response.data?.success) {
         toastsuccessmsg(
-          response.data?.message || "BOM updated successfully.",
+          response.data?.message || "BOM created successfully.",
         );
 
         // IMPORTANT: BOM is now saved
@@ -907,53 +1046,15 @@ const handleSaveBOM = async () => {
         navigate("/master/bom");
       } else {
         toasterrormsg(
-          response.data?.message || "Failed to update BOM.",
+          response.data?.message || "Failed to create BOM.",
         );
       }
     } catch (error) {
       toasterrormsg(
-        "Something went wrong while updating BOM.",
+        "Something went wrong while creating BOM.",
       );
     }
-
-    return;
-  }
-
-  const payload = {
-    bomName,
-    bomCode,
-    status: bomStatus,
-    items: bomItems,
   };
-
-  try {
-    const response = await Post(
-      "master/bom/create",
-      payload,
-      false,
-    );
-
-    if (response.data?.success) {
-      toastsuccessmsg(
-        response.data?.message || "BOM created successfully.",
-      );
-
-      // IMPORTANT: BOM is now saved
-      setDirty(false);
-      setIsBOMDirty(false);
-
-      navigate("/master/bom");
-    } else {
-      toasterrormsg(
-        response.data?.message || "Failed to create BOM.",
-      );
-    }
-  } catch (error) {
-    toasterrormsg(
-      "Something went wrong while creating BOM.",
-    );
-  }
-};
 
   if (loading) {
     return (
@@ -972,14 +1073,14 @@ const handleSaveBOM = async () => {
           <h2 className="border-primary text-primary dark:text-dark-50 border-b-4 text-xl font-bold tracking-wide lg:text-2xl">
             {isEditMode ? "Edit BOM" : "Create BOM"}
           </h2>
-       <Button
-  color="primary"
-  variant="outlined"
-  onClick={() => handleProtectedNavigation("/master/bom")}
->
-  <ChevronLeftIcon className="size-6" />
-  <span>Back</span>
-</Button>
+          <Button
+            color="primary"
+            variant="outlined"
+            onClick={() => handleProtectedNavigation("/master/bom")}
+          >
+            <ChevronLeftIcon className="size-6" />
+            <span>Back</span>
+          </Button>
         </div>
 
         <Card className="mb-6 p-3">
@@ -990,40 +1091,62 @@ const handleSaveBOM = async () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Input
-  label="BOM Name"
-  value={bomName}
-  onChange={(e) => {
-    setBomName(e.target.value);
-    setIsBOMDirty(true);
-  }}
-  placeholder="Enter BOM name"
-/>
-          <Input
-  label="BOM Code"
-  value={bomCode}
-  onChange={(e) => {
-    setBomCode(e.target.value);
-    setIsBOMDirty(true);
-  }}
-  placeholder="Enter BOM code"
-/>
-          <Listbox
-  data={statusOptions}
-  value={
-    statusOptions.find((item) => item.id === bomStatus) || {
-      id: "active",
-      label: "Active",
-    }
-  }
-  onChange={(item) => {
-    setBomStatus(item.id);
-    setIsBOMDirty(true);
-  }}
-  label="Status"
-  placeholder="Select status"
-  displayField="label"
-/>
+            <Combobox
+              label="BOM Name"
+              data={finishedGoodsItems}
+              displayField="itemName"
+              value={
+                finishedGoodsItems.find(
+                  (item) =>
+                    String(item.itemId) === String(finishedGoodsItemId)
+                ) || null
+              }
+              onChange={(item: any) => {
+                if (!item) {
+                  setFinishedGoodsItemId("");
+                  setBomName("");
+                  setBomCode("");
+                  setIsBOMDirty(true);
+                  return;
+                }
+
+                // Selected Finished Goods Item ID
+                setFinishedGoodsItemId(String(item.itemId));
+
+                // BOM Name = Item Master Item Name
+                setBomName(item.itemName || "");
+
+                // BOM Code = Item Master Item Code
+                setBomCode(item.itemCode || "");
+
+                setIsBOMDirty(true);
+              }}
+              placeholder="Select Finished Goods"
+              searchFields={["itemCode", "itemName"]}
+            />
+            <Input
+              label="BOM Code"
+              value={bomCode}
+              readOnly
+              placeholder="Auto generated "
+              className="dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
+            />
+            <Listbox
+              data={statusOptions}
+              value={
+                statusOptions.find((item) => item.id === bomStatus) || {
+                  id: "active",
+                  label: "Active",
+                }
+              }
+              onChange={(item) => {
+                setBomStatus(item.id);
+                setIsBOMDirty(true);
+              }}
+              label="Status"
+              placeholder="Select status"
+              displayField="label"
+            />
           </div>
         </Card>
 
@@ -1063,7 +1186,11 @@ const handleSaveBOM = async () => {
                   <BOMTreeList
                     items={bomItems}
                     level={0}
-                    highlightId={editingItemId ?? matchedParent?.id ?? null}
+                  highlightId={
+  selectedParentId ??
+  matchedParent?.id ??
+  null
+}
                     expanded={expandedNodes}
                     onToggle={toggleNode}
                     onPick={handlePickNode}
@@ -1200,31 +1327,7 @@ const handleSaveBOM = async () => {
                     <Input
                       type="number"
                       value={asslyQty}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setAsslyQty(value);
-
-                        const selectedItem = editingItemId
-                          ? findAvailableByCode(parentCode)
-                          : childCode
-                            ? findAvailableByCode(childCode)
-                            : !hasBOMItems && parentCode
-                              ? findAvailableByCode(parentCode)
-                              : undefined;
-
-                        if (selectedItem) {
-                          const baseWeight = parseFloat(
-                            selectedItem.weight || "",
-                          );
-                          const assly = parseFloat(value || "");
-
-                          if (!isNaN(baseWeight) && !isNaN(assly)) {
-                            setWeight((baseWeight * assly).toFixed(3));
-                          } else {
-                            setWeight("");
-                          }
-                        }
-                      }}
+                      onChange={(e) => setAsslyQty(e.target.value)}
                       placeholder="Assly Qty"
                     />
                   </div>
@@ -1298,71 +1401,67 @@ const handleSaveBOM = async () => {
                       </label>
                       <Input
                         type="number"
+                        step="any"
                         value={qty}
-                        onChange={(e) => setQty(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setQty(value);
+
+                       const selectedItem = childCode
+  ? findAvailableByCode(childCode)
+  : !hasBOMItems && parentCode
+    ? findAvailableByCode(parentCode)
+    : undefined;
+
+                          if (selectedItem) {
+                            const baseWeight = parseFloat(selectedItem.weight || "");
+                            const quantity = parseFloat(value || "");
+
+                            if (
+                              !isNaN(baseWeight) &&
+                              !isNaN(quantity) &&
+                              quantity > 0
+                            ) {
+                              setWeight((baseWeight * quantity).toFixed(3));
+                            } else {
+                              setWeight("");
+                            }
+                          } else {
+                            setWeight("");
+                          }
+                        }}
                         placeholder="Qty"
                       />
                     </div>
                   </div>
                 </div>
-
-                {editingItemId ? (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <Button
-                      color="primary"
-                      onClick={handleUpdateItem}
-                      className="w-full"
-                    >
-                      Update Item
-                    </Button>
-
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      onClick={() => {
-                        setEditingItemId(null);
-                        setParentCode("");
-                        setChildCode("");
-                        resetEntryFields();
-                      }}
-                      className="w-full"
-                    >
-                      Cancel Edit
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    color="success"
-                    onClick={handleAddToTree}
-                    className="mt-4 w-full"
-                    disabled={
-                      hasBOMItems ? !childMasterMatch : !parentMasterMatch
-                    }
-                  >
-                    {hasBOMItems ? "Add to BOM Structure" : "Add Root Item"}
-                  </Button>
-                )}
+<Button
+  color="success"
+  onClick={handleAddToTree}
+  className="mt-4 w-full"
+  disabled={
+    hasBOMItems ? !childMasterMatch : !parentMasterMatch
+  }
+>
+  {hasBOMItems ? "Add to BOM Structure" : "Add Root Item"}
+</Button>
               </div>
             </Card>
           </div>
         </div>
+        <div className="my-6 flex justify-end gap-3">
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => handleProtectedNavigation("/master/bom")}
+          >
+            Cancel
+          </Button>
 
-        {isEditMode && (
-          <div className="my-6 flex justify-end gap-3">
-         <Button
-  variant="outlined"
-  color="secondary"
-  onClick={() => handleProtectedNavigation("/master/bom")}
->
-  Cancel
-</Button>
-
-            <Button color="primary" onClick={handleSaveBOM}>
-              Update BOM
-            </Button>
-          </div>
-        )}
-
+          <Button color="primary" onClick={handleSaveBOM}>
+            {isEditMode ? "Update BOM" : "Create BOM"}
+          </Button>
+        </div>
         <Card>
           <div className="dark:border-dark-500 mb-4 border-b border-gray-200 p-4">
             <div className="flex items-center justify-between">
@@ -1435,7 +1534,7 @@ const handleSaveBOM = async () => {
                       className={clsx(
                         "dark:hover:bg-dark-600 cursor-pointer transition hover:bg-gray-50",
                         childCode === item.itemCode &&
-                          "bg-primary-50 dark:bg-primary-900/20",
+                        "bg-primary-50 dark:bg-primary-900/20",
                       )}
                     >
                       <td className="dark:text-dark-50 px-4 py-3 text-sm font-medium text-gray-900">
