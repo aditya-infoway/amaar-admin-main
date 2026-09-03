@@ -646,6 +646,14 @@ const protectedRoutes: RouteObject = {
             //     ).QuotationForm,
             //   }),
             // },
+
+            {
+              path: "sales-order",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/lead-master/sales-order"))
+                  .default,
+              }),
+            },
           ],
         },
          // Followups

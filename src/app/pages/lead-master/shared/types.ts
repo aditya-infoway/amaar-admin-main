@@ -83,3 +83,39 @@ export interface Quotation {
   position: string;
   createdAt?: string;
 }
+
+
+export interface SalesOrder {
+  id: string;
+  soNo: string;
+  quotationId: string;
+  leadId: string;
+
+  customerName: string;
+  mobile: string;
+  email: string;
+  address: string;
+  city: string;
+  model: string;
+  remark?: string;
+
+  mode: "asIs" | "manual";
+
+  qty: number;
+  unitPrice: number;
+  totalAmount: number;
+
+  aadharNumber?: string;
+  aadharImage?: string;
+
+  panNumber?: string;
+  panImage?: string;
+
+  gstNumber?: string;
+  gstImage?: string;
+
+  createdBy?: string;
+  createdType?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}

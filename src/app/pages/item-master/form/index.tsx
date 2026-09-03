@@ -1,5 +1,5 @@
 import { ChevronLeftIcon } from "@heroicons/react/20/solid";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router";
 
@@ -76,6 +76,7 @@ interface GroupOptionItem extends OptionItem {
 export default function ItemMasterFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  
   const isEdit = Boolean(id);
 
   const [categoryOptions, setCategoryOptions] = useState<OptionItem[]>([]);
@@ -99,6 +100,8 @@ export default function ItemMasterFormPage() {
   });
 
   const { setDirty, requestNavigation } = useUnsavedChanges();
+
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     setDirty(isDirty);
@@ -270,62 +273,95 @@ export default function ItemMasterFormPage() {
     return fallback;
   };
 
-  const onSubmit = async (data: ItemMasterFormValues) => {
-    try {
-      setSubmitting(true);
+const onSubmit = async (data: ItemMasterFormValues) => {
+  try {
+    isSavingRef.current = true;
+    setSubmitting(true);
 
-      const payload = {
-        ...data,
-        itemCategoryId: Number(data.itemCategoryId),
-        groupId: Number(data.groupId),
-        minQty: data.stockMapping ? data.minQty : null,
-        maxQty: data.stockMapping ? data.maxQty : null,
-        thickness: data.thickness ? Number(data.thickness) : null,
-        length: data.length ? Number(data.length) : null,
-        width: data.width ? Number(data.width) : null,
-        weight: data.weight ? Number(data.weight) : null,
-      };
+    const payload = {
+      ...data,
+      itemCategoryId: Number(data.itemCategoryId),
+      groupId: Number(data.groupId),
+      minQty: data.stockMapping ? data.minQty : null,
+      maxQty: data.stockMapping ? data.maxQty : null,
+      thickness: data.thickness ? Number(data.thickness) : null,
+      length: data.length ? Number(data.length) : null,
+      width: data.width ? Number(data.width) : null,
+      weight: data.weight ? Number(data.weight) : null,
+    };
 
-      if (isEdit && id) {
-        const res = await Put(
-          "master/itemmaster/update",
-          { itemId: Number(id), ...payload },
-          false,
+    let res;
+
+    if (isEdit && id) {
+      res = await Put(
+        "master/itemmaster/update",
+        {
+          itemId: Number(id),
+          ...payload,
+        },
+        false,
+      );
+
+      if (res?.data?.status === 400 || res?.data?.success === false) {
+        isSavingRef.current = false;
+
+        toasterrormsg(
+          extractErrorMessage(res, "Something went wrong."),
         );
 
-        if (res?.data?.status === 400 || res?.data?.success === false) {
-          toasterrormsg(extractErrorMessage(res, "Something went wrong."));
-          return;
-        }
-
-        toastsuccessmsg(extractErrorMessage(res, "Item updated successfully"));
-      } else {
-        const res = await Post("master/itemmaster/create", payload, false);
-
-        if (res?.data?.status === 400 || res?.data?.success === false) {
-          toasterrormsg(extractErrorMessage(res, "Something went wrong."));
-          return;
-        }
-
-        toastsuccessmsg(extractErrorMessage(res, "Item created successfully"));
+        return;
       }
 
-      // Save successful → no unsaved changes anymore
-      setDirty(false);
-
-      navigate("/item-master");
-    } catch (err: any) {
-      toasterrormsg(
-        extractErrorMessage(
-          err?.response,
-          "Something went wrong. Please try again.",
-        ),
+      toastsuccessmsg(
+        extractErrorMessage(res, "Item updated successfully"),
       );
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    } else {
+      res = await Post(
+        "master/itemmaster/create",
+        payload,
+        false,
+      );
 
+      if (res?.data?.status === 400 || res?.data?.success === false) {
+        isSavingRef.current = false;
+
+        toasterrormsg(
+          extractErrorMessage(res, "Something went wrong."),
+        );
+
+        return;
+      }
+
+      toastsuccessmsg(
+        extractErrorMessage(res, "Item created successfully"),
+      );
+    }
+
+    // Make React Hook Form clean
+    reset(data);
+
+    // Make global unsaved state clean
+    setDirty(false);
+
+    // Navigate after state update
+    setTimeout(() => {
+      isSavingRef.current = false;
+      navigate("/item-master");
+    }, 0);
+
+  } catch (err: any) {
+    isSavingRef.current = false;
+
+    toasterrormsg(
+      extractErrorMessage(
+        err?.response,
+        "Something went wrong. Please try again.",
+      ),
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
   return (
     <Page title={isEdit ? "Edit Item" : "Create Item"}>
       <div className="transition-content w-full px-(--margin-x) pb-8">
