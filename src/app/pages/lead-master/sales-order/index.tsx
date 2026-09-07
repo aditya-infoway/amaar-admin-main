@@ -41,6 +41,8 @@ import { emptySalesOrder } from "./data";
 
 import type { SalesOrder } from "../shared/types";
 
+
+
 export default function SalesOrderPage() {
   const [data, setData] = useState<SalesOrder[]>([]);
 
@@ -72,6 +74,8 @@ export default function SalesOrderPage() {
 
   const [filterSoNo, setFilterSoNo] =
     useState("");
+
+    const [viewOnly, setViewOnly] = useState(false);
 
   /*
    * Fetch Sales Orders
@@ -211,15 +215,22 @@ export default function SalesOrderPage() {
       String(row.id),
 
     meta: {
+
+
+        viewRow: (row: SalesOrder) => {
+    setEditing(row);
+    setViewOnly(true);
+    setDrawerOpen(true);
+  },
+      
       /*
        * Edit Sales Order
        */
-      openEditDrawer: (
-        row: SalesOrder,
-      ) => {
-        setEditing(row);
-        setDrawerOpen(true);
-      },
+      openEditDrawer: (row: SalesOrder) => {
+    setEditing(row);
+    setViewOnly(false);
+    setDrawerOpen(true);
+  },
 
       /*
        * Delete Single
@@ -461,12 +472,15 @@ export default function SalesOrderPage() {
       <SalesOrderDrawer
         isOpen={drawerOpen}
 
-        close={() => {
-          setDrawerOpen(false);
-          setEditing(null);
-        }}
+  readOnly={viewOnly}
 
-        salesOrder={editing}
+  close={() => {
+    setDrawerOpen(false);
+    setEditing(null);
+    setViewOnly(false);
+  }}
+
+  salesOrder={editing}
 
         onSave={(item) => {
           const exists =

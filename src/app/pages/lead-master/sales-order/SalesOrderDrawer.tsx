@@ -23,6 +23,7 @@ interface SalesOrderDrawerProps {
     close: () => void;
     salesOrder: SalesOrder | null;
     onSave: (salesOrder: SalesOrder) => void;
+    readOnly?: boolean;
 }
 
 interface QuotationOption {
@@ -57,6 +58,7 @@ export function SalesOrderDrawer({
     close,
     salesOrder,
     onSave,
+    readOnly = false,
 }: SalesOrderDrawerProps) {
     const isEditing = Boolean(salesOrder?.id);
 
@@ -68,9 +70,12 @@ export function SalesOrderDrawer({
         QuotationOption[]
     >([]);
 
-    // "asIs" = fields locked from quotation, "manual" = user can override
+    // "asIs" = bottom detail fields mirror the quotation, "manual" = user fills them in
     const [mode, setMode] = useState<"asIs" | "manual">("asIs");
 
+    // ---- TOP BLOCK: read-only snapshot of the selected quotation ----
+    // Set ONLY when a quotation is selected (or on edit-prefill).
+    // Never touched by the As Its / Manual toggle.
     const [leadId, setLeadId] = useState("");
     const [city, setCity] = useState("");
     const [customerName, setCustomerName] = useState("");
@@ -80,8 +85,16 @@ export function SalesOrderDrawer({
     const [model, setModel] = useState("");
     const [remark, setRemark] = useState("");
 
+    // ---- BOTTOM BLOCK: editable details, actually submitted ----
+    // In "As Its" mode these mirror the quotation. In "Manual" mode
+    // they start blank and the user fills them in.
+    const [detailCustomerName, setDetailCustomerName] = useState("");
+    const [detailMobile, setDetailMobile] = useState("");
+    const [detailEmail, setDetailEmail] = useState("");
+    const [detailAddress, setDetailAddress] = useState("");
+    const [detailCity, setDetailCity] = useState("");
+
     const [qty, setQty] = useState("1");
-    const [unitPrice, setUnitPrice] = useState(0);
 
     // KYC — each doc independent, upload only appears once its number is typed
     const [kyc, setKyc] = useState<Record<KycKey, KycState>>({
@@ -92,10 +105,8 @@ export function SalesOrderDrawer({
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // All fields remain editable in both modes.
-    // "As Its" only prefills quotation data.
-    const fieldsDisabled = false;
-
+    // Bottom block fields are always editable; top block is always read-only.
+   const fieldsDisabled = readOnly;
 
     const [quotationAmount, setQuotationAmount] = useState(0);
 
@@ -104,6 +115,7 @@ export function SalesOrderDrawer({
 
         return quotationAmount * quantity;
     }, [qty, quotationAmount]);
+
     // Fetch quotations to populate "Select Quotation"
     useEffect(() => {
         if (!isOpen) return;
@@ -146,11 +158,14 @@ export function SalesOrderDrawer({
         fetchQuotations();
     }, [isOpen]);
 
-    // Auto-fill Lead ID / City / customer block whenever a quotation is picked
+    // Auto-fill Lead ID / City / customer block whenever a quotation is picked.
+    // TOP block always mirrors the quotation, regardless of mode.
+    // BOTTOM (detail) block only mirrors it when mode === "asIs".
     useEffect(() => {
         const q = selectedQuotation?.[0];
 
         if (!q) {
+            // Nothing selected — clear everything.
             setLeadId("");
             setCity("");
             setCustomerName("");
@@ -159,12 +174,19 @@ export function SalesOrderDrawer({
             setAddress("");
             setModel("");
             setRemark("");
+
+            setDetailCustomerName("");
+            setDetailMobile("");
+            setDetailEmail("");
+            setDetailAddress("");
+            setDetailCity("");
+
             setQty("1");
-            setUnitPrice(0);
+            setQuotationAmount(0);
             return;
         }
 
-        // Auto fill from quotation
+        // TOP — always set from the quotation, read-only.
         setLeadId(String(q.leadId));
         setCity(q.city || "");
         setCustomerName(q.customerName || "");
@@ -174,11 +196,16 @@ export function SalesOrderDrawer({
         setModel(q.model || "");
         setRemark(q.remark || "");
 
-        // Qty default 1
-        setQty("1");
-
-        // Amount from quotation
-        setQuotationAmount(Number(q.finalPrice) || 0);
+        // BOTTOM — only auto-fill in "As Its" mode.
+        if (mode === "asIs") {
+            setDetailCustomerName(q.customerName || "");
+            setDetailMobile(q.mobile || "");
+            setDetailEmail(q.email || "");
+            setDetailAddress(q.address || "");
+            setDetailCity(q.city || "");
+            setQty("1");
+            setQuotationAmount(Number(q.finalPrice) || 0);
+        }
     }, [selectedQuotation]);
 
     // Prefill on edit / reset on add
@@ -192,13 +219,24 @@ export function SalesOrderDrawer({
             );
             setSelectedQuotation(q ? [q] : []);
             setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
-            setCustomerName((salesOrder as any).customerName || "");
-            setMobile((salesOrder as any).mobile || "");
-            setEmail((salesOrder as any).email || "");
-            setAddress((salesOrder as any).address || "");
-            setCity((salesOrder as any).city || "");
-            setModel((salesOrder as any).model || "");
-            setRemark((salesOrder as any).remark || "");
+
+            // TOP — snapshot from the linked quotation (fallback to saved order data)
+            setLeadId(String((salesOrder as any).leadId ?? q?.leadId ?? ""));
+            setCity(q?.city || (salesOrder as any).city || "");
+            setCustomerName(q?.customerName || (salesOrder as any).customerName || "");
+            setMobile(q?.mobile || (salesOrder as any).mobile || "");
+            setEmail(q?.email || (salesOrder as any).email || "");
+            setAddress(q?.address || (salesOrder as any).address || "");
+            setModel(q?.model || (salesOrder as any).model || "");
+            setRemark(q?.remark || (salesOrder as any).remark || "");
+
+            // BOTTOM — actual saved/editable contact details
+            setDetailCustomerName((salesOrder as any).customerName || "");
+            setDetailMobile((salesOrder as any).mobile || "");
+            setDetailEmail((salesOrder as any).email || "");
+            setDetailAddress((salesOrder as any).address || "");
+            setDetailCity((salesOrder as any).city || "");
+
             setQty(String((salesOrder as any).qty ?? "1"));
             setKyc({
                 aadhar: {
@@ -301,17 +339,19 @@ export function SalesOrderDrawer({
         formData.append("quotationId", String(q?.id ?? ""));
         formData.append("leadId", leadId);
         formData.append("mode", mode);
-        formData.append("customerName", customerName);
-        formData.append("mobile", mobile);
-        formData.append("email", email || "");
-        formData.append("address", address || "");
-        formData.append("city", city || "");
+
+        // Actual saved contact info comes from the editable (bottom) fields
+        formData.append("customerName", detailCustomerName);
+        formData.append("mobile", detailMobile);
+        formData.append("email", detailEmail || "");
+        formData.append("address", detailAddress || "");
+        formData.append("city", detailCity || "");
+
         formData.append("model", model || "");
         formData.append("remark", remark || "");
         formData.append("qty", qty);
         formData.append("unitPrice", String(quotationAmount));
         formData.append("totalAmount", String(totalAmount));
-
 
         formData.append("aadharNumber", kyc.aadhar.number);
         formData.append("panNumber", kyc.pan.number);
@@ -365,39 +405,43 @@ export function SalesOrderDrawer({
                 <div className="flex items-stretch">
                     {/* Number Input */}
                     <div className="w-[68%]">
-                        <input
-                            type="text"
-                            placeholder={`Enter ${label}`}
-                            value={entry.number}
-                            onChange={(e) =>
-                                updateKycNumber(key, e.target.value)
-                            }
-                            className="w-full rounded-l-lg rounded-r-none border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary dark:border-gray-600 dark:bg-dark-800"
-                        />
+                    <input
+    type="text"
+    placeholder={`Enter ${label}`}
+    value={entry.number}
+    disabled={readOnly}
+    onChange={(e) =>
+        updateKycNumber(key, e.target.value)
+    }
+    className="w-full rounded-l-lg rounded-r-none border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-60 dark:border-gray-600 dark:bg-dark-800"
+/>
                     </div>
 
                     {/* Upload */}
-                    <label className="w-[32%] cursor-pointer rounded-r-lg rounded-l-none border border-l-0 border-dashed border-primary bg-primary/5 px-2 py-2 text-center text-xs text-primary flex items-center justify-center gap-1">
-                        <PaperClipIcon className="size-4" />
+                                      {/* Upload — hidden in view mode */}
+                    {!readOnly && (
+                        <label className="w-[32%] cursor-pointer rounded-r-lg rounded-l-none border border-l-0 border-dashed border-primary bg-primary/5 px-2 py-2 text-center text-xs text-primary flex items-center justify-center gap-1">
+                            <PaperClipIcon className="size-4" />
 
-                        {entry.file
-                            ? "Change"
-                            : entry.existingUrl
-                                ? "Replace"
-                                : "Upload"}
+                            {entry.file
+                                ? "Change"
+                                : entry.existingUrl
+                                    ? "Replace"
+                                    : "Upload"}
 
-                        <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) =>
-                                updateKycFile(
-                                    key,
-                                    e.target.files?.[0] || null
-                                )
-                            }
-                        />
-                    </label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) =>
+                                    updateKycFile(
+                                        key,
+                                        e.target.files?.[0] || null
+                                    )
+                                }
+                            />
+                        </label>
+                    )}
                 </div>
 
                 {/* Selected filename */}
@@ -454,7 +498,7 @@ export function SalesOrderDrawer({
                 >
                     <div className="dark:border-dark-500 bg-primary flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
                         <h3 className="text-lg font-semibold text-white">
-                            {isEditing ? "Edit Sales Order" : "Add Sales Order"}
+                             {readOnly ? "View Sales Order" : isEditing ? "Edit Sales Order" : "Add Sales Order"}
                         </h3>
                         <Button
                             onClick={close}
@@ -483,6 +527,7 @@ export function SalesOrderDrawer({
                                         placeholder="Select Quotation"
                                         label="Select Quotation"
                                         searchFields={["qNo", "customerName"]}
+                                         disabled={readOnly}
                                     />
                                     {errors.quotation && (
                                         <p className="text-error mt-1 text-xs">
@@ -498,55 +543,49 @@ export function SalesOrderDrawer({
                 /> */}
                             </div>
 
-                            {/* Lead ID + City auto-fill */}
-                            {/* Lead ID + City */}
+                            {/* TOP BLOCK — read-only snapshot of the selected quotation.
+                                Never changed by the As Its / Manual toggle. */}
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <Input label="Lead ID" value={leadId} disabled onChange={() => { }} />
-                                <Input
-                                    label="City"
-                                    value={city}
-                                    disabled={fieldsDisabled}
-                                    onChange={(e) => setCity(e.target.value)}
-                                />
+                                <Input label="City" value={city} disabled onChange={() => { }} />
                             </div>
 
-                            {/* Client Details */}
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <Input
                                     label="Client Name"
                                     value={customerName}
-                                    disabled={fieldsDisabled}
-                                    onChange={(e) => setCustomerName(e.target.value)}
+                                    disabled
+                                    onChange={() => { }}
                                 />
                                 <Input
                                     label="Address"
                                     value={address}
-                                    disabled={fieldsDisabled}
-                                    onChange={(e) => setAddress(e.target.value)}
+                                    disabled
+                                    onChange={() => { }}
                                 />
                                 <Input
                                     label="Client Number"
                                     value={mobile}
-                                    disabled={fieldsDisabled}
-                                    onChange={(e) => setMobile(e.target.value)}
+                                    disabled
+                                    onChange={() => { }}
                                 />
                                 <Input
                                     label="Model"
                                     value={model}
-                                    disabled={fieldsDisabled}
-                                    onChange={(e) => setModel(e.target.value)}
+                                    disabled
+                                    onChange={() => { }}
                                 />
                                 <Input
                                     label="Email ID"
                                     value={email}
-                                    disabled={fieldsDisabled}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    disabled
+                                    onChange={() => { }}
                                 />
                                 <Input
                                     label="Remark"
                                     value={remark}
-                                    disabled={fieldsDisabled}
-                                    onChange={(e) => setRemark(e.target.value)}
+                                    disabled
+                                    onChange={() => { }}
                                 />
                             </div>
 
@@ -558,72 +597,86 @@ export function SalesOrderDrawer({
 
                                 <div className="flex gap-5">
                                     <Radio
-                                        label="As Its"
-                                        checked={mode === "asIs"}
-                                        onChange={() => {
-                                            setMode("asIs");
+    label="As Its"
+    checked={mode === "asIs"}
+    disabled={readOnly}
+    onChange={() => {
+        if (readOnly) return;
+        setMode("asIs");
 
                                             const q = selectedQuotation?.[0];
                                             if (!q) return;
 
-                                            // Refill quotation values.
-                                            setCustomerName(q.customerName || "");
-                                            setMobile(q.mobile || "");
-                                            setEmail(q.email || "");
-                                            setAddress(q.address || "");
-                                            setCity(q.city || "");
-                                            setModel(q.model || "");
-                                            setRemark(q.remark || "");
+                                            // Refill ONLY the bottom (editable) block.
+                                            setDetailCustomerName(q.customerName || "");
+                                            setDetailMobile(q.mobile || "");
+                                            setDetailEmail(q.email || "");
+                                            setDetailAddress(q.address || "");
+                                            setDetailCity(q.city || "");
                                             setQty("1");
-                                            setUnitPrice(Number(q.finalPrice) || 0);
+                                            setQuotationAmount(Number(q.finalPrice) || 0);
                                         }}
                                     />
 
-                                    <Radio
-                                        label="Manual"
-                                        checked={mode === "manual"}
-                                        onChange={() => {
-                                            setMode("manual");
+                                  <Radio
+    label="Manual"
+    checked={mode === "manual"}
+    disabled={readOnly}
+    onChange={() => {
+        if (readOnly) return;
+        setMode("manual");
+
+                                            // ONLY the bottom (editable) block resets.
+                                            // Top block (Lead ID, City, Client Name, Address,
+                                            // Client Number, Model, Email ID, Remark) stays as-is.
+                                            setDetailCustomerName("");
+                                            setDetailMobile("");
+                                            setDetailEmail("");
+                                            setDetailAddress("");
+                                            setDetailCity("");
+                                            setQty("1");
+                                            setQuotationAmount(0);
                                         }}
                                     />
                                 </div>
 
                                 <p className="mt-2 text-xs text-gray-500">
-                                    As Its automatically fills quotation details, but you can still edit them.
+                                    As Its automatically fills the details below from the quotation, but you can still edit them.
                                 </p>
                             </div>
 
+                            {/* BOTTOM BLOCK — editable, actually submitted. Auto-filled from
+                                the quotation in "As Its" mode, blank in "Manual" mode. */}
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <Input
                                     label="Client Name"
-                                    value={customerName}
+                                    value={detailCustomerName}
                                     disabled={fieldsDisabled}
-                                    onChange={(e) => setCustomerName(e.target.value)}
+                                    onChange={(e) => setDetailCustomerName(e.target.value)}
                                 />
                                 <Input
                                     label="Client Number"
-                                    value={mobile}
+                                    value={detailMobile}
                                     disabled={fieldsDisabled}
-                                    onChange={(e) => setMobile(e.target.value)}
+                                    onChange={(e) => setDetailMobile(e.target.value)}
                                 />
                                 <Input
                                     label="Email ID"
-                                    value={email}
+                                    value={detailEmail}
                                     disabled={fieldsDisabled}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    onChange={(e) => setDetailEmail(e.target.value)}
                                 />
                                 <Input
                                     label="Address"
-                                    value={address}
+                                    value={detailAddress}
                                     disabled={fieldsDisabled}
-                                    onChange={(e) => setAddress(e.target.value)}
+                                    onChange={(e) => setDetailAddress(e.target.value)}
                                 />
-                                {/* Replace Model with City */}
                                 <Input
                                     label="City"
-                                    value={city}
+                                    value={detailCity}
                                     disabled={fieldsDisabled}
-                                    onChange={(e) => setCity(e.target.value)}
+                                    onChange={(e) => setDetailCity(e.target.value)}
                                 />
                             </div>
 
@@ -649,15 +702,16 @@ export function SalesOrderDrawer({
                                         onChange={() => { }}
                                     />
 
-                                    <Input
-                                        type="number"
-                                        label="Qty"
-                                        value={qty}
-                                        min={1}
-                                        onChange={(e) => {
-                                            setQty(e.target.value);
-                                        }}
-                                    />
+                                 <Input
+    type="number"
+    label="Qty"
+    value={qty}
+    min={1}
+    disabled={readOnly}
+    onChange={(e) => {
+        setQty(e.target.value);
+    }}
+/>
 
                                     <Input
                                         label="Total Amount"
@@ -673,13 +727,22 @@ export function SalesOrderDrawer({
                         </div>
 
                         {/* Footer */}
+                                              {/* Footer */}
                         <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
-                            <Button type="button" onClick={close}>
-                                Cancel
-                            </Button>
-                            <Button type="button" color="primary" onClick={handleSubmit}>
-                                {isEditing ? "Update" : "Submit"}
-                            </Button>
+                            {readOnly ? (
+                                <Button type="button" onClick={close}>
+                                    Close
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button type="button" onClick={close}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="button" color="primary" onClick={handleSubmit}>
+                                        {isEditing ? "Update" : "Submit"}
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </TransitionChild>

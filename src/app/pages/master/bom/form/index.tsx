@@ -683,9 +683,6 @@ export default function BOMFormPage() {
     // Clear child field so user can enter/select new child
     setChildCode("");
 
-    // Exit item edit mode
-    setEditingItemId(null);
-
     // Clear old item values
     resetEntryFields();
 
