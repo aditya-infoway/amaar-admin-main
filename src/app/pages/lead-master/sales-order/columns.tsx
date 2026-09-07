@@ -1,9 +1,198 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import type { SalesOrder } from "../shared/types";
+import {
+  SelectCell,
+  SelectHeader,
+} from "@/components/shared/table/SelectCheckbox";
+import { createRowActions } from "../shared/createRowActions";
+import { URL as ApiUrl, toasterrormsg } from "@/ApiHelper";
+import type { ExportColumn } from "../shared/export";
 
 const columnHelper = createColumnHelper<SalesOrder>();
 
+// Fetches a cross-origin file as a blob and triggers a real browser
+// download (a plain <a download> won't work across origins).
+const MIME_BY_EXTENSION: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  gif: "image/gif",
+  pdf: "application/pdf",
+};
+
+// Fetches a cross-origin file as a blob and triggers a real browser
+// download (a plain <a download> won't work across origins).
+// We force the correct MIME type from the file extension rather than
+// trusting the server's Content-Type header, so the OS always
+// recognizes it as an image instead of falling back to some other
+// default app.
+const downloadFile = async (
+  relativePath: string,
+  suggestedName: string,
+) => {
+  try {
+    if (!relativePath) {
+      toasterrormsg("File not found");
+      return;
+    }
+
+    const url = /^https?:\/\//i.test(relativePath)
+      ? relativePath
+      : `${ApiUrl.localurl}${relativePath.replace(/^\/+/, "")}`;
+
+    console.log("========== FILE DOWNLOAD ==========");
+    console.log("Path:", relativePath);
+    console.log("URL:", url);
+
+    const response = await fetch(url);
+
+    console.log("Status:", response.status);
+    console.log(
+      "Content-Type:",
+      response.headers.get("content-type"),
+    );
+    console.log(
+      "Content-Disposition:",
+      response.headers.get("content-disposition"),
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+
+    console.log("Blob Type:", blob.type);
+    console.log("Blob Size:", blob.size);
+
+    // Detect extension
+    let ext = "";
+
+    const contentType = (
+      response.headers.get("content-type") ||
+      blob.type ||
+      ""
+    ).toLowerCase();
+
+    if (contentType.includes("png")) {
+      ext = "png";
+    } else if (
+      contentType.includes("jpeg") ||
+      contentType.includes("jpg")
+    ) {
+      ext = "jpg";
+    } else if (contentType.includes("webp")) {
+      ext = "webp";
+    } else if (contentType.includes("gif")) {
+      ext = "gif";
+    } else if (contentType.includes("pdf")) {
+      ext = "pdf";
+    } else {
+      // fallback from original path
+      const cleanPath = relativePath.split("?")[0];
+      const pathExt = cleanPath
+        .split(".")
+        .pop()
+        ?.toLowerCase();
+
+      if (
+        pathExt &&
+        ["png", "jpg", "jpeg", "webp", "gif", "pdf"].includes(
+          pathExt,
+        )
+      ) {
+        ext = pathExt;
+      }
+    }
+
+    if (!ext) {
+      console.error("Unknown file type:", contentType);
+      throw new Error(
+        `Server returned unsupported file type: ${contentType}`,
+      );
+    }
+
+    const mimeTypes: Record<string, string> = {
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      webp: "image/webp",
+      gif: "image/gif",
+      pdf: "application/pdf",
+    };
+
+    const fileBlob = new Blob([blob], {
+      type: mimeTypes[ext],
+    });
+
+    const blobUrl = window.URL.createObjectURL(fileBlob);
+
+    const link = document.createElement("a");
+
+    link.href = blobUrl;
+    link.download = `${suggestedName}.${ext}`;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 2000);
+
+    console.log(
+      `Downloaded: ${suggestedName}.${ext}`,
+    );
+  } catch (error) {
+    console.error("Download error:", error);
+    toasterrormsg("Unable to download file.");
+  }
+};
+const RowActions = createRowActions<SalesOrder>("sales order", {
+  withView: true,
+  extraItems: (row) => {
+    const item = row as any;
+
+    return [
+      {
+        key: "aadhar",
+        label: "Aadhar Card",
+        show: !!item.aadharImage,
+        onClick: () =>
+          downloadFile(
+            item.aadharImage,
+            `Aadhar_${item.soNo || item.id}`,
+          ),
+      },
+      {
+        key: "pan",
+        label: "PAN Card",
+        show: !!item.panImage,
+        onClick: () =>
+          downloadFile(item.panImage, `PAN_${item.soNo || item.id}`),
+      },
+      {
+        key: "gst",
+        label: "GST Card",
+        show: !!item.gstImage,
+        onClick: () =>
+          downloadFile(item.gstImage, `GST_${item.soNo || item.id}`),
+      },
+    ];
+  },
+});
+
 export const createColumns = () => [
+
+   columnHelper.display({
+    id: "select",
+    header: SelectHeader,
+    cell: SelectCell,
+    enableSorting: false,
+  }),
+
   columnHelper.display({
     id: "srNo",
     header: "Sr. No.",
@@ -17,6 +206,9 @@ export const createColumns = () => [
       );
     },
   }),
+
+
+  
 
   columnHelper.accessor("soNo", {
     header: "SO No",
@@ -122,43 +314,18 @@ export const createColumns = () => [
     },
   }),
 
-  columnHelper.display({
+   columnHelper.display({
     id: "actions",
-    header: "Actions",
-    cell: ({ row, table }) => {
-      const meta = table.options.meta as any;
-
-      return (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="text-primary text-sm font-medium hover:underline"
-            onClick={() =>
-              meta?.openEditDrawer?.(row.original)
-            }
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            className="text-error text-sm font-medium hover:underline"
-            onClick={() =>
-              meta?.deleteRow?.(row)
-            }
-          >
-            Delete
-          </button>
-        </div>
-      );
-    },
+    header: "Action",
+    cell: RowActions,
+    enableSorting: false,
   }),
 ];
 
 /*
  * Columns used for Excel/PDF export
  */
-export const createExportColumns = () => [
+export const createExportColumns = (): ExportColumn<SalesOrder>[] => [
   {
     key: "soNo",
     header: "SO No",
