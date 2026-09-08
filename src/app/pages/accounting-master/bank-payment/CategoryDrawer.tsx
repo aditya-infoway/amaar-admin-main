@@ -82,7 +82,7 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
 
     (async () => {
       try {
-        const financialYearId = sessionStorage.getItem("financialYearId") || "";
+        const financialYearId = localStorage.getItem("financialYearId") || "";
 
         const [bankRes, oppRes, voucherRes] = await Promise.all([
           accountApi.bankList(),
@@ -133,8 +133,8 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
 
     try {
       setSubmitting(true);
-      const financialYearId = sessionStorage.getItem("financialYearId");
-      const companyId = sessionStorage.getItem("companyId");
+      const financialYearId = localStorage.getItem("financialYearId");
+      const companyId = localStorage.getItem("companyId");
 
       const res = await paymentApi.create({
         bankAccountId: Number(data.bankAccount),

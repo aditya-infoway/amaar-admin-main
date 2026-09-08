@@ -216,8 +216,8 @@ export function EnquiryDrawer({
           toasterrormsg(response.data?.message || "Enquiry update nahi ho payi.");
         }
       } else {
-        // ===== companyId sessionStorage se, createdType default "Super Admin" =====
-        const companyId = sessionStorage.getItem("companyId") || "";
+        // ===== companyId localStorage se, createdType default "Super Admin" =====
+        const companyId = localStorage.getItem("companyId") || "";
 
         const response = await Post(
           "lead/create",

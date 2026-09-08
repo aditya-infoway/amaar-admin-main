@@ -21,7 +21,7 @@ export const URL = {
 
 //get the x-token if store in session
 function getToken() {
-  return sessionStorage.getItem("authToken") || "";
+  return localStorage.getItem("authToken") || "";
 }
 
 // API HEADER

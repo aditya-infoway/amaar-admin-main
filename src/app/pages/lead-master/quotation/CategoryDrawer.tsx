@@ -156,7 +156,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
       if (!isOpen) return;
 
       try {
-        const role = sessionStorage.getItem("role") || "";
+        const role = localStorage.getItem("role") || "";
 
         const response = await Get("lead/list", { role }, false);
 
@@ -499,7 +499,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
       if (!isOpen || isEditing) return;
 
       try {
-        const financialYearId = sessionStorage.getItem("financialYearId");
+        const financialYearId = localStorage.getItem("financialYearId");
 
         if (!financialYearId) {
           console.error("Financial Year ID not found");
@@ -583,7 +583,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
       return;
     }
 
-    const financialYearId = sessionStorage.getItem("financialYearId");
+    const financialYearId = localStorage.getItem("financialYearId");
 
     if (!financialYearId) {
       toasterrormsg("Financial Year not found. Please select a company year.");
@@ -632,7 +632,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
       position: position || null,
 
       createdBy:
-        quotation?.createdBy || sessionStorage.getItem("userId") || "Admin",
+        quotation?.createdBy || localStorage.getItem("userId") || "Admin",
     };
 
     try {

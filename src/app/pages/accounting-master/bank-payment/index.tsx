@@ -32,7 +32,7 @@ export default function BankPaymentPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const financialYearId = sessionStorage.getItem("financialYearId") || "";
+      const financialYearId = localStorage.getItem("financialYearId") || "";
       const response = await Get("payment/bank/list", { financialYearId }, false);
       if (response?.data?.success) {
         setData(response.data.data || []);

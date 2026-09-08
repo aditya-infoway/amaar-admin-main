@@ -52,56 +52,49 @@ export const master: NavigationTree = {
           transKey: "nav.master.variantStructure",
           icon: "master.variantStructure",
         },
-        {
-          id: "master.bom",
-          type: "item",
-          path: "/master/bom",
-          title: "BOM",
-          transKey: "BOM",
-          icon: "master.bom",
-        },
+       
       ],
     },
 
     // Separate Brand dropdown
-    {
-      id: "master.brand",
-      type: "collapse",
-      path: "/master/brand",
-      title: "Brand",
-      transKey: "Brand",
-      icon: "master.brand",
-      childs: [
-        {
-          id: "master.brand.bodyType",
-          type: "item",
-          path: "/master/brand/body-type",
-          title: "Body Type",
-          transKey: "Body Type",
-        },
-        {
-          id: "master.brand.axleBrand",
-          type: "item",
-          path: "/master/brand/axle-brand",
-          title: "Axle Brand",
-          transKey: "Axle Brand",
-        },
-        {
-          id: "master.brand.hydraulicBrand",
-          type: "item",
-          path: "/master/brand/hydraulic-brand",
-          title: "Hydraulic Brand",
-          transKey: "Hydraulic Brand",
-        },
-        {
-          id: "master.brand.tyreBrand",
-          type: "item",
-          path: "/master/brand/tyre-brand",
-          title: "Tyre Brand",
-          transKey: "Tyre Brand",
-        },
-      ],
-    },
+    // {
+    //   id: "master.brand",
+    //   type: "collapse",
+    //   path: "/master/brand",
+    //   title: "Brand",
+    //   transKey: "Brand",
+    //   icon: "master.brand",
+    //   childs: [
+    //     {
+    //       id: "master.brand.bodyType",
+    //       type: "item",
+    //       path: "/master/brand/body-type",
+    //       title: "Body Type",
+    //       transKey: "Body Type",
+    //     },
+    //     {
+    //       id: "master.brand.axleBrand",
+    //       type: "item",
+    //       path: "/master/brand/axle-brand",
+    //       title: "Axle Brand",
+    //       transKey: "Axle Brand",
+    //     },
+    //     {
+    //       id: "master.brand.hydraulicBrand",
+    //       type: "item",
+    //       path: "/master/brand/hydraulic-brand",
+    //       title: "Hydraulic Brand",
+    //       transKey: "Hydraulic Brand",
+    //     },
+    //     {
+    //       id: "master.brand.tyreBrand",
+    //       type: "item",
+    //       path: "/master/brand/tyre-brand",
+    //       title: "Tyre Brand",
+    //       transKey: "Tyre Brand",
+    //     },
+    //   ],
+    // },
 
     // Separate Quotation Master dropdown
     {
@@ -125,6 +118,59 @@ export const master: NavigationTree = {
           path: "/master/quotation-master/createpricing",
           title: "Create Pricing",
           transKey: "Create Pricing",
+        },
+      ],
+    },
+
+      {
+      id: "master.itemMaster",
+      type: "collapse",
+      path: "/master/item-master",
+      title: "Item Master",
+      transKey: "Item Master",
+      icon: "itemMaster.list",
+
+      childs: [
+        {
+          id: "itemMaster.list",
+          type: "item",
+          path: "/master/item-master/item-list",
+          title: "Item Master",
+          transKey: "nav.itemMaster.list",
+          icon: "itemMaster.list",
+        },
+        {
+          id: "itemBarcode.list",
+          type: "item",
+          path: "/master/item-master/barcode-manager",
+          title: "Barcode Manager",
+          transKey: "Barcode Manager",
+          icon: "itemBarcode.list",
+        },
+        {
+          id: "itemCategory.list",
+          type: "item",
+          path: "/master/item-master/item-category",
+          title: "Item Category",
+          transKey: "Item Category",
+          icon: "itemCategory.list",
+        },
+        {
+          id: "itemGroup.list",
+          type: "item",
+          path: "/master/item-master/item-group",
+          title: "Item Group",
+          transKey: "Item Group",
+          icon: "itemGroup.list",
+        },
+
+         {
+          id: "itemBom.bom",
+          type: "item",
+          path: "/master/item-master/bom",
+          title: "BOM",
+          transKey: "BOM",
+          icon: "itemBom.bom",
         },
       ],
     },

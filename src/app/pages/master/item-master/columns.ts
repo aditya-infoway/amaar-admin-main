@@ -1,9 +1,9 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { SelectCell, SelectHeader } from "@/components/shared/table/SelectCheckbox";
-import { createRowActions } from "../master/shared/createRowActions";
-import { TextCell } from "../master/shared/tableCells";
+import { createRowActions } from "../shared/createRowActions";
+import { TextCell } from "../shared/tableCells";
 import { ItemMaster } from "./data";
-import { ExportColumn } from "../master/shared/export";
+import { ExportColumn } from "../shared/export";
 
 const RowActions = createRowActions<ItemMaster>("item");
 

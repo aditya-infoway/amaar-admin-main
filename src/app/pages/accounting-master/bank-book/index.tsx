@@ -52,7 +52,7 @@ export default function BankBookPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const financialYearId = sessionStorage.getItem("financialYearId") || "";
+      const financialYearId = localStorage.getItem("financialYearId") || "";
       const response = await Get(
         "payment/bank-book",
         { financialYearId, transactionType, bankAccountId, fromDate, toDate },

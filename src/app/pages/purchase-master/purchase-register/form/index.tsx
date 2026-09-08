@@ -920,7 +920,7 @@ export default function VehiclePurchaseBill() {
   useEffect(() => {
     (async () => {
       try {
-        const financialYearId = sessionStorage.getItem("financialYearId");
+        const financialYearId = localStorage.getItem("financialYearId");
         const res = await Get("purchase/next-bill-no", { financialYearId }, false);
         if (res.data?.success) {
           setHdr((h) => ({ ...h, billNo: res.data.data?.billNo || "" }));
@@ -1025,7 +1025,7 @@ export default function VehiclePurchaseBill() {
   useEffect(() => {
     (async () => {
       try {
-        const companyDetailsId = sessionStorage.getItem("companyDetailsId");
+        const companyDetailsId = localStorage.getItem("companyDetailsId");
         const res = await Get("superadmin/company-details", { companyDetailsId }, false);
         if (res.data?.success) {
           setCompanyState(res.data.data?.state || "");
@@ -1198,8 +1198,8 @@ const bankComboValue = useMemo(() => {
 
     try {
 
-      const financialYearId = sessionStorage.getItem("financialYearId");
-      const companyId = sessionStorage.getItem("companyId");
+      const financialYearId = localStorage.getItem("financialYearId");
+      const companyId = localStorage.getItem("companyId");
 
       const payload = {
         financialYearId: financialYearId,

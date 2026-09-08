@@ -37,7 +37,7 @@ export default function CashBookPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const financialYearId = sessionStorage.getItem("financialYearId") || "";
+      const financialYearId = localStorage.getItem("financialYearId") || "";
       const response = await Get(
         "payment/cash-book",
         { financialYearId, transactionType, fromDate, toDate },

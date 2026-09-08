@@ -61,7 +61,7 @@ export default function QuotationPage() {
       try {
         setLoading(true);
 
-        const financialYearId = sessionStorage.getItem("financialYearId");
+        const financialYearId = localStorage.getItem("financialYearId");
 
         const response = await Get(
           "quotation/list",

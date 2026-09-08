@@ -3,6 +3,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  Row,
   RowSelectionState,
   SortingState,
   useReactTable,
@@ -14,7 +15,7 @@ import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
-import { Get, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import { Get, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
@@ -84,17 +85,34 @@ export default function BOM2Page() {
     enableRowSelection: true,
     getRowId: (row) => row.id,
     meta: {
-      viewRow: (row: BOM2) => navigate(`/master/bom/view/${row.bomId}`),
+      viewRow: (row: BOM2) => navigate(`/master/item-master/bom/view/${row.bomId}`),
 
-      openEditDrawer: (row: BOM2) => navigate(`/master/bom/edit/${row.bomId}`),
+      openEditDrawer: (row: BOM2) => navigate(`/master/item-master/bom/edit/${row.bomId}`),
       
-      deleteRow: (row) => {
-        // TODO: Implement delete functionality
-        console.log("Delete row:", row.original);
+          deleteRow: async (row: Row<BOM2>) => {
+        try {
+          const response = await Delete("master/bom/delete", { bomId: row.original.bomId }, false);
+          if (response.data?.success) {
+            toastsuccessmsg("BOM deleted successfully.");
+            fetchAll();
+          } else {
+            toasterrormsg(response.data?.message || "Failed to delete BOM.");
+          }
+        } catch (error) {
+          toasterrormsg("Something went wrong while deleting BOM.");
+        }
       },
-      deleteRows: (rows) => {
-        // TODO: Implement bulk delete functionality
-        console.log("Delete rows:", rows);
+      deleteRows: async (rows) => {
+        try {
+          await Promise.all(
+            rows.map((r) => Delete("master/bom/delete", { bomId: r.original.bomId }, false)),
+          );
+          toastsuccessmsg("Selected BOMs deleted successfully.");
+          setRowSelection({});
+          fetchAll();
+        } catch (error) {
+          toasterrormsg("Something went wrong while deleting BOMs.");
+        }
       },
     },
     filterFns: { fuzzy: fuzzyFilter },
@@ -118,7 +136,7 @@ export default function BOM2Page() {
           table={table}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
-          onCreate={() => navigate("/master/bom/create")}
+          onCreate={() => navigate("/master/item-master/bom/create")}
           onExportExcel={() =>
             exportToExcel(filteredData, exportColumns, "bom2")
           }

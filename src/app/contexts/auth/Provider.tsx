@@ -5,7 +5,13 @@ import { AuthProvider as AuthContext, AuthContextType } from "./context";
 import { User } from "@/@types/user";
 
 interface AuthAction {
-  type: "INITIALIZE" | "LOGIN_REQUEST" | "LOGIN_SUCCESS" | "LOGIN_ERROR" | "LOGOUT" | "SESSION_ESTABLISHED";
+  type:
+    | "INITIALIZE"
+    | "LOGIN_REQUEST"
+    | "LOGIN_SUCCESS"
+    | "LOGIN_ERROR"
+    | "LOGOUT"
+    | "SESSION_ESTABLISHED";
   payload?: Partial<AuthContextType>;
 }
 
@@ -20,6 +26,23 @@ const initialState: AuthContextType = {
   login: async () => {},
   completeAuth: () => {},
   logout: async () => {},
+};
+
+const EXPIRES_AT_KEY = "authExpiresAt";
+const SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours inactivity
+
+const isSessionExpired = () => {
+  const expiresAt = window.localStorage.getItem(EXPIRES_AT_KEY);
+  if (!expiresAt) return true;
+  return Date.now() > Number(expiresAt);
+};
+
+// call this on login AND on every user activity to slide the window
+const resetExpiry = () => {
+  window.localStorage.setItem(
+    EXPIRES_AT_KEY,
+    String(Date.now() + SESSION_DURATION_MS),
+  );
 };
 
 const reducerHandlers: Record<
@@ -74,7 +97,10 @@ const reducerHandlers: Record<
   }),
 };
 
-const reducer = (state: AuthContextType, action: AuthAction): AuthContextType => {
+const reducer = (
+  state: AuthContextType,
+  action: AuthAction,
+): AuthContextType => {
   const handler = reducerHandlers[action.type];
   return handler ? handler(state, action) : state;
 };
@@ -89,20 +115,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        const authToken = window.sessionStorage.getItem("authToken");
-        const companyId = window.sessionStorage.getItem(COMPANY_ID_KEY);
+        const authToken = window.localStorage.getItem("authToken");
+        const companyId = window.localStorage.getItem(COMPANY_ID_KEY);
 
-        if (authToken && isTokenValid(authToken) && companyId) {
+        if (
+          authToken &&
+          isTokenValid(authToken) &&
+          companyId &&
+          !isSessionExpired()
+        ) {
           setSession(authToken);
-          const userStr = window.sessionStorage.getItem("user");
+          const userStr = window.localStorage.getItem("user");
           const user = userStr ? JSON.parse(userStr) : null;
-          dispatch({ type: "INITIALIZE", payload: { isAuthenticated: true, user } });
+          dispatch({
+            type: "INITIALIZE",
+            payload: { isAuthenticated: true, user },
+          });
         } else {
-          dispatch({ type: "INITIALIZE", payload: { isAuthenticated: false, user: null } });
+          // clear stale/expired session
+          window.localStorage.removeItem("authToken");
+          window.localStorage.removeItem(COMPANY_ID_KEY);
+          window.localStorage.removeItem("user");
+          window.localStorage.removeItem(EXPIRES_AT_KEY);
+          dispatch({
+            type: "INITIALIZE",
+            payload: { isAuthenticated: false, user: null },
+          });
         }
       } catch (err) {
         console.error(err);
-        dispatch({ type: "INITIALIZE", payload: { isAuthenticated: false, user: null } });
+        dispatch({
+          type: "INITIALIZE",
+          payload: { isAuthenticated: false, user: null },
+        });
       }
     };
     init();
@@ -119,6 +164,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("force-logout", handleForceLogout);
     };
   }, []);
+
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    const scheduleCheck = () => {
+      clearTimeout(timer);
+      const expiresAt = Number(window.localStorage.getItem(EXPIRES_AT_KEY));
+      const msLeft = expiresAt - Date.now();
+
+      if (msLeft <= 0) {
+        logout();
+        toasterrormsg("Session expired due to inactivity.");
+        return;
+      }
+      timer = setTimeout(scheduleCheck, msLeft);
+    };
+
+    const handleActivity = () => {
+      resetExpiry();
+    };
+
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, handleActivity));
+
+    scheduleCheck();
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, handleActivity));
+    };
+  }, [state.isAuthenticated]);
 
   // STEP 1: login validate — OTP nahi
   const login = async (credentials: { email: string; password: string }) => {
@@ -138,8 +216,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ✅ CHANGE #2 — companyId/companyName bhi destructure kiya
       const { token, email, companyId, companyName } = result.data;
 
-      window.sessionStorage.setItem(PENDING_TOKEN_KEY, token);
-      window.sessionStorage.setItem(PENDING_EMAIL_KEY, email);
+      window.localStorage.setItem(PENDING_TOKEN_KEY, token);
+      window.localStorage.setItem(PENDING_EMAIL_KEY, email);
       setSession(token); // axios Authorization header set karega
 
       toastsuccessmsg(result.message);
@@ -153,7 +231,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
     } catch (err: any) {
-      const message = err?.response?.data?.message || err.message || "Login failed";
+      const message =
+        err?.response?.data?.message || err.message || "Login failed";
       toasterrormsg(message);
       dispatch({ type: "LOGIN_ERROR", payload: { errorMessage: message } });
       throw err;
@@ -162,7 +241,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // STEP 2: company select/create hone ke baad final auth
   const completeAuth = (companyId: string) => {
-    const token = state.pendingToken || window.sessionStorage.getItem(PENDING_TOKEN_KEY);
+    const token =
+      state.pendingToken || window.localStorage.getItem(PENDING_TOKEN_KEY);
 
     if (!token) {
       toasterrormsg("Session expired. Please login again.");
@@ -170,24 +250,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setSession(token);
-    window.sessionStorage.setItem("authToken", token);
-    window.sessionStorage.setItem(COMPANY_ID_KEY, companyId);
-    window.sessionStorage.setItem("authToken", token);
-    window.sessionStorage.setItem("user", JSON.stringify(state.user));
-    window.sessionStorage.removeItem(PENDING_TOKEN_KEY);
-    window.sessionStorage.removeItem(PENDING_EMAIL_KEY);
+
+    window.localStorage.setItem("authToken", token);
+    window.localStorage.setItem(COMPANY_ID_KEY, companyId);
+    window.localStorage.setItem("authToken", token); // (duplicate line, already existed)
+    window.localStorage.setItem("user", JSON.stringify(state.user));
+    resetExpiry(); // was setExpiry() — wrong name, causes ReferenceError
+    window.localStorage.removeItem(PENDING_TOKEN_KEY);
+    window.localStorage.removeItem(PENDING_EMAIL_KEY);
 
     dispatch({ type: "SESSION_ESTABLISHED", payload: { user: state.user } });
   };
 
   const logout = async () => {
     setSession(null);
-    window.sessionStorage.removeItem("authToken");
-    window.sessionStorage.removeItem(COMPANY_ID_KEY);
-    window.sessionStorage.removeItem("authToken");
-    window.sessionStorage.removeItem("user");
-    window.sessionStorage.removeItem(PENDING_TOKEN_KEY);
-    window.sessionStorage.removeItem(PENDING_EMAIL_KEY);
+    window.localStorage.removeItem("authToken");
+    window.localStorage.removeItem(COMPANY_ID_KEY);
+    window.localStorage.removeItem("authToken"); // (duplicate line, already existed)
+    window.localStorage.removeItem("user");
+    window.localStorage.removeItem(PENDING_TOKEN_KEY);
+    window.localStorage.removeItem(PENDING_EMAIL_KEY);
+    window.localStorage.removeItem(EXPIRES_AT_KEY); // add alongside the other removeItem calls
     dispatch({ type: "LOGOUT" });
   };
 

@@ -214,7 +214,7 @@ export default function BOMViewPage() {
         <div className="py-16 text-center text-gray-500 dark:text-dark-300">
           BOM not found.
           <div className="mt-4">
-            <Link to="/master/bom">
+            <Link to="/master/item-master/bom">
               <Button color="primary" variant="outlined">
                 <ChevronLeftIcon className="size-5" />
                 <span>Back to BOM List</span>
@@ -233,7 +233,7 @@ export default function BOMViewPage() {
           <h2 className="border-b-4 border-primary text-xl font-bold tracking-wide text-primary dark:text-dark-50 lg:text-2xl">
             View BOM
           </h2>
-          <Link to="/master/bom">
+          <Link to="/master/item-master/bom">
             <Button color="primary" variant="outlined">
               <ChevronLeftIcon className="size-6" />
               <span>Back</span>
