@@ -64,8 +64,8 @@ export default function SelectCompany() {
   // ✅ FIX — completeAuth() call kiya + path sahi kiya
   const handleCompanySelect = (row: FinancialYearRow) => {
     setSelectedRowId(row.financialYearId);
-    sessionStorage.setItem("financialYearId", String(row.financialYearId));
-    sessionStorage.setItem("companyDetailsId", String(row.companyDetailsId));
+    localStorage.setItem("financialYearId", String(row.financialYearId));
+    localStorage.setItem("companyDetailsId", String(row.companyDetailsId));
 
     completeAuth(String(row.companyId));   // 👈 isAuthenticated ko true karega
     navigate("/dashboards/home");           // 👈 "dashboard" nahi, "dashboards" (route config ke mutabik)

@@ -8,17 +8,17 @@ export const setCompanySession = (
   companyId: string | number | null,
 ) => {
   if (token && companyId !== null && companyId !== undefined) {
-    sessionStorage.setItem(TOKEN_KEY, token);
-    sessionStorage.setItem(COMPANY_ID_KEY, String(companyId));
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(COMPANY_ID_KEY, String(companyId));
   } else {
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(COMPANY_ID_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(COMPANY_ID_KEY);
   }
 };
 
 export const getCompanySession = () => {
-  const token = sessionStorage.getItem(TOKEN_KEY);
-  const companyId = sessionStorage.getItem(COMPANY_ID_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  const companyId = localStorage.getItem(COMPANY_ID_KEY);
   return { token, companyId };
 };
 

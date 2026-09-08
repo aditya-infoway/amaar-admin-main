@@ -53,42 +53,7 @@ const protectedRoutes: RouteObject = {
                   .default,
               }),
             },
-            {
-              path: "bom",
-              children: [
-                {
-                  index: true,
-                  lazy: async () => ({
-                    Component: (await import("@/app/pages/master/bom"))
-                      .default,
-                  }),
-                },
-                {
-                  path: "create",
-                  lazy: async () => ({
-                    Component: (
-                      await import("@/app/pages/master/bom/form")
-                    ).default,
-                  }),
-                },
-                {
-                  path: "edit/:id",
-                  lazy: async () => ({
-                    Component: (
-                      await import("@/app/pages/master/bom/form")
-                    ).default,
-                  }),
-                },
-                {
-                  path: "view/:id",
-                  lazy: async () => ({
-                    Component: (
-                      await import("@/app/pages/master/bom/BOMViewPage")
-                    ).default,
-                  }),
-                },
-              ],
-            },
+        
             {
               path: "product-series",
               lazy: async () => ({
@@ -134,6 +99,96 @@ const protectedRoutes: RouteObject = {
                       await import("@/app/pages/master/variant-structure/form")
                     ).default,
                   }),
+                },
+              ],
+            },
+
+                  {
+              path: "item-master",
+              children: [
+                {
+                  index: true,
+                  element: <Navigate to="/master/item-master/item-list" replace />,
+                },
+                {
+                  path: "item-list",
+                  lazy: async () => ({
+                    Component: (await import("@/app/pages/master/item-master")).default,
+                  }),
+                },
+                {
+                  path: "create",
+                  lazy: async () => ({
+                    Component: (await import("@/app/pages/master/item-master/form")).default,
+                  }),
+                },
+                {
+                  path: "edit/:id",
+                  lazy: async () => ({
+                    Component: (await import("@/app/pages/master/item-master/form")).default,
+                  }),
+                },
+                {
+                  path: "barcode-manager",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/item-master/barcode-manager")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "item-category",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/item-master/iteam-category")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "item-group",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/item-master/iteam-group")
+                    ).default,
+                  }),
+                },
+
+
+                                {
+                  path: "bom",
+                  children: [
+                    {
+                      index: true,
+                      lazy: async () => ({
+                        Component: (await import("@/app/pages/master/bom"))
+                          .default,
+                      }),
+                    },
+                    {
+                      path: "create",
+                      lazy: async () => ({
+                        Component: (
+                          await import("@/app/pages/master/bom/form")
+                        ).default,
+                      }),
+                    },
+                    {
+                      path: "edit/:id",
+                      lazy: async () => ({
+                        Component: (
+                          await import("@/app/pages/master/bom/form")
+                        ).default,
+                      }),
+                    },
+                    {
+                      path: "view/:id",
+                      lazy: async () => ({
+                        Component: (
+                          await import("@/app/pages/master/bom/BOMViewPage")
+                        ).default,
+                      }),
+                    },
+                  ],
                 },
               ],
             },
@@ -269,89 +324,89 @@ const protectedRoutes: RouteObject = {
           ],
         },
 
-        {
-          path: "item-master",
-          children: [
-            {
-              index: true,
-              lazy: async () => ({
-                Component: (await import("@/app/pages/item-master")).default,
-              }),
-            },
-            {
-              path: "create",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form"))
-                  .default,
-              }),
-            },
-            {
-              path: "edit/:id",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form"))
-                  .default,
-              }),
-            },
-          ],
-        },
-        {
-          path: "item-master",
-          children: [
-            {
-              index: true,
-              element: <Navigate to="/item-master/item-list" replace />,
-            },
+        // {
+        //   path: "item-master",
+        //   children: [
+        //     {
+        //       index: true,
+        //       lazy: async () => ({
+        //         Component: (await import("@/app/pages/item-master")).default,
+        //       }),
+        //     },
+        //     {
+        //       path: "create",
+        //       lazy: async () => ({
+        //         Component: (await import("@/app/pages/item-master/form"))
+        //           .default,
+        //       }),
+        //     },
+        //     {
+        //       path: "edit/:id",
+        //       lazy: async () => ({
+        //         Component: (await import("@/app/pages/item-master/form"))
+        //           .default,
+        //       }),
+        //     },
+        //   ],
+        // },
+        // {
+        //   path: "item-master",
+        //   children: [
+        //     {
+        //       index: true,
+        //       element: <Navigate to="/item-master/item-list" replace />,
+        //     },
 
-            {
-              path: "item-list",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/item-master")).default,
-              }),
-            },
+        //     {
+        //       path: "item-list",
+        //       lazy: async () => ({
+        //         Component: (await import("@/app/pages/item-master")).default,
+        //       }),
+        //     },
 
-            {
-              path: "create",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form"))
-                  .default,
-              }),
-            },
+        //     {
+        //       path: "create",
+        //       lazy: async () => ({
+        //         Component: (await import("@/app/pages/item-master/form"))
+        //           .default,
+        //       }),
+        //     },
 
-            {
-              path: "edit/:id",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/form"))
-                  .default,
-              }),
-            },
+        //     {
+        //       path: "edit/:id",
+        //       lazy: async () => ({
+        //         Component: (await import("@/app/pages/item-master/form"))
+        //           .default,
+        //       }),
+        //     },
 
-            {
-              path: "barcode-manager",
-              lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/item-master/barcode-manager")
-                ).default,
-              }),
-            },
+        //     {
+        //       path: "barcode-manager",
+        //       lazy: async () => ({
+        //         Component: (
+        //           await import("@/app/pages/item-master/barcode-manager")
+        //         ).default,
+        //       }),
+        //     },
 
-            {
-              path: "item-category",
-              lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/item-master/iteam-category")
-                ).default,
-              }),
-            },
+        //     {
+        //       path: "item-category",
+        //       lazy: async () => ({
+        //         Component: (
+        //           await import("@/app/pages/item-master/iteam-category")
+        //         ).default,
+        //       }),
+        //     },
 
-            {
-              path: "item-group",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/item-master/iteam-group"))
-                  .default,
-              }),
-            },
-          ],
-        },
+        //     {
+        //       path: "item-group",
+        //       lazy: async () => ({
+        //         Component: (await import("@/app/pages/item-master/iteam-group"))
+        //           .default,
+        //       }),
+        //     },
+        //   ],
+        // },
         {
           path: "accounting-master",
           children: [

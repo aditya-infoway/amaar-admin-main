@@ -32,7 +32,7 @@ interface BOMItem {
   unit: string;
   serialNo?: string;
 
-    nextChildSerial?: number;
+  nextChildSerial?: number;
 
   asslyQty?: string;
   ldDay?: string;
@@ -134,7 +134,6 @@ function findNodeByCode(items: BOMItem[], code: string): BOMItem | null {
   return null;
 }
 
-
 function findNodeById(items: BOMItem[], id: string): BOMItem | null {
   for (const item of items) {
     if (item.id === id) return item;
@@ -150,6 +149,16 @@ function collectIds(items: BOMItem[]): string[] {
 
 function countAll(items: BOMItem[]): number {
   return items.reduce((acc, item) => acc + 1 + countAll(item.children), 0);
+}
+
+function computeTotalWeight(item: BOMItem): number {
+  if (item.children.length === 0) {
+    return parseFloat(item.weight || "0") || 0;
+  }
+  return item.children.reduce(
+    (sum, child) => sum + computeTotalWeight(child),
+    0,
+  );
 }
 
 const ROW_H = 36;
@@ -286,6 +295,11 @@ function BOMTreeNode({
 
         <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
           Qty: {item.asslyQty}
+          {hasChildren && (
+            <span className="text-primary-600 dark:text-primary-400 ml-2">
+              Wt: {computeTotalWeight(item).toFixed(3)} kg
+            </span>
+          )}
         </span>
         <button
           type="button"
@@ -361,7 +375,6 @@ export default function BOMFormPage() {
   const [thickness, setThickness] = useState<string>("");
   const [length, setLength] = useState<string>("");
   const [width, setWidth] = useState<string>("");
-  const [weight, setWeight] = useState<string>("");
 
   const [qty, setQty] = useState<string>("");
 
@@ -369,10 +382,7 @@ export default function BOMFormPage() {
   const [bomCode, setBomCode] = useState<string>("");
   const [bomStatus, setBomStatus] = useState<string>("active");
 
-  
-   const isLoadingFieldsRef = useRef(false);
-
-
+  const isLoadingFieldsRef = useRef(false);
 
   const [isBOMDirty, setIsBOMDirty] = useState(false);
   const [finishedGoodsItemId, setFinishedGoodsItemId] = useState<string>("");
@@ -380,7 +390,12 @@ export default function BOMFormPage() {
 
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
 
-
+  const [weight, setWeight] = useState<string>("");
+  const [weightReadOnly, setWeightReadOnly] = useState<boolean>(true);
+  // Per-unit base weight — from Item Master if present, or typed manually
+  // by the user in the BOM screen when the master has none. Kept in sync
+  // so Qty changes can always recompute the total weight.
+  const baseWeightRef = useRef<string>("");
 
   useEffect(() => {
     setDirty(isBOMDirty);
@@ -389,7 +404,6 @@ export default function BOMFormPage() {
       setDirty(false);
     };
   }, [isBOMDirty, setDirty]);
-
 
   // ---------------------------------------------------------------------
   // 👇 NEW: ek hi useEffect me — available items load karo, AUR agar edit
@@ -449,7 +463,7 @@ export default function BOMFormPage() {
         } else {
           setAvailableItems(mockItems);
         }
-      } catch (error) {
+      } catch {
         setAvailableItems(mockItems);
       }
     };
@@ -475,8 +489,7 @@ export default function BOMFormPage() {
         }
       } catch (error) {
         toasterrormsg("Something went wrong while fetching BOM.");
-      }
-      finally {
+      } finally {
         requestAnimationFrame(() => {
           isLoadingFieldsRef.current = false;
         });
@@ -488,7 +501,7 @@ export default function BOMFormPage() {
         const response = await Get(
           "master/itemmaster/finished-goods/list",
           {},
-          false
+          false,
         );
 
         console.log("Finished Goods API Response:", response);
@@ -500,7 +513,7 @@ export default function BOMFormPage() {
         } else {
           setFinishedGoodsItems([]);
           toasterrormsg(
-            response.data?.message || "Failed to load Finished Goods."
+            response.data?.message || "Failed to load Finished Goods.",
           );
         }
       } catch (error) {
@@ -525,11 +538,25 @@ export default function BOMFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-
-
-
   const totalItems = useMemo(() => countAll(bomItems), [bomItems]);
   const hasBOMItems = bomItems.length > 0;
+
+  // Live preview of the serial number this item will get, following the
+  // same per-parent-level counting as getNextSerialNo:
+  // - Root level: count of existing root items + 1
+  // - Under a selected parent: count of that parent's existing children + 1
+  //   (so a nested grandchild level restarts at 01, and going back to a
+  //   parent that already has e.g. 10 children continues at 11 — no reset,
+  //   no fixed digit limit)
+  const nextSerialPreview = useMemo(() => {
+    if (!hasBOMItems) {
+      return String(bomItems.length + 1).padStart(2, "0");
+    }
+    if (!selectedParentId) return "";
+    const parentNode = findNodeById(bomItems, selectedParentId);
+    const existingCount = parentNode ? parentNode.children.length : 0;
+    return String(existingCount + 1).padStart(2, "0");
+  }, [bomItems, hasBOMItems, selectedParentId]);
 
   const filteredAvailableItems = useMemo(() => {
     if (!searchQuery.trim()) return availableItems;
@@ -701,7 +728,6 @@ export default function BOMFormPage() {
     isLoadingFieldsRef.current = false;
   });
 
-
   const markBOMDirty = () => {
     setIsBOMDirty(true);
   };
@@ -770,9 +796,20 @@ export default function BOMFormPage() {
     const baseWeight = parseFloat(item.weight || "");
     const currentQty = parseFloat(qty || "");
 
-    if (!isNaN(baseWeight) && !isNaN(currentQty) && currentQty > 0) {
-      setWeight((baseWeight * currentQty).toFixed(3));
+    if (!isNaN(baseWeight)) {
+      // Item Master has a weight -> auto-filled, read-only, multiplies with Qty
+      baseWeightRef.current = item.weight || "";
+      setWeightReadOnly(true);
+
+      if (!isNaN(currentQty) && currentQty > 0) {
+        setWeight((baseWeight * currentQty).toFixed(3));
+      } else {
+        setWeight("");
+      }
     } else {
+      // Item Master has no weight -> user enters it manually here
+      baseWeightRef.current = "";
+      setWeightReadOnly(false);
       setWeight("");
     }
   };
@@ -834,127 +871,109 @@ export default function BOMFormPage() {
     setLength("");
     setWidth("");
     setWeight("");
+    baseWeightRef.current = "";
+    setWeightReadOnly(true);
 
     setQty("");
   };
 
+  const getNextSerialNo = (parentId: string | null): string => {
+    // Root level: count of existing top-level items
+    if (!parentId) {
+      return String(bomItems.length + 1).padStart(2, "0");
+    }
 
- const getNextSerialNo = (parentId: string | null): string => {
-  // Root level: count of existing top-level items
-  if (!parentId) {
-    return String(bomItems.length + 1).padStart(2, "0");
-  }
+    // Child level: count of existing children under this specific parent
+    const parentNode = findNodeById(bomItems, parentId);
+    const existingCount = parentNode ? parentNode.children.length : 0;
 
-  // Child level: count of existing children under this specific parent
-  const parentNode = findNodeById(bomItems, parentId);
-  const existingCount = parentNode ? parentNode.children.length : 0;
+    return String(existingCount + 1).padStart(2, "0");
+  };
 
-  return String(existingCount + 1).padStart(2, "0");
-};
+  const handleAddToTree = () => {
+    // =========================
+    // FIRST ROOT ITEM
+    // =========================
+    if (!hasBOMItems) {
+      if (!parentCode.trim()) {
+        toasterrormsg("Please enter an item code.");
+        return;
+      }
 
+      const rootItem = buildItem(parentCode);
 
- const handleAddToTree = () => {
-  // =========================
-  // FIRST ROOT ITEM
-  // =========================
-  if (!hasBOMItems) {
-    if (!parentCode.trim()) {
-      toasterrormsg("Please enter an item code.");
+      if (!rootItem) {
+        toasterrormsg(
+          `Item code "${parentCode}" not found in Item Master. Please enter a valid, existing item code.`,
+        );
+        return;
+      }
+
+      // Root serial: 01, 02, 03...
+      const rootSerial = getNextSerialNo(null);
+
+      rootItem.serialNo = rootSerial;
+
+      setBomItems([rootItem]);
+
+      // This root is now the selected parent
+      setSelectedParentId(rootItem.id);
+      setParentCode(rootItem.itemCode);
+
+      setIsBOMDirty(true);
+
+      resetEntryFields();
+
+      toastsuccessmsg(`Root item added with Serial# ${rootSerial}.`);
+
       return;
     }
 
-    const rootItem = buildItem(parentCode);
+    // =========================
+    // CHILD ITEM
+    // =========================
 
-    if (!rootItem) {
+    if (!childCode.trim()) {
+      toasterrormsg("Please enter the Child item code.");
+      return;
+    }
+
+    if (!selectedParentId) {
+      toasterrormsg("Please select a Parent item before adding a Child.");
+      return;
+    }
+
+    const newItem = buildItem(childCode);
+
+    if (!newItem) {
       toasterrormsg(
-        `Item code "${parentCode}" not found in Item Master. Please enter a valid, existing item code.`,
+        `Item code "${childCode}" not found in Item Master. Please enter a valid, existing item code.`,
       );
       return;
     }
 
-    // Root serial: 01, 02, 03...
-    const rootSerial = getNextSerialNo(null);
+    // Child serial depends on selected parent
+    const newSerialNo = getNextSerialNo(selectedParentId);
 
-    rootItem.serialNo = rootSerial;
+    newItem.serialNo = newSerialNo;
 
-    setBomItems([rootItem]);
-
-    // This root is now the selected parent
-    setSelectedParentId(rootItem.id);
-    setParentCode(rootItem.itemCode);
+    // Add child inside selected parent
+    setBomItems((prev) => insertItem(prev, selectedParentId, newItem));
 
     setIsBOMDirty(true);
 
+    // Keep parent expanded
+    setExpandedNodes((prev) => ({
+      ...prev,
+      [selectedParentId]: true,
+    }));
+
+    // Keep SAME parent selected
+    setChildCode("");
     resetEntryFields();
 
-    toastsuccessmsg(
-      `Root item added with Serial# ${rootSerial}.`,
-    );
-
-    return;
-  }
-
-  // =========================
-  // CHILD ITEM
-  // =========================
-
-  if (!childCode.trim()) {
-    toasterrormsg("Please enter the Child item code.");
-    return;
-  }
-
-  if (!selectedParentId) {
-    toasterrormsg(
-      "Please select a Parent item before adding a Child.",
-    );
-    return;
-  }
-
-  const newItem = buildItem(childCode);
-
-  if (!newItem) {
-    toasterrormsg(
-      `Item code "${childCode}" not found in Item Master. Please enter a valid, existing item code.`,
-    );
-    return;
-  }
-
-  // Child serial depends on selected parent
-  const newSerialNo = getNextSerialNo(selectedParentId);
-
-  newItem.serialNo = newSerialNo;
-
-  // Add child inside selected parent
-  setBomItems((prev) =>
-    insertItem(
-      prev,
-      selectedParentId,
-      newItem,
-    ),
-  );
-
-  setIsBOMDirty(true);
-
-  // Keep parent expanded
-  setExpandedNodes((prev) => ({
-    ...prev,
-    [selectedParentId]: true,
-  }));
-
-  // Keep SAME parent selected
-  setChildCode("");
-  resetEntryFields();
-
-  toastsuccessmsg(
-    `Child item added with Serial# ${newSerialNo}.`,
-  );
-};
-
-
-
-
-
-
+    toastsuccessmsg(`Child item added with Serial# ${newSerialNo}.`);
+  };
 
   // ---------------------------------------------------------------------
   // 👇 NEW: Save function ab dono mode handle karta hai — edit mode me
@@ -977,78 +996,68 @@ export default function BOMFormPage() {
       return;
     }
 
-    if (isEditMode) {
-      const payload = {
-        bomId: Number(id),
-        bomName,
-        bomCode,
-        status: bomStatus,
-        items: bomItems,
-      };
+    try {
+      if (isEditMode) {
+        const payload = {
+          bomId: Number(id),
+          bomName,
+          bomCode,
+          status: bomStatus,
+          items: bomItems,
+        };
 
-      try {
-        const response = await Put(
-          "master/bom/update",
-          payload,
-          false,
-        );
+        const response = await Put("master/bom/update", payload, false);
 
         if (response.data?.success) {
           toastsuccessmsg(
             response.data?.message || "BOM updated successfully.",
           );
 
-          // IMPORTANT: BOM is now saved
-          setDirty(false);
+          // Mark as saved
           setIsBOMDirty(false);
+          setDirty(false);
 
-          navigate("/master/bom");
+          // Allow React to commit dirty state first
+          setTimeout(() => {
+            navigate("/master/item-master/bom");
+          }, 0);
         } else {
-          toasterrormsg(
-            response.data?.message || "Failed to update BOM.",
-          );
+          toasterrormsg(response.data?.message || "Failed to update BOM.");
         }
-      } catch (error) {
-        toasterrormsg(
-          "Something went wrong while updating BOM.",
-        );
+
+        return;
       }
 
-      return;
-    }
+      const payload = {
+        bomName,
+        bomCode,
+        status: bomStatus,
+        items: bomItems,
+      };
 
-    const payload = {
-      bomName,
-      bomCode,
-      status: bomStatus,
-      items: bomItems,
-    };
-
-    try {
-      const response = await Post(
-        "master/bom/create",
-        payload,
-        false,
-      );
+      const response = await Post("master/bom/create", payload, false);
 
       if (response.data?.success) {
-        toastsuccessmsg(
-          response.data?.message || "BOM created successfully.",
-        );
+        toastsuccessmsg(response.data?.message || "BOM created successfully.");
 
-        // IMPORTANT: BOM is now saved
-        setDirty(false);
+        // Mark as saved
         setIsBOMDirty(false);
+        setDirty(false);
 
-        navigate("/master/bom");
+        // Allow React to commit dirty state first
+        setTimeout(() => {
+          navigate("/master/item-master/bom");
+        }, 0);
       } else {
-        toasterrormsg(
-          response.data?.message || "Failed to create BOM.",
-        );
+        toasterrormsg(response.data?.message || "Failed to create BOM.");
       }
     } catch (error) {
+      console.error("BOM save error:", error);
+
       toasterrormsg(
-        "Something went wrong while creating BOM.",
+        isEditMode
+          ? "Something went wrong while updating BOM."
+          : "Something went wrong while creating BOM.",
       );
     }
   };
@@ -1073,7 +1082,7 @@ export default function BOMFormPage() {
           <Button
             color="primary"
             variant="outlined"
-            onClick={() => handleProtectedNavigation("/master/bom")}
+            onClick={() => handleProtectedNavigation("/master/item-master/bom")}
           >
             <ChevronLeftIcon className="size-6" />
             <span>Back</span>
@@ -1094,8 +1103,7 @@ export default function BOMFormPage() {
               displayField="itemName"
               value={
                 finishedGoodsItems.find(
-                  (item) =>
-                    String(item.itemId) === String(finishedGoodsItemId)
+                  (item) => String(item.itemId) === String(finishedGoodsItemId),
                 ) || null
               }
               onChange={(item: any) => {
@@ -1183,11 +1191,7 @@ export default function BOMFormPage() {
                   <BOMTreeList
                     items={bomItems}
                     level={0}
-                  highlightId={
-  selectedParentId ??
-  matchedParent?.id ??
-  null
-}
+                    highlightId={selectedParentId ?? matchedParent?.id ?? null}
                     expanded={expandedNodes}
                     onToggle={toggleNode}
                     onPick={handlePickNode}
@@ -1276,6 +1280,8 @@ export default function BOMFormPage() {
                           setLength("");
                           setWidth("");
                           setWeight("");
+                          baseWeightRef.current = "";
+                          setWeightReadOnly(true);
                         }
                       }}
                       placeholder="Item code to add under Parent"
@@ -1312,9 +1318,10 @@ export default function BOMFormPage() {
                       Serial#
                     </label>
                     <Input
-                      value={serialNo}
-                      onChange={(e) => setSerialNo(e.target.value)}
+                      value={nextSerialPreview}
+                      readOnly
                       placeholder="Serial#"
+                      className="dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
                     />
                   </div>
                   <div>
@@ -1383,9 +1390,24 @@ export default function BOMFormPage() {
                         type="number"
                         step="any"
                         value={weight}
-                        readOnly
-                        placeholder="Auto calculated"
-                        className="dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
+                        readOnly={weightReadOnly}
+                        onChange={
+                          weightReadOnly
+                            ? undefined
+                            : (e) => {
+                                const val = e.target.value;
+                                setWeight(val);
+                                baseWeightRef.current = val; // this becomes the base weight for future Qty changes
+                              }
+                        }
+                        placeholder={
+                          weightReadOnly ? "Auto calculated" : "Enter weight"
+                        }
+                        className={
+                          weightReadOnly
+                            ? "dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
+                            : undefined
+                        }
                       />
                     </div>
                   </div>
@@ -1404,26 +1426,19 @@ export default function BOMFormPage() {
                           const value = e.target.value;
                           setQty(value);
 
-                       const selectedItem = childCode
-  ? findAvailableByCode(childCode)
-  : !hasBOMItems && parentCode
-    ? findAvailableByCode(parentCode)
-    : undefined;
+                          const quantity = parseFloat(value || "");
+                          const baseWeight = parseFloat(
+                            baseWeightRef.current || "",
+                          );
 
-                          if (selectedItem) {
-                            const baseWeight = parseFloat(selectedItem.weight || "");
-                            const quantity = parseFloat(value || "");
-
-                            if (
-                              !isNaN(baseWeight) &&
-                              !isNaN(quantity) &&
-                              quantity > 0
-                            ) {
-                              setWeight((baseWeight * quantity).toFixed(3));
-                            } else {
-                              setWeight("");
-                            }
-                          } else {
+                          if (
+                            !isNaN(baseWeight) &&
+                            !isNaN(quantity) &&
+                            quantity > 0
+                          ) {
+                            setWeight((baseWeight * quantity).toFixed(3));
+                          } else if (weightReadOnly) {
+                            // Only auto-clear in read-only/auto mode; leave manual entries alone
                             setWeight("");
                           }
                         }}
@@ -1432,16 +1447,16 @@ export default function BOMFormPage() {
                     </div>
                   </div>
                 </div>
-<Button
-  color="success"
-  onClick={handleAddToTree}
-  className="mt-4 w-full"
-  disabled={
-    hasBOMItems ? !childMasterMatch : !parentMasterMatch
-  }
->
-  {hasBOMItems ? "Add to BOM Structure" : "Add Root Item"}
-</Button>
+                <Button
+                  color="success"
+                  onClick={handleAddToTree}
+                  className="mt-4 w-full"
+                  disabled={
+                    hasBOMItems ? !childMasterMatch : !parentMasterMatch
+                  }
+                >
+                  {hasBOMItems ? "Add to BOM Structure" : "Add Root Item"}
+                </Button>
               </div>
             </Card>
           </div>
@@ -1450,7 +1465,7 @@ export default function BOMFormPage() {
           <Button
             variant="outlined"
             color="secondary"
-            onClick={() => handleProtectedNavigation("/master/bom")}
+            onClick={() => handleProtectedNavigation("/master/item-master/bom")}
           >
             Cancel
           </Button>
@@ -1531,7 +1546,7 @@ export default function BOMFormPage() {
                       className={clsx(
                         "dark:hover:bg-dark-600 cursor-pointer transition hover:bg-gray-50",
                         childCode === item.itemCode &&
-                        "bg-primary-50 dark:bg-primary-900/20",
+                          "bg-primary-50 dark:bg-primary-900/20",
                       )}
                     >
                       <td className="dark:text-dark-50 px-4 py-3 text-sm font-medium text-gray-900">

@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Page } from "@/components/shared/Page";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Card, Input, Radio, Switch } from "@/components/ui";
-import { taxSlabOptions, uomOptions } from "../../master/shared/constants";
+import { taxSlabOptions, uomOptions } from "../../shared/constants";
 import { Get, Post, Put, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { useUnsavedChanges } from "@/app/contexts/unsavedChanges/context";
@@ -76,7 +76,7 @@ interface GroupOptionItem extends OptionItem {
 export default function ItemMasterFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const isEdit = Boolean(id);
 
   const [categoryOptions, setCategoryOptions] = useState<OptionItem[]>([]);
@@ -114,23 +114,6 @@ export default function ItemMasterFormPage() {
   const stockMapping = watch("stockMapping");
   const barcodeType = watch("barcodeType");
   const selectedCategoryId = watch("itemCategoryId");
-  const thickness = watch("thickness");
-  const length = watch("length");
-  const width = watch("width");
-
-  // ---- Weight auto-calc: (thickness * length * width * 7.85) / 10,00,000 ----
-  useEffect(() => {
-    const t = parseFloat(thickness);
-    const l = parseFloat(length);
-    const w = parseFloat(width);
-
-    if (!isNaN(t) && !isNaN(l) && !isNaN(w)) {
-      const calculatedWeight = (t * l * w * 7.85) / 1000000;
-      setValue("weight", calculatedWeight.toFixed(3), { shouldValidate: true });
-    } else {
-      setValue("weight", "", { shouldValidate: false });
-    }
-  }, [thickness, length, width, setValue]);
 
   // ---- Item Category — dynamic from Item Category master ----
   useEffect(() => {
@@ -273,95 +256,82 @@ export default function ItemMasterFormPage() {
     return fallback;
   };
 
-const onSubmit = async (data: ItemMasterFormValues) => {
-  try {
-    isSavingRef.current = true;
-    setSubmitting(true);
+  const onSubmit = async (data: ItemMasterFormValues) => {
+    try {
+      isSavingRef.current = true;
+      setSubmitting(true);
 
-    const payload = {
-      ...data,
-      itemCategoryId: Number(data.itemCategoryId),
-      groupId: Number(data.groupId),
-      minQty: data.stockMapping ? data.minQty : null,
-      maxQty: data.stockMapping ? data.maxQty : null,
-      thickness: data.thickness ? Number(data.thickness) : null,
-      length: data.length ? Number(data.length) : null,
-      width: data.width ? Number(data.width) : null,
-      weight: data.weight ? Number(data.weight) : null,
-    };
+      const payload = {
+        ...data,
+        itemCategoryId: Number(data.itemCategoryId),
+        groupId: Number(data.groupId),
+        minQty: data.stockMapping ? data.minQty : null,
+        maxQty: data.stockMapping ? data.maxQty : null,
+        thickness: data.thickness ? Number(data.thickness) : null,
+        length: data.length ? Number(data.length) : null,
+        width: data.width ? Number(data.width) : null,
+        weight: data.weight ? Number(data.weight) : null,
+      };
 
-    let res;
+      let res;
 
-    if (isEdit && id) {
-      res = await Put(
-        "master/itemmaster/update",
-        {
-          itemId: Number(id),
-          ...payload,
-        },
-        false,
-      );
-
-      if (res?.data?.status === 400 || res?.data?.success === false) {
-        isSavingRef.current = false;
-
-        toasterrormsg(
-          extractErrorMessage(res, "Something went wrong."),
+      if (isEdit && id) {
+        res = await Put(
+          "master/itemmaster/update",
+          {
+            itemId: Number(id),
+            ...payload,
+          },
+          false,
         );
 
-        return;
+        if (res?.data?.status === 400 || res?.data?.success === false) {
+          isSavingRef.current = false;
+
+          toasterrormsg(extractErrorMessage(res, "Something went wrong."));
+
+          return;
+        }
+
+        toastsuccessmsg(extractErrorMessage(res, "Item updated successfully"));
+      } else {
+        res = await Post("master/itemmaster/create", payload, false);
+
+        if (res?.data?.status === 400 || res?.data?.success === false) {
+          isSavingRef.current = false;
+
+          toasterrormsg(extractErrorMessage(res, "Something went wrong."));
+
+          return;
+        }
+
+        toastsuccessmsg(extractErrorMessage(res, "Item created successfully"));
       }
 
-      toastsuccessmsg(
-        extractErrorMessage(res, "Item updated successfully"),
-      );
-    } else {
-      res = await Post(
-        "master/itemmaster/create",
-        payload,
-        false,
-      );
+      // Make React Hook Form clean
+      reset(data);
 
-      if (res?.data?.status === 400 || res?.data?.success === false) {
+      // Make global unsaved state clean
+      setDirty(false);
+
+      // Navigate after state update
+      setTimeout(() => {
         isSavingRef.current = false;
-
-        toasterrormsg(
-          extractErrorMessage(res, "Something went wrong."),
-        );
-
-        return;
-      }
-
-      toastsuccessmsg(
-        extractErrorMessage(res, "Item created successfully"),
-      );
-    }
-
-    // Make React Hook Form clean
-    reset(data);
-
-    // Make global unsaved state clean
-    setDirty(false);
-
-    // Navigate after state update
-    setTimeout(() => {
+        navigate("/master/item-master");
+      }, 0);
+    } catch (err: any) {
       isSavingRef.current = false;
-      navigate("/item-master");
-    }, 0);
 
-  } catch (err: any) {
-    isSavingRef.current = false;
-
-    toasterrormsg(
-      extractErrorMessage(
-        err?.response,
-        "Something went wrong. Please try again.",
-      ),
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+      toasterrormsg(
+        extractErrorMessage(
+          err?.response,
+          "Something went wrong. Please try again.",
+        ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <Page title={isEdit ? "Edit Item" : "Create Item"}>
       <div className="transition-content w-full px-(--margin-x) pb-8">
@@ -375,7 +345,7 @@ const onSubmit = async (data: ItemMasterFormValues) => {
             variant="outlined"
             onClick={() => {
               requestNavigation(() => {
-                navigate("/item-master");
+                navigate("/master/item-master");
               });
             }}
           >
@@ -535,44 +505,56 @@ const onSubmit = async (data: ItemMasterFormValues) => {
 
                 <Input
                   {...register("thickness", {
-                    required: "Thickness is required",
-                    min: { value: 0, message: "Thickness cannot be negative" },
+                    min: {
+                      value: 0,
+                      message: "Thickness cannot be negative",
+                    },
                   })}
                   label="Thickness (mm)"
                   type="number"
                   step="any"
-                  placeholder="Enter thickness"
+                  placeholder="Enter thickness "
                   error={errors.thickness?.message}
                 />
+
                 <Input
                   {...register("length", {
-                    required: "Length is required",
-                    min: { value: 0, message: "Length cannot be negative" },
+                    min: {
+                      value: 0,
+                      message: "Length cannot be negative",
+                    },
                   })}
                   label="Length (mm)"
                   type="number"
                   step="any"
-                  placeholder="Enter length"
+                  placeholder="Enter length "
                   error={errors.length?.message}
                 />
+
                 <Input
                   {...register("width", {
-                    required: "Width is required",
-                    min: { value: 0, message: "Width cannot be negative" },
+                    min: {
+                      value: 0,
+                      message: "Width cannot be negative",
+                    },
                   })}
                   label="Width (mm)"
                   type="number"
                   step="any"
-                  placeholder="Enter width"
+                  placeholder="Enter width "
                   error={errors.width?.message}
                 />
                 <Input
-                  {...register("weight")}
+                  {...register("weight", {
+                    min: {
+                      value: 0,
+                      message: "Weight cannot be negative",
+                    },
+                  })}
                   label="Weight (kg)"
                   type="number"
-                  placeholder="Auto calculated"
-                  readOnly
-                  className="dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
+                  step="any"
+                  placeholder="Enter weight "
                   error={errors.weight?.message}
                 />
               </div>

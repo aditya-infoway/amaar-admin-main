@@ -47,7 +47,7 @@ export default function LedgerReportDetailsPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const financialYearId = sessionStorage.getItem("financialYearId") || "";
+      const financialYearId = localStorage.getItem("financialYearId") || "";
       const response = await Get(
         "ledger-report/details",
         { accountId: id, fromDate: from, toDate: to, financialYearId },

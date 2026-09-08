@@ -32,7 +32,7 @@ export default function CashPaymentPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const financialYearId = sessionStorage.getItem("financialYearId") || "";
+      const financialYearId = localStorage.getItem("financialYearId") || "";
       const response = await Get("payment/cash/list", { financialYearId }, false);
       if (response?.data?.success) {
         setData(response.data.data || []);

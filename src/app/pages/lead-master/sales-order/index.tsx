@@ -15,113 +15,77 @@ import { Input } from "@/components/ui";
 
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
 
-import {
-  Delete,
-  Get,
-  toasterrormsg,
-  toastsuccessmsg,
-} from "@/ApiHelper";
+import { Delete, Get, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 
-import {
-  exportToExcel,
-  exportToPdf,
-} from "../shared/export";
+import { exportToExcel, exportToPdf } from "../shared/export";
 
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 
 import { SalesOrderDrawer } from "./SalesOrderDrawer";
 
-import {
-  createColumns,
-  createExportColumns,
-} from "./columns";
+import { createColumns, createExportColumns } from "./columns";
 
 import { emptySalesOrder } from "./data";
 
 import type { SalesOrder } from "../shared/types";
-
-
 
 export default function SalesOrderPage() {
   const [data, setData] = useState<SalesOrder[]>([]);
 
   const [loading, setLoading] = useState(false);
 
-  const [globalFilter, setGlobalFilter] =
-    useState("");
+  const [globalFilter, setGlobalFilter] = useState("");
 
-  const [sorting, setSorting] =
-    useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
-  const [rowSelection, setRowSelection] =
-    useState<RowSelectionState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  const [drawerOpen, setDrawerOpen] =
-    useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const [editing, setEditing] =
-    useState<SalesOrder | null>(null);
+  const [editing, setEditing] = useState<SalesOrder | null>(null);
 
-  const [showFilters, setShowFilters] =
-    useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const [filterCustomer, setFilterCustomer] =
-    useState("");
+  const [filterCustomer, setFilterCustomer] = useState("");
 
-  const [filterCity, setFilterCity] =
-    useState("");
+  const [filterCity, setFilterCity] = useState("");
 
-  const [filterSoNo, setFilterSoNo] =
-    useState("");
+  const [filterSoNo, setFilterSoNo] = useState("");
 
-    const [viewOnly, setViewOnly] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
 
   /*
    * Fetch Sales Orders
    */
-  useEffect(() => {
-    const fetchSalesOrders = async () => {
-      try {
-        setLoading(true);
+  const fetchSalesOrders = async () => {
+    try {
+      setLoading(true);
 
-        const financialYearId =
-          sessionStorage.getItem(
-            "financialYearId",
-          );
+      const financialYearId = localStorage.getItem("financialYearId");
 
-        const response = await Get(
-          "salesorder/list",
-          financialYearId
-            ? { financialYearId }
-            : {},
-          false,
-        );
+      const response = await Get(
+        "salesorder/list",
+        financialYearId ? { financialYearId } : {},
+        false,
+      );
 
-        if (
-          response?.data?.success ||
-          response?.data?.status === 200
-        ) {
-          setData(
-            response?.data?.data || [],
-          );
-        } else {
-          console.error(
-            "Sales Order list failed:",
-            response?.data?.message ||
-              response?.data,
-          );
-        }
-      } catch (error) {
+      if (response?.data?.success || response?.data?.status === 200) {
+        setData(response?.data?.data || []);
+      } else {
         console.error(
-          "Sales Order list error:",
-          error,
+          "Sales Order list failed:",
+          response?.data?.message || response?.data,
         );
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Sales Order list error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchSalesOrders();
   }, []);
 
@@ -134,64 +98,40 @@ export default function SalesOrderPage() {
         filterCustomer &&
         !(item.customerName || "")
           .toLowerCase()
-          .includes(
-            filterCustomer.toLowerCase(),
-          )
+          .includes(filterCustomer.toLowerCase())
       ) {
         return false;
       }
 
       if (
         filterCity &&
-        !(item.city || "")
-          .toLowerCase()
-          .includes(
-            filterCity.toLowerCase(),
-          )
+        !(item.city || "").toLowerCase().includes(filterCity.toLowerCase())
       ) {
         return false;
       }
 
       if (
         filterSoNo &&
-        !(item.soNo || "")
-          .toLowerCase()
-          .includes(
-            filterSoNo.toLowerCase(),
-          )
+        !(item.soNo || "").toLowerCase().includes(filterSoNo.toLowerCase())
       ) {
         return false;
       }
 
       return true;
     });
-  }, [
-    data,
-    filterCustomer,
-    filterCity,
-    filterSoNo,
-  ]);
+  }, [data, filterCustomer, filterCity, filterSoNo]);
 
   /*
    * Columns
    */
-  const salesOrderColumns = useMemo(
-    () => createColumns(),
-    [],
-  );
+  const salesOrderColumns = useMemo(() => createColumns(), []);
 
-  const salesOrderExportColumns =
-    useMemo(
-      () => createExportColumns(),
-      [],
-    );
+  const salesOrderExportColumns = useMemo(() => createExportColumns(), []);
 
   /*
    * Update table data
    */
-  const persist = (
-    next: SalesOrder[],
-  ) => {
+  const persist = (next: SalesOrder[]) => {
     setData(next);
   };
 
@@ -211,74 +151,55 @@ export default function SalesOrderPage() {
 
     enableRowSelection: true,
 
-    getRowId: (row) =>
-      String(row.id),
+    getRowId: (row) => String(row.id),
 
     meta: {
+      viewRow: (row: SalesOrder) => {
+        setEditing(row);
+        setViewOnly(true);
+        setDrawerOpen(true);
+      },
 
-
-        viewRow: (row: SalesOrder) => {
-    setEditing(row);
-    setViewOnly(true);
-    setDrawerOpen(true);
-  },
-      
       /*
        * Edit Sales Order
        */
       openEditDrawer: (row: SalesOrder) => {
-    setEditing(row);
-    setViewOnly(false);
-    setDrawerOpen(true);
-  },
+        setEditing(row);
+        setViewOnly(false);
+        setDrawerOpen(true);
+      },
 
       /*
        * Delete Single
        */
-      deleteRow: async (
-        row: any,
-      ) => {
+      deleteRow: async (row: any) => {
         try {
-          const response =
-            await Delete(
-              `salesorder/${row.original.id}`,
-              {},
-              false,
-            );
+          const response = await Delete(
+            `salesorder/${row.original.id}`,
+            {},
+            false,
+          );
 
-          if (
-            response?.data?.success ||
-            response?.data?.status === 200
-          ) {
+          if (response?.data?.success || response?.data?.status === 200) {
             persist(
               data.filter(
-                (item) =>
-                  String(item.id) !==
-                  String(
-                    row.original.id,
-                  ),
+                (item) => String(item.id) !== String(row.original.id),
               ),
             );
 
             toastsuccessmsg(
-              response?.data?.message ||
-                "Sales Order deleted successfully",
+              response?.data?.message || "Sales Order deleted successfully",
             );
           } else {
             toasterrormsg(
-              response?.data?.message ||
-                "Failed to delete sales order.",
+              response?.data?.message || "Failed to delete sales order.",
             );
           }
         } catch (error: any) {
-          console.error(
-            "Sales Order delete error:",
-            error,
-          );
+          console.error("Sales Order delete error:", error);
 
           toasterrormsg(
-            error?.response?.data
-              ?.message ||
+            error?.response?.data?.message ||
               error?.message ||
               "Something went wrong while deleting sales order.",
           );
@@ -288,55 +209,26 @@ export default function SalesOrderPage() {
       /*
        * Delete Multiple
        */
-      deleteRows: async (
-        rows: any[],
-      ) => {
+      deleteRows: async (rows: any[]) => {
         try {
-          const ids =
-            rows.map(
-              (row) =>
-                row.original.id,
-            );
+          const ids = rows.map((row) => row.original.id);
 
           await Promise.all(
-            ids.map((id) =>
-              Delete(
-                `salesorder/${id}`,
-                {},
-                false,
-              ),
-            ),
+            ids.map((id) => Delete(`salesorder/${id}`, {}, false)),
           );
 
-          const idSet = new Set(
-            ids.map((id) =>
-              String(id),
-            ),
-          );
+          const idSet = new Set(ids.map((id) => String(id)));
 
-          persist(
-            data.filter(
-              (item) =>
-                !idSet.has(
-                  String(item.id),
-                ),
-            ),
-          );
+          persist(data.filter((item) => !idSet.has(String(item.id))));
 
           setRowSelection({});
 
-          toastsuccessmsg(
-            "Selected sales orders deleted successfully",
-          );
+          toastsuccessmsg("Selected sales orders deleted successfully");
         } catch (error: any) {
-          console.error(
-            "Sales Order bulk delete error:",
-            error,
-          );
+          console.error("Sales Order bulk delete error:", error);
 
           toasterrormsg(
-            error?.response?.data
-              ?.message ||
+            error?.response?.data?.message ||
               error?.message ||
               "Something went wrong while deleting sales orders.",
           );
@@ -348,68 +240,41 @@ export default function SalesOrderPage() {
       fuzzy: fuzzyFilter,
     },
 
-    globalFilterFn:
-      fuzzyFilter,
+    globalFilterFn: fuzzyFilter,
 
-    onGlobalFilterChange:
-      setGlobalFilter,
+    onGlobalFilterChange: setGlobalFilter,
 
-    onSortingChange:
-      setSorting,
+    onSortingChange: setSorting,
 
-    onRowSelectionChange:
-      setRowSelection,
+    onRowSelectionChange: setRowSelection,
 
-    getCoreRowModel:
-      getCoreRowModel(),
+    getCoreRowModel: getCoreRowModel(),
 
-    getFilteredRowModel:
-      getFilteredRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
 
-    getSortedRowModel:
-      getSortedRowModel(),
+    getSortedRowModel: getSortedRowModel(),
 
-    getPaginationRowModel:
-      getPaginationRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   return (
     <Page title="Sales Order">
       <div className="transition-content w-full pb-5">
-
         <MasterToolbar
           title="Sales Order"
-
           createLabel="Add Sales Order"
-
           searchPlaceholder="Search sales orders..."
-
           table={table}
-
           showFilters={showFilters}
-
-          onToggleFilters={() =>
-            setShowFilters(
-              (value) => !value,
-            )
-          }
-
+          onToggleFilters={() => setShowFilters((value) => !value)}
           onCreate={() => {
-            setEditing(
-              emptySalesOrder(),
-            );
+            setEditing(emptySalesOrder());
 
             setDrawerOpen(true);
           }}
-
           onExportExcel={() =>
-            exportToExcel(
-              filteredData,
-              salesOrderExportColumns,
-              "sales_orders",
-            )
+            exportToExcel(filteredData, salesOrderExportColumns, "sales_orders")
           }
-
           onExportPdf={() =>
             exportToPdf(
               filteredData,
@@ -418,88 +283,54 @@ export default function SalesOrderPage() {
               "sales_orders",
             )
           }
-
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
-
               <Input
                 label="Sales Order No"
                 value={filterSoNo}
-                onChange={(e) =>
-                  setFilterSoNo(
-                    e.target.value,
-                  )
-                }
+                onChange={(e) => setFilterSoNo(e.target.value)}
                 placeholder="Filter by SO number"
               />
 
               <Input
                 label="Customer Name"
                 value={filterCustomer}
-                onChange={(e) =>
-                  setFilterCustomer(
-                    e.target.value,
-                  )
-                }
+                onChange={(e) => setFilterCustomer(e.target.value)}
                 placeholder="Filter by customer name"
               />
 
               <Input
                 label="City"
                 value={filterCity}
-                onChange={(e) =>
-                  setFilterCity(
-                    e.target.value,
-                  )
-                }
+                onChange={(e) => setFilterCity(e.target.value)}
                 placeholder="Filter by city"
               />
-
             </div>
           }
         />
 
         <MasterTable
           table={table}
-          columnCount={
-            salesOrderColumns.length
-          }
+          columnCount={salesOrderColumns.length}
           emptyMessage="No sales orders found. Click Add Sales Order to add one."
         />
-
       </div>
 
       <SalesOrderDrawer
         isOpen={drawerOpen}
+        readOnly={viewOnly}
+        close={() => {
+          setDrawerOpen(false);
+          setEditing(null);
+          setViewOnly(false);
+        }}
+        salesOrder={editing}
+        onSave={async () => {
+          await fetchSalesOrders();
 
-  readOnly={viewOnly}
-
-  close={() => {
-    setDrawerOpen(false);
-    setEditing(null);
-    setViewOnly(false);
-  }}
-
-  salesOrder={editing}
-
-        onSave={(item) => {
-          const exists =
-            data.some(
-              (row) =>
-                String(row.id) ===
-                String(item.id),
-            );
-
-          persist(
-            exists
-              ? data.map((row) =>
-                  String(row.id) ===
-                  String(item.id)
-                    ? item
-                    : row,
-                )
-              : [item, ...data],
-          );
+          setDrawerOpen(false);
+          setEditing(null);
+          setViewOnly(false);
         }}
       />
     </Page>

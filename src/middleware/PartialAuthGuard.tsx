@@ -7,7 +7,7 @@ export default function PartialAuthGuard() {
   const { isAuthenticated, pendingToken } = useAuthContext();
 
   const hasPendingSession =
-    pendingToken || window.sessionStorage.getItem("pendingToken");
+    pendingToken || window.localStorage.getItem("pendingToken");
 
   // na pending login hai na full login — login page pe bhej do
   if (!hasPendingSession && !isAuthenticated) {
