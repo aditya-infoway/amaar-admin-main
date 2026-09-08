@@ -178,7 +178,7 @@ export default function ItemMasterListPage() {
     getRowId: (row) => row.id,
     meta: {
       openEditDrawer: (row: ItemMaster) =>
-        navigate(`/item-master/edit/${row.id}`),
+        navigate(`/master/item-master/edit/${row.id}`),
       deleteRow: (row) => handleDeleteOne(row.original),
       deleteRows: (rows) => handleDeleteMany(rows),
     },
@@ -203,7 +203,7 @@ export default function ItemMasterListPage() {
           table={table}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
-          onCreate={() => navigate("/item-master/create")}
+          onCreate={() => navigate("/master/item-master/create")}
           importButton={
             <Button
               variant="outlined"

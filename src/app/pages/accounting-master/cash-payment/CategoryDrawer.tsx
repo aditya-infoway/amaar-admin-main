@@ -72,7 +72,7 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
 
     (async () => {
       try {
-        const financialYearId = sessionStorage.getItem("financialYearId") || "";
+        const financialYearId = localStorage.getItem("financialYearId") || "";
 
         const [cashRes, oppRes, voucherRes] = await Promise.all([
           accountApi.cashList(),
@@ -117,8 +117,8 @@ export function CashPaymentDrawer({ isOpen, close, onSaved }: CashPaymentDrawerP
 
     try {
       setSubmitting(true);
-      const financialYearId = sessionStorage.getItem("financialYearId");
-      const companyId = sessionStorage.getItem("companyId");
+      const financialYearId = localStorage.getItem("financialYearId");
+      const companyId = localStorage.getItem("companyId");
 
       const res = await paymentApi.create({
         cashAccountId: Number(data.cashAccount),

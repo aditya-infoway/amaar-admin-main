@@ -22,17 +22,17 @@ import { createColumns, createExportColumns } from "./columns";
 import { Enquiry, mapApiLeadToEnquiry } from "./data";
 
 export default function EnquiryPage() {
-  // FIX — sessionStorage ko state se read karo, component mount ke time,
+  // FIX — localStorage ko state se read karo, component mount ke time,
   // na ki module-load time (jab tak company select hi nahi hua tha)
-  const [financialYearId, setFinancialYearId] = useState<string>(
-    () => sessionStorage.getItem("financialYearId") || "",
-  );
+const [financialYearId, setFinancialYearId] = useState<string>(
+  () => localStorage.getItem("financialYearId") || "",
+);
 
-  useEffect(() => {
-    const fyId = sessionStorage.getItem("financialYearId") || "";
-    if (fyId !== financialYearId) setFinancialYearId(fyId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+ useEffect(() => {
+  const fyId = localStorage.getItem("financialYearId") || "";
+  if (fyId !== financialYearId) setFinancialYearId(fyId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const [data, setData] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);

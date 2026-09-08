@@ -144,8 +144,8 @@ export default function Followup() {
     if (!validateForm()) return;
 
     try {
-      // ===== employeeId sessionStorage se (static), createdType fix "Sale Executive" =====
-      const employeeId = sessionStorage.getItem("employeeId") || "";
+      // ===== employeeId localStorage se (static), createdType fix "Sale Executive" =====
+      const employeeId = localStorage.getItem("employeeId") || "";
 
       const payload = {
         leadId: Number(id),

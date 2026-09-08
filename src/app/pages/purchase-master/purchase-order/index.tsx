@@ -279,7 +279,7 @@ function PurchaseOrderList() {
     (async () => {
       try {
         setLoading(true);
-        const financialYearId = sessionStorage.getItem("financialYearId");
+        const financialYearId = localStorage.getItem("financialYearId");
         const res = await Get("purchase-order/list", { financialYearId }, false);
         if (res.data?.success) {
           setData(res.data.data || []);
@@ -405,7 +405,7 @@ export default function PurchaseOrderPage() {
     if (!isCreateView) return;
     (async () => {
       try {
-        const financialYearId = sessionStorage.getItem("financialYearId");
+        const financialYearId = localStorage.getItem("financialYearId");
         const res = await Get("purchase-order/next-po-no", { financialYearId }, false);
         if (res.data?.success) {
           setPoNumber(res.data.data?.poNumber || "");
@@ -526,7 +526,7 @@ const resetForm = async () => {
   setShowSupplierPanel(false);
 
   try {
-    const financialYearId = sessionStorage.getItem("financialYearId");
+    const financialYearId = localStorage.getItem("financialYearId");
     const res = await Get("purchase-order/next-po-no", { financialYearId }, false);
     if (res.data?.success) {
       setPoNumber(res.data.data?.poNumber || "");
@@ -549,7 +549,7 @@ const handleSave = async (status: "Draft" | "Generated") => {
   }
   setSubmitting(true);
   try {
-    const financialYearId = sessionStorage.getItem("financialYearId");
+    const financialYearId = localStorage.getItem("financialYearId");
     const payload = {
       financialYearId,
       poNumber, poDate, requiredDate,

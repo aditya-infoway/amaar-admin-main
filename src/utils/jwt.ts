@@ -8,10 +8,10 @@ const isTokenValid = (authToken: string): boolean => {
 
 const setSession = (authToken?: string | null): void => {
   if (typeof authToken === "string" && authToken.trim() !== "") {
-    sessionStorage.setItem("authToken", authToken);
+    localStorage.setItem("authToken", authToken);
     axios.defaults.headers.common.Authorization = `Bearer ${authToken}`;
   } else {
-    sessionStorage.removeItem("authToken");
+    localStorage.removeItem("authToken");
     delete axios.defaults.headers.common.Authorization;
   }
 };

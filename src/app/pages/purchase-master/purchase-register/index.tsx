@@ -41,7 +41,7 @@ export default function PurchaseRegisterPage() {
   const fetchPurchaseList = async () => {
     try {
       setLoading(true);
-      const financialYearId = sessionStorage.getItem("financialYearId");
+      const financialYearId = localStorage.getItem("financialYearId");
       const res = await Get("purchase/list", { financialYearId }, false);
       if (res.data?.success) {
         setData(res.data.data || []);

@@ -82,7 +82,7 @@ export default function General() {
     const fetchCompanyDetails = async () => {
       setFetching(true);
       try {
-        const companyDetailsId = sessionStorage.getItem("companyDetailsId");
+        const companyDetailsId = localStorage.getItem("companyDetailsId");
 
         if (!companyDetailsId) {
           toasterrormsg("No company selected.");
@@ -148,7 +148,7 @@ export default function General() {
   const onSubmit = async (data: CompanyProfileType) => {
     setLoading(true);
     try {
-      const companyDetailsId = sessionStorage.getItem("companyDetailsId");
+      const companyDetailsId = localStorage.getItem("companyDetailsId");
       const formPayload = new FormData();
 
       formPayload.append("companyDetailsId", companyDetailsId || "");
