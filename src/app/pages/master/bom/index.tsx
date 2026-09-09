@@ -38,22 +38,22 @@ export default function BOM2Page() {
 
   // ---- Fetch BOM2 items ----
   const fetchAll = async () => {
-  setLoading(true);
-  try {
-    // 👇 FIX: was "master/bom2/list" — no such route exists.
-    // Your router mounts everything under /master/bom (see bom.routes.js).
-    const response = await Get("master/bom/list", {}, false);
-    if (response.data?.success) {
-      setData((response.data.data || []).map(mapApiBOM2ToBOM2));
-    } else {
-      toasterrormsg(response.data?.message || "Failed to fetch BOM items.");
+    setLoading(true);
+    try {
+      // 👇 FIX: was "master/bom2/list" — no such route exists.
+      // Your router mounts everything under /master/bom (see bom.routes.js).
+      const response = await Get("master/bom/list", {}, false);
+      if (response.data?.success) {
+        setData((response.data.data || []).map(mapApiBOM2ToBOM2));
+      } else {
+        toasterrormsg(response.data?.message || "Failed to fetch BOM items.");
+      }
+    } catch (error) {
+      toasterrormsg("Something went wrong while fetching BOM2 data.");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    toasterrormsg("Something went wrong while fetching BOM2 data.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchAll();
@@ -77,7 +77,6 @@ export default function BOM2Page() {
     });
   }, [data, filterItemName, filterBOMName, filterStatus]);
 
-
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -85,13 +84,19 @@ export default function BOM2Page() {
     enableRowSelection: true,
     getRowId: (row) => row.id,
     meta: {
-      viewRow: (row: BOM2) => navigate(`/master/item-master/bom/view/${row.bomId}`),
+      viewRow: (row: BOM2) =>
+        navigate(`/master/item-master/bom/view/${row.bomId}`),
 
-      openEditDrawer: (row: BOM2) => navigate(`/master/item-master/bom/edit/${row.bomId}`),
-      
-          deleteRow: async (row: Row<BOM2>) => {
+      openEditDrawer: (row: BOM2) =>
+        navigate(`/master/item-master/bom/edit/${row.bomId}`),
+
+      deleteRow: async (row: Row<BOM2>) => {
         try {
-          const response = await Delete("master/bom/delete", { bomId: row.original.bomId }, false);
+          const response = await Delete(
+            "master/bom/delete",
+            { bomId: row.original.bomId },
+            false,
+          );
           if (response.data?.success) {
             toastsuccessmsg("BOM deleted successfully.");
             fetchAll();
@@ -105,7 +110,9 @@ export default function BOM2Page() {
       deleteRows: async (rows) => {
         try {
           await Promise.all(
-            rows.map((r) => Delete("master/bom/delete", { bomId: r.original.bomId }, false)),
+            rows.map((r) =>
+              Delete("master/bom/delete", { bomId: r.original.bomId }, false),
+            ),
           );
           toastsuccessmsg("Selected BOMs deleted successfully.");
           setRowSelection({});
@@ -141,12 +148,7 @@ export default function BOM2Page() {
             exportToExcel(filteredData, exportColumns, "bom2")
           }
           onExportPdf={() =>
-            exportToPdf(
-              filteredData,
-              exportColumns,
-              "BOM2 List",
-              "bom2",
-            )
+            exportToPdf(filteredData, exportColumns, "BOM2 List", "bom2")
           }
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
