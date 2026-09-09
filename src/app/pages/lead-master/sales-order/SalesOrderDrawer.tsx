@@ -404,7 +404,6 @@ export function SalesOrderDrawer({
     }
   };
 
-
   // Small reusable block: number input + its own conditional upload
   const renderKycField = (key: KycKey, label: string) => {
     const entry = kyc[key];
@@ -453,7 +452,7 @@ export function SalesOrderDrawer({
                   link.click();
                   document.body.removeChild(link);
                 }}
-                className="border-primary bg-primary/5 text-primary hover:bg-primary/10 flex w-[32%] items-center justify-center gap-1 rounded-l-none rounded-r-lg border border-l-0 px-2 py-2 text-center text-xs transition-colors cursor-pointer"
+                className="border-primary bg-primary/5 text-primary hover:bg-primary/10 flex w-[32%] cursor-pointer items-center justify-center gap-1 rounded-l-none rounded-r-lg border border-l-0 px-2 py-2 text-center text-xs transition-colors"
                 title="Download"
               >
                 <Download className="size-4" />
@@ -491,7 +490,7 @@ export function SalesOrderDrawer({
                   link.click();
                   document.body.removeChild(link);
                 }}
-                className="mt-1 inline-flex items-center cursor-pointer gap-1 text-xs text-blue-600 hover:underline"
+                className="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs text-blue-600 hover:underline"
               >
                 <Download className="size-3" />
                 View Image
@@ -583,18 +582,77 @@ export function SalesOrderDrawer({
               </div>
 
               {/* TOP BLOCK — read-only snapshot of the selected quotation.
-                                Never changed by the As Its / Manual toggle. */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Lead ID"
-                  value={leadId}
-                  disabled
-                  onChange={() => {}}
-                />
-                <Input label="City" value={city} disabled onChange={() => {}} />
+    Never changed by the As Its / Manual toggle. */}
+              <div className="dark:border-dark-500 rounded-lg border border-gray-200 p-4 dark:border-gray-600">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      Lead ID
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {leadId || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      City
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {city || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      Client Name
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {customerName || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      Address
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {address || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      Client Number
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {mobile || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      Model
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {model || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      Email ID
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {email || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                      Remark
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {remark || "-"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Client Name"
                   value={customerName}
@@ -631,7 +689,7 @@ export function SalesOrderDrawer({
                   disabled
                   onChange={() => {}}
                 />
-              </div>
+              </div> */}
 
               {/* As Its / Manual */}
               <div>

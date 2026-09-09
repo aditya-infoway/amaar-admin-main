@@ -9,19 +9,33 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ChevronRightIcon,
-  ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon,
 } from "@heroicons/react/24/outline";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import clsx from "clsx";
 
 import { Page } from "@/components/shared/Page";
-import { Button, Card, Input, GhostSpinner } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Input,
+  GhostSpinner,
+  Radio,
+  Checkbox,
+} from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Get, Post, Put, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { statusOptions } from "../../shared/constants";
 import { useUnsavedChanges } from "@/app/contexts/unsavedChanges/context";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
+
+// Import Dialog components for the right drawer
+import {
+  Dialog,
+  DialogPanel,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
+import { Fragment } from "react";
 
 interface BOMItem {
   id: string;
@@ -143,6 +157,22 @@ function findNodeById(items: BOMItem[], id: string): BOMItem | null {
   return null;
 }
 
+function findPathToNode(
+  items: BOMItem[],
+  id: string,
+  path: BOMItem[] = [],
+): BOMItem[] | null {
+  for (const item of items) {
+    const nextPath = [...path, item];
+    if (item.id === id) return nextPath;
+    if (item.children.length > 0) {
+      const found = findPathToNode(item.children, id, nextPath);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 function collectIds(items: BOMItem[]): string[] {
   return items.flatMap((item) => [item.id, ...collectIds(item.children)]);
 }
@@ -152,13 +182,12 @@ function countAll(items: BOMItem[]): number {
 }
 
 function computeTotalWeight(item: BOMItem): number {
-  if (item.children.length === 0) {
-    return parseFloat(item.weight || "0") || 0;
-  }
-  return item.children.reduce(
+  const ownWeight = parseFloat(item.weight || "0") || 0;
+  const childrenWeight = item.children.reduce(
     (sum, child) => sum + computeTotalWeight(child),
     0,
   );
+  return ownWeight + childrenWeight;
 }
 
 const ROW_H = 36;
@@ -294,10 +323,10 @@ function BOMTreeNode({
         </div>
 
         <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
-          Qty: {item.asslyQty}
+          Qty: {item.quantity}
           {hasChildren && (
             <span className="text-primary-600 dark:text-primary-400 ml-2">
-              Wt: {computeTotalWeight(item).toFixed(3)} kg
+              Wt: {computeTotalWeight(item).toFixed(2)} kg
             </span>
           )}
         </span>
@@ -339,7 +368,6 @@ export default function BOMFormPage() {
     });
   };
 
-  // 👇 NEW: id param se edit mode detect hota hai
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
 
@@ -392,10 +420,30 @@ export default function BOMFormPage() {
 
   const [weight, setWeight] = useState<string>("");
   const [weightReadOnly, setWeightReadOnly] = useState<boolean>(true);
-  // Per-unit base weight — from Item Master if present, or typed manually
-  // by the user in the BOM screen when the master has none. Kept in sync
-  // so Qty changes can always recompute the total weight.
   const baseWeightRef = useRef<string>("");
+
+  //  NEW: Entry mode state
+  const [entryMode, setEntryMode] = useState<"normal" | "subBom">("normal");
+
+  //  NEW: Sub BOM right drawer states
+  const [isSubBomDrawerOpen, setIsSubBomDrawerOpen] = useState(false);
+  const [subBomItems, setSubBomItems] = useState<BOMItem[]>([]);
+  const [selectedSubBomItems, setSelectedSubBomItems] = useState<Set<string>>(
+    new Set(),
+  );
+  const [subBomSearchQuery, setSubBomSearchQuery] = useState("");
+  const [subBomDrawerCode, setSubBomDrawerCode] = useState("");
+  const [subBomDrawerName, setSubBomDrawerName] = useState("");
+
+  //  NEW: Sub BOM confirmation modal states
+  const [isSubBomConfirmOpen, setIsSubBomConfirmOpen] = useState(false);
+  const [subBomConfirmData, setSubBomConfirmData] = useState<{
+    parentCode: string;
+    parentName: string;
+    childCode: string;
+    childName: string;
+    selectedItems: BOMItem[];
+  } | null>(null);
 
   useEffect(() => {
     setDirty(isBOMDirty);
@@ -405,11 +453,6 @@ export default function BOMFormPage() {
     };
   }, [isBOMDirty, setDirty]);
 
-  // ---------------------------------------------------------------------
-  // 👇 NEW: ek hi useEffect me — available items load karo, AUR agar edit
-  // mode hai to existing BOM bhi fetch karke saare fields + tree populate
-  // karo. Dono parallel chalte hain (Promise.all).
-  // ---------------------------------------------------------------------
   useEffect(() => {
     const mockItems: AvailableItem[] = [
       {
@@ -453,7 +496,6 @@ export default function BOMFormPage() {
               type: "Raw Material",
               status: item.status || "Active",
               balanceQty: "0",
-
               thickness: item.thickness != null ? String(item.thickness) : "",
               length: item.length != null ? String(item.length) : "",
               width: item.width != null ? String(item.width) : "",
@@ -478,7 +520,7 @@ export default function BOMFormPage() {
           setBomName(data.bomName || "");
           setBomCode(data.bomCode || "");
           setBomStatus(data.status || "active");
-          setBomItems(data.items || []); // backend tree shape BOMItem se match karta hai
+          setBomItems(data.items || []);
           setExpandedNodes(
             Object.fromEntries(
               collectIds(data.items || []).map((nid: string) => [nid, true]),
@@ -504,11 +546,7 @@ export default function BOMFormPage() {
           false,
         );
 
-        console.log("Finished Goods API Response:", response);
-
         if (response.data?.success) {
-          console.log("Finished Goods Data:", response.data.data);
-
           setFinishedGoodsItems(response.data.data || []);
         } else {
           setFinishedGoodsItems([]);
@@ -525,13 +563,9 @@ export default function BOMFormPage() {
 
     const load = async () => {
       setLoading(true);
-
-      await Promise.all([
-        loadAvailableItems(),
-        loadFinishedGoodsItems(),
-        loadExistingBom(),
-      ]);
-
+      await loadAvailableItems();
+      await loadFinishedGoodsItems();
+      await loadExistingBom();
       setLoading(false);
     };
     load();
@@ -541,21 +575,14 @@ export default function BOMFormPage() {
   const totalItems = useMemo(() => countAll(bomItems), [bomItems]);
   const hasBOMItems = bomItems.length > 0;
 
-  // Live preview of the serial number this item will get, following the
-  // same per-parent-level counting as getNextSerialNo:
-  // - Root level: count of existing root items + 1
-  // - Under a selected parent: count of that parent's existing children + 1
-  //   (so a nested grandchild level restarts at 01, and going back to a
-  //   parent that already has e.g. 10 children continues at 11 — no reset,
-  //   no fixed digit limit)
   const nextSerialPreview = useMemo(() => {
     if (!hasBOMItems) {
-      return String(bomItems.length + 1).padStart(2, "0");
+      return String(bomItems.length + 1);
     }
     if (!selectedParentId) return "";
     const parentNode = findNodeById(bomItems, selectedParentId);
     const existingCount = parentNode ? parentNode.children.length : 0;
-    return String(existingCount + 1).padStart(2, "0");
+    return String(existingCount + 1);
   }, [bomItems, hasBOMItems, selectedParentId]);
 
   const filteredAvailableItems = useMemo(() => {
@@ -569,67 +596,16 @@ export default function BOMFormPage() {
     );
   }, [availableItems, searchQuery]);
 
-  // 👇 NEW: Pagination calculations
   const totalItemsCount = filteredAvailableItems.length;
   const totalPages = Math.ceil(totalItemsCount / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItemsCount);
   const currentItems = filteredAvailableItems.slice(startIndex, endIndex);
 
-  // const handleUpdateItem = () => {
-  //   if (!editingItemId) {
-  //     toasterrormsg("Please select an item from the BOM structure.");
-  //     return;
-  //   }
-
-  //   if (!qty) {
-  //     toasterrormsg("Please enter Qty.");
-  //     return;
-  //   }
-
-  //   const updatedFields: Partial<BOMItem> = {
-  //     quantity: qty,
-  //     serialNo,
-  //     asslyQty,
-  //     ldDay,
-  //     psNo,
-  //     rejPct,
-  //     pkgNo,
-  //     mfgCd,
-  //     modDate,
-  //     person,
-  //     dtlNo,
-
-  //     shapeDim,
-  //     finQtty,
-  //     shape,
-
-  //     thickness,
-  //     length,
-  //     width,
-  //     weight,
-  //   };
-
-  //   setBomItems((prev) => updateItem(prev, editingItemId, updatedFields));
-  //   setIsBOMDirty(true);
-
-  //   toastsuccessmsg("BOM item updated successfully.");
-
-  //   // Exit edit mode
-  //   setEditingItemId(null);
-
-  //   // Clear form
-  //   setParentCode("");
-  //   setChildCode("");
-  //   resetEntryFields();
-  // };
-
-  // 👇 NEW: Reset to first page when search query changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  // 👇 NEW: Helper to generate page numbers
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = 5;
@@ -696,24 +672,13 @@ export default function BOMFormPage() {
   const handleCollapseAll = () => setExpandedNodes({});
 
   const handlePickNode = (item: BOMItem) => {
-    // Clicking a tree item means:
-    // "I want to use this item as Parent"
-    // NOT "I want to edit this item"
-
     isLoadingFieldsRef.current = true;
 
     setSelectedParentId(item.id);
-
-    // Set selected item as parent
     setParentCode(item.itemCode);
-
-    // Clear child field so user can enter/select new child
     setChildCode("");
-
-    // Clear old item values
     resetEntryFields();
 
-    // Open selected parent
     setExpandedNodes((prev) => ({
       ...prev,
       [item.id]: true,
@@ -724,17 +689,10 @@ export default function BOMFormPage() {
     });
   };
 
-  requestAnimationFrame(() => {
-    isLoadingFieldsRef.current = false;
-  });
-
   const markBOMDirty = () => {
     setIsBOMDirty(true);
   };
 
-  // Single source of truth: any change to the entry-panel fields marks
-  // the form dirty, UNLESS we're programmatically loading values
-  // (handlePickNode / loadExistingBom set the ref to skip this).
   useEffect(() => {
     if (isLoadingFieldsRef.current) return;
     markBOMDirty();
@@ -768,24 +726,7 @@ export default function BOMFormPage() {
 
   const handlePickReferenceItem = (item: AvailableItem) => {
     setChildCode(item.itemCode);
-
     fillItemDimensions(item);
-  };
-
-  const handleCalculate = () => {
-    if (length && width && qty) {
-      const calculatedArea = (
-        parseFloat(length) *
-        parseFloat(width) *
-        parseFloat(qty)
-      ).toFixed(2);
-      setFinQtty(calculatedArea);
-      toastsuccessmsg("Calculation completed successfully.");
-    } else {
-      toasterrormsg(
-        "Please enter Length, Width, and Quantity for calculation.",
-      );
-    }
   };
 
   const fillItemDimensions = (item: AvailableItem) => {
@@ -797,7 +738,6 @@ export default function BOMFormPage() {
     const currentQty = parseFloat(qty || "");
 
     if (!isNaN(baseWeight)) {
-      // Item Master has a weight -> auto-filled, read-only, multiplies with Qty
       baseWeightRef.current = item.weight || "";
       setWeightReadOnly(true);
 
@@ -807,7 +747,6 @@ export default function BOMFormPage() {
         setWeight("");
       }
     } else {
-      // Item Master has no weight -> user enters it manually here
       baseWeightRef.current = "";
       setWeightReadOnly(false);
       setWeight("");
@@ -878,17 +817,200 @@ export default function BOMFormPage() {
   };
 
   const getNextSerialNo = (parentId: string | null): string => {
-    // Root level: count of existing top-level items
     if (!parentId) {
-      return String(bomItems.length + 1).padStart(2, "0");
+      return String(bomItems.length + 1);
     }
 
-    // Child level: count of existing children under this specific parent
     const parentNode = findNodeById(bomItems, parentId);
     const existingCount = parentNode ? parentNode.children.length : 0;
 
-    return String(existingCount + 1).padStart(2, "0");
+    return String(existingCount + 1);
   };
+
+  //  NEW: Fetch sub BOM items for the drawer using the API
+  const fetchSubBomItems = async (code: string) => {
+    try {
+      const response = await Get(`master/bom/sub-bom/${code}`, {}, false);
+      if (response.data?.success) {
+        const data = response.data.data;
+        const items = data.items || [];
+        setSubBomItems(items);
+        setSubBomDrawerCode(data.bomCode || code);
+        setSubBomDrawerName(data.bomName || code);
+        // CHANGED: start with nothing selected — user picks manually
+        setSelectedSubBomItems(new Set());
+        setIsSubBomDrawerOpen(true);
+      } else {
+        toasterrormsg(
+          response.data?.message || "Failed to fetch Sub BOM items.",
+        );
+        // Close drawer if no items or error
+        setIsSubBomDrawerOpen(false);
+      }
+    } catch (error) {
+      console.error("Fetch Sub BOM Error:", error);
+      toasterrormsg("Something went wrong while fetching Sub BOM.");
+      setIsSubBomDrawerOpen(false);
+    }
+  };
+
+  //  NEW: Handle search icon click in Sub BOM mode
+  const handleSubBomSearch = () => {
+    if (!childCode.trim()) {
+      toasterrormsg("Please enter a Child item code first.");
+      return;
+    }
+
+    const childItem = findAvailableByCode(childCode);
+    if (!childItem) {
+      toasterrormsg(`Item code "${childCode}" not found in Item Master.`);
+      return;
+    }
+
+    fetchSubBomItems(childCode);
+  };
+
+  // NEW: Toggle sub BOM item selection
+  const toggleSubBomItem = (itemId: string) => {
+    setSelectedSubBomItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  //  NEW: Toggle all sub BOM items
+  const toggleAllSubBomItems = () => {
+    if (
+      selectedSubBomItems.size === subBomItems.length &&
+      subBomItems.length > 0
+    ) {
+      setSelectedSubBomItems(new Set());
+    } else {
+      setSelectedSubBomItems(new Set(subBomItems.map((item) => item.id)));
+    }
+  };
+
+  //  NEW: Save sub BOM drawer selection (closes drawer, opens confirmation)
+  const handleSubBomDrawerSave = () => {
+    if (selectedSubBomItems.size === 0) {
+      toasterrormsg("Please select at least one item from the BOM.");
+      return;
+    }
+
+    const selectedItems = subBomItems.filter((item) =>
+      selectedSubBomItems.has(item.id),
+    );
+
+    const parentItem = findAvailableByCode(parentCode);
+    const childItem = findAvailableByCode(childCode);
+
+    setSubBomConfirmData({
+      parentCode: parentCode,
+      parentName: parentItem?.itemName || parentCode,
+      childCode: childCode,
+      childName: childItem?.itemName || childCode,
+      selectedItems: selectedItems,
+    });
+
+    setIsSubBomDrawerOpen(false);
+    setSubBomItems([]);
+    setSelectedSubBomItems(new Set());
+    setSubBomSearchQuery("");
+
+    //  CHANGED: don't open the confirmation view yet — go back to the
+    // entry panel so the user can still adjust fields (Qty etc.) before
+    // finalizing. The confirmation view now opens from
+    // "Add to BOM Structure" instead.
+    toastsuccessmsg(
+      `${selectedItems.length} item(s) selected from sub BOM. Review the entry fields, then click "Add to BOM Structure".`,
+    );
+  };
+
+  //  NEW: Submit sub BOM confirmation
+  const handleSubBomConfirmSubmit = () => {
+    if (!subBomConfirmData) return;
+
+    const { selectedItems } = subBomConfirmData;
+
+    if (selectedItems.length === 0) {
+      toasterrormsg("No items selected to add.");
+      setIsSubBomConfirmOpen(false);
+      setSubBomConfirmData(null);
+      return;
+    }
+
+    // Add selected items to the current BOM
+    if (!selectedParentId) {
+      toasterrormsg("Please select a parent item before adding sub BOM items.");
+      return;
+    }
+    const parentNode = findNodeById(bomItems, selectedParentId);
+    let newItems: BOMItem[] = [];
+    let serialCounter = parentNode ? parentNode.children.length + 1 : 1;
+
+    selectedItems.forEach((subItem) => {
+      // Check for duplicates
+      const isDuplicate = parentNode?.children.some(
+        (child) =>
+          child.itemCode.toLowerCase() === subItem.itemCode.toLowerCase(),
+      );
+
+      if (!isDuplicate) {
+        const itemToAdd: BOMItem = {
+          ...subItem,
+          id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+          serialNo: String(serialCounter++),
+          quantity: subItem.quantity || "1",
+          children: [],
+        };
+        newItems.push(itemToAdd);
+      }
+    });
+
+    if (newItems.length === 0) {
+      toasterrormsg("Selected items are already present in this BOM.");
+      setIsSubBomConfirmOpen(false);
+      setSubBomConfirmData(null);
+      return;
+    }
+
+    // Add all new items under the selected parent
+    let updatedItems = [...bomItems];
+    newItems.forEach((item) => {
+      updatedItems = insertItem(updatedItems, selectedParentId, item);
+    });
+
+    setBomItems(updatedItems);
+    setIsBOMDirty(true);
+    setExpandedNodes((prev) => ({
+      ...prev,
+      [selectedParentId as string]: true,
+    }));
+
+    // Reset fields
+    setChildCode("");
+    resetEntryFields();
+    setIsSubBomConfirmOpen(false);
+    setSubBomConfirmData(null);
+
+    toastsuccessmsg(`${newItems.length} item(s) added from sub BOM.`);
+  };
+
+  //  NEW: Filter sub BOM items for search
+  const filteredSubBomItems = useMemo(() => {
+    if (!subBomSearchQuery.trim()) return subBomItems;
+    const query = subBomSearchQuery.toLowerCase();
+    return subBomItems.filter(
+      (item) =>
+        item.itemCode.toLowerCase().includes(query) ||
+        item.itemName.toLowerCase().includes(query),
+    );
+  }, [subBomItems, subBomSearchQuery]);
 
   const handleAddToTree = () => {
     // =========================
@@ -909,23 +1031,15 @@ export default function BOMFormPage() {
         return;
       }
 
-      // Root serial: 01, 02, 03...
       const rootSerial = getNextSerialNo(null);
-
       rootItem.serialNo = rootSerial;
 
       setBomItems([rootItem]);
-
-      // This root is now the selected parent
       setSelectedParentId(rootItem.id);
       setParentCode(rootItem.itemCode);
-
       setIsBOMDirty(true);
-
       resetEntryFields();
-
       toastsuccessmsg(`Root item added with Serial# ${rootSerial}.`);
-
       return;
     }
 
@@ -943,6 +1057,30 @@ export default function BOMFormPage() {
       return;
     }
 
+    //  In Sub BOM mode:
+    // - If items were already picked from the drawer, this click opens
+    //   the read-only confirmation view instead of submitting straight
+    //   away, so there's a final check before it lands in the tree.
+    // - Otherwise, this click just opens the drawer to pick items.
+    if (entryMode === "subBom") {
+      if (subBomConfirmData) {
+        setIsSubBomConfirmOpen(true);
+        return;
+      }
+
+      const childItem = findAvailableByCode(childCode);
+      if (!childItem) {
+        toasterrormsg(`Item code "${childCode}" not found in Item Master.`);
+        return;
+      }
+
+      fetchSubBomItems(childCode);
+      return;
+    }
+
+    // =========================
+    // NORMAL MODE
+    // =========================
     const newItem = buildItem(childCode);
 
     if (!newItem) {
@@ -952,34 +1090,47 @@ export default function BOMFormPage() {
       return;
     }
 
-    // Child serial depends on selected parent
-    const newSerialNo = getNextSerialNo(selectedParentId);
+    const parentNode = findNodeById(bomItems, selectedParentId);
+    const isDuplicateSibling = parentNode?.children.some(
+      (child) =>
+        child.itemCode.toLowerCase() === newItem.itemCode.toLowerCase(),
+    );
 
+    if (isDuplicateSibling) {
+      toasterrormsg(
+        `"${newItem.itemCode}" is already added under this parent.`,
+      );
+      return;
+    }
+
+    const ancestorChain = findPathToNode(bomItems, selectedParentId) || [];
+    const createsCycle = ancestorChain.some(
+      (ancestor) =>
+        ancestor.itemCode.toLowerCase() === newItem.itemCode.toLowerCase(),
+    );
+
+    if (createsCycle) {
+      toasterrormsg(
+        `Cannot add "${newItem.itemCode}" here — it is already a parent of this item further up the tree, which would create a circular reference.`,
+      );
+      return;
+    }
+
+    const newSerialNo = getNextSerialNo(selectedParentId);
     newItem.serialNo = newSerialNo;
 
-    // Add child inside selected parent
     setBomItems((prev) => insertItem(prev, selectedParentId, newItem));
-
     setIsBOMDirty(true);
-
-    // Keep parent expanded
     setExpandedNodes((prev) => ({
       ...prev,
       [selectedParentId]: true,
     }));
 
-    // Keep SAME parent selected
     setChildCode("");
     resetEntryFields();
-
     toastsuccessmsg(`Child item added with Serial# ${newSerialNo}.`);
   };
 
-  // ---------------------------------------------------------------------
-  // 👇 NEW: Save function ab dono mode handle karta hai — edit mode me
-  // Put("master/bom/update") + bomId body me jaata hai, create mode me
-  // pehle jaisa hi Post("master/bom/create") chalta hai.
-  // ---------------------------------------------------------------------
   const handleSaveBOM = async () => {
     if (!bomName) {
       toasterrormsg("Please enter BOM name.");
@@ -1012,19 +1163,14 @@ export default function BOMFormPage() {
           toastsuccessmsg(
             response.data?.message || "BOM updated successfully.",
           );
-
-          // Mark as saved
           setIsBOMDirty(false);
           setDirty(false);
-
-          // Allow React to commit dirty state first
           setTimeout(() => {
             navigate("/master/item-master/bom");
           }, 0);
         } else {
           toasterrormsg(response.data?.message || "Failed to update BOM.");
         }
-
         return;
       }
 
@@ -1039,12 +1185,8 @@ export default function BOMFormPage() {
 
       if (response.data?.success) {
         toastsuccessmsg(response.data?.message || "BOM created successfully.");
-
-        // Mark as saved
         setIsBOMDirty(false);
         setDirty(false);
-
-        // Allow React to commit dirty state first
         setTimeout(() => {
           navigate("/master/item-master/bom");
         }, 0);
@@ -1053,7 +1195,6 @@ export default function BOMFormPage() {
       }
     } catch (error) {
       console.error("BOM save error:", error);
-
       toasterrormsg(
         isEditMode
           ? "Something went wrong while updating BOM."
@@ -1114,16 +1255,9 @@ export default function BOMFormPage() {
                   setIsBOMDirty(true);
                   return;
                 }
-
-                // Selected Finished Goods Item ID
                 setFinishedGoodsItemId(String(item.itemId));
-
-                // BOM Name = Item Master Item Name
                 setBomName(item.itemName || "");
-
-                // BOM Code = Item Master Item Code
                 setBomCode(item.itemCode || "");
-
                 setIsBOMDirty(true);
               }}
               placeholder="Select Finished Goods"
@@ -1211,6 +1345,8 @@ export default function BOMFormPage() {
               </div>
 
               <div className="space-y-4">
+                {/*  NEW: Entry Mode Radio Buttons */}
+
                 <div>
                   <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                     Parent
@@ -1261,55 +1397,100 @@ export default function BOMFormPage() {
                 </div>
 
                 {hasBOMItems && (
-                  <div>
-                    <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
-                      Child
-                    </label>
-                    <Input
-                      value={childCode}
-                      onChange={(e) => {
-                        const code = e.target.value;
-                        setChildCode(code);
+                  <>
+                    {/*  Entry Mode — only shows once a root item exists,
+                        sits between Parent and Child */}
+                    <div>
+                      <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
+                        Entry Mode
+                      </label>
+                      <div className="flex gap-6">
+                        <Radio
+                          checked={entryMode === "normal"}
+                          onChange={() => {
+                            setEntryMode("normal");
+                            setIsSubBomDrawerOpen(false);
+                            setIsSubBomConfirmOpen(false);
+                            setSubBomConfirmData(null);
+                          }}
+                          label="Normal"
+                        />
+                        <Radio
+                          checked={entryMode === "subBom"}
+                          onChange={() => setEntryMode("subBom")}
+                          label="Sub BOM"
+                        />
+                      </div>
+                      {entryMode === "subBom" && (
+                        <p className="dark:text-dark-400 mt-1 text-xs text-gray-400">
+                          Enter a child code and click the search icon to select
+                          items from its BOM.
+                        </p>
+                      )}
+                    </div>
 
-                        const item = findAvailableByCode(code);
+                    <div>
+                      <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
+                        Child
+                      </label>
+                      <div className="relative">
+                        <Input
+                          value={childCode}
+                          onChange={(e) => {
+                            const code = e.target.value;
+                            setChildCode(code);
 
-                        if (item) {
-                          fillItemDimensions(item);
-                        } else {
-                          setThickness("");
-                          setLength("");
-                          setWidth("");
-                          setWeight("");
-                          baseWeightRef.current = "";
-                          setWeightReadOnly(true);
-                        }
-                      }}
-                      placeholder="Item code to add under Parent"
-                    />
-                    {childCode.trim() !== "" && (
-                      <p
-                        className={clsx(
-                          "mt-1 flex items-center gap-1 text-xs font-medium",
-                          childMasterMatch
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-500 dark:text-red-400",
+                            const item = findAvailableByCode(code);
+
+                            if (item) {
+                              fillItemDimensions(item);
+                            } else {
+                              setThickness("");
+                              setLength("");
+                              setWidth("");
+                              setWeight("");
+                              baseWeightRef.current = "";
+                              setWeightReadOnly(true);
+                            }
+                          }}
+                          placeholder="Item code to add under Parent"
+                          className={entryMode === "subBom" ? "pr-10" : ""}
+                        />
+                        {entryMode === "subBom" && (
+                          <button
+                            type="button"
+                            onClick={handleSubBomSearch}
+                            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+                          >
+                            <MagnifyingGlassIcon className="size-4" />
+                          </button>
                         )}
-                      >
-                        {childMasterMatch ? (
-                          <>
-                            <CheckCircleIcon className="size-3.5" />
-                            In Item Master: {childMasterMatch.itemName} (
-                            {childMasterMatch.unit})
-                          </>
-                        ) : (
-                          <>
-                            <ExclamationTriangleIcon className="size-3.5" />
-                            Not found in Item Master — cannot be added
-                          </>
-                        )}
-                      </p>
-                    )}
-                  </div>
+                      </div>
+                      {childCode.trim() !== "" && (
+                        <p
+                          className={clsx(
+                            "mt-1 flex items-center gap-1 text-xs font-medium",
+                            childMasterMatch
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-500 dark:text-red-400",
+                          )}
+                        >
+                          {childMasterMatch ? (
+                            <>
+                              <CheckCircleIcon className="size-3.5" />
+                              In Item Master: {childMasterMatch.itemName} (
+                              {childMasterMatch.unit})
+                            </>
+                          ) : (
+                            <>
+                              <ExclamationTriangleIcon className="size-3.5" />
+                              Not found in Item Master — cannot be added
+                            </>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
@@ -1339,7 +1520,6 @@ export default function BOMFormPage() {
 
                 <div className="dark:border-dark-500 mt-4 border-t border-gray-200 pt-4">
                   <div className="grid grid-cols-2 gap-4">
-                    {/* Thickness */}
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                         Thickness (mm)
@@ -1353,7 +1533,6 @@ export default function BOMFormPage() {
                       />
                     </div>
 
-                    {/* Length */}
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                         Length (mm)
@@ -1367,7 +1546,6 @@ export default function BOMFormPage() {
                       />
                     </div>
 
-                    {/* Width */}
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                         Width (mm)
@@ -1381,7 +1559,6 @@ export default function BOMFormPage() {
                       />
                     </div>
 
-                    {/* Weight */}
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                         Weight (kg)
@@ -1397,7 +1574,21 @@ export default function BOMFormPage() {
                             : (e) => {
                                 const val = e.target.value;
                                 setWeight(val);
-                                baseWeightRef.current = val; // this becomes the base weight for future Qty changes
+                                const enteredWeight = parseFloat(val || "");
+                                const currentQty = parseFloat(qty || "");
+
+                                if (isNaN(enteredWeight)) {
+                                  baseWeightRef.current = "";
+                                } else if (
+                                  !isNaN(currentQty) &&
+                                  currentQty > 0
+                                ) {
+                                  baseWeightRef.current = (
+                                    enteredWeight / currentQty
+                                  ).toString();
+                                } else {
+                                  baseWeightRef.current = val;
+                                }
                               }
                         }
                         placeholder={
@@ -1412,7 +1603,6 @@ export default function BOMFormPage() {
                     </div>
                   </div>
 
-                  {/* Existing Qty */}
                   <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
@@ -1438,7 +1628,6 @@ export default function BOMFormPage() {
                           ) {
                             setWeight((baseWeight * quantity).toFixed(3));
                           } else if (weightReadOnly) {
-                            // Only auto-clear in read-only/auto mode; leave manual entries alone
                             setWeight("");
                           }
                         }}
@@ -1461,6 +1650,7 @@ export default function BOMFormPage() {
             </Card>
           </div>
         </div>
+
         <div className="my-6 flex justify-end gap-3">
           <Button
             variant="outlined"
@@ -1469,11 +1659,11 @@ export default function BOMFormPage() {
           >
             Cancel
           </Button>
-
           <Button color="primary" onClick={handleSaveBOM}>
             {isEditMode ? "Update BOM" : "Create BOM"}
           </Button>
         </div>
+
         <Card>
           <div className="dark:border-dark-500 mb-4 border-b border-gray-200 p-4">
             <div className="flex items-center justify-between">
@@ -1585,11 +1775,8 @@ export default function BOMFormPage() {
             </table>
           </div>
 
-          {/* 👇 NEW: Pagination Controls with Theme Styling */}
-          {/* Pagination — theme-matched style (Show entries / page pills / count) */}
           {totalItemsCount > 0 && (
             <div className="dark:border-dark-500 flex flex-col items-center justify-between gap-4 border-t border-gray-200 px-4 py-3 sm:flex-row">
-              {/* Left - Show entries */}
               <div className="dark:text-dark-300 flex items-center gap-2 text-sm text-gray-700">
                 <span>Show</span>
                 <select
@@ -1609,7 +1796,6 @@ export default function BOMFormPage() {
                 <span>entries</span>
               </div>
 
-              {/* Center - Page controls */}
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -1665,7 +1851,6 @@ export default function BOMFormPage() {
                 </button>
               </div>
 
-              {/* Right - Showing count */}
               <div className="dark:text-dark-300 text-sm text-gray-500">
                 {startIndex + 1} - {endIndex} of {totalItemsCount} entries
               </div>
@@ -1673,6 +1858,331 @@ export default function BOMFormPage() {
           )}
         </Card>
       </div>
+
+      {/*  Sub BOM Right Drawer */}
+      <Transition appear show={isSubBomDrawerOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-[100]"
+          onClose={() => {
+            setIsSubBomDrawerOpen(false);
+            setSelectedSubBomItems(new Set());
+            setSubBomItems([]);
+            setSubBomSearchQuery("");
+          }}
+        >
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur transition-opacity dark:bg-black/40" />
+          </TransitionChild>
+
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out transform-gpu transition-transform duration-300"
+            enterFrom="translate-x-full"
+            enterTo="translate-x-0"
+            leave="ease-in transform-gpu transition-transform duration-300"
+            leaveFrom="translate-x-0"
+            leaveTo="translate-x-full"
+          >
+            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-2xl transform-gpu flex-col bg-white transition-transform duration-300">
+              {/* Header */}
+              <div className="dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <div>
+                  <h3 className="dark:text-dark-100 text-lg font-medium text-gray-900">
+                    Select Items from Sub BOM
+                  </h3>
+                  <p className="dark:text-dark-300 text-sm text-gray-500">
+                    BOM: {subBomDrawerCode} — {subBomItems.length} items
+                    available
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsSubBomDrawerOpen(false);
+                    setSelectedSubBomItems(new Set());
+                    setSubBomItems([]);
+                    setSubBomSearchQuery("");
+                  }}
+                  className="dark:hover:bg-dark-600 rounded-md p-1.5 hover:bg-gray-100"
+                >
+                  <XMarkIcon className="size-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div className="relative flex-1">
+                    <MagnifyingGlassIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      value={subBomSearchQuery}
+                      onChange={(e) => setSubBomSearchQuery(e.target.value)}
+                      placeholder="Search items..."
+                      className="pl-9"
+                    />
+                  </div>
+                  <button
+                    onClick={toggleAllSubBomItems}
+                    className="dark:text-dark-300 text-sm text-gray-600 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200"
+                  >
+                    {selectedSubBomItems.size === subBomItems.length &&
+                    subBomItems.length > 0
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
+                  <span className="dark:text-dark-300 text-sm text-gray-500">
+                    {selectedSubBomItems.size} selected
+                  </span>
+                </div>
+
+                              <div className="max-h-[400px] overflow-y-auto">
+                  {filteredSubBomItems.length === 0 ? (
+                    <div className="dark:text-dark-300 py-8 text-center text-gray-500">
+                      {subBomSearchQuery ? "No items match your search" : "No items in this BOM"}
+                    </div>
+                  ) : (
+                    <ul className="space-y-1">
+                      {filteredSubBomItems.map((item) => {
+                        const isSelected = selectedSubBomItems.has(item.id);
+                        const hasChildren = item.children && item.children.length > 0;
+                        return (
+                          <li key={item.id} style={{ minHeight: 36 }}>
+                            <div
+                              onClick={() => toggleSubBomItem(item.id)}
+                              className={clsx(
+                                "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 pl-1 transition",
+                                isSelected
+                                  ? "bg-primary-50 ring-primary-400 dark:bg-primary-900/30 ring-1 ring-inset"
+                                  : "dark:hover:bg-dark-600 hover:bg-gray-50",
+                              )}
+                              style={{ minHeight: 36 }}
+                            >
+                              <span
+                                className="flex size-5 shrink-0 items-center justify-center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Checkbox
+                                  checked={isSelected}
+                                  onChange={() => toggleSubBomItem(item.id)}
+                                />
+                              </span>
+
+                              <span
+                                className={clsx(
+                                  "size-5 shrink-0",
+                                  hasChildren ? "text-primary-600" : "text-gray-400",
+                                )}
+                              >
+                                {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+                              </span>
+
+                              <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                                <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+                                  {item.itemCode}
+                                </span>
+                                <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+                                  {item.itemName}
+                                </span>
+                              </div>
+
+                              <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
+                                Qty: {item.quantity} {item.unit}
+                              </span>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="dark:border-dark-500 dark:bg-dark-800 flex justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4">
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => {
+                    setIsSubBomDrawerOpen(false);
+                    setSelectedSubBomItems(new Set());
+                    setSubBomItems([]);
+                    setSubBomSearchQuery("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="primary"
+                  onClick={handleSubBomDrawerSave}
+                  disabled={selectedSubBomItems.size === 0}
+                >
+                  Save ({selectedSubBomItems.size})
+                </Button>
+              </div>
+            </DialogPanel>
+          </TransitionChild>
+        </Dialog>
+      </Transition>
+
+      {/*  Sub BOM Confirmation Drawer — right side, same style as the
+          Sub BOM selection drawer for theme consistency */}
+      <Transition
+        appear
+        show={isSubBomConfirmOpen && !!subBomConfirmData}
+        as={Fragment}
+      >
+        <Dialog
+          as="div"
+          className="relative z-[100]"
+          onClose={() => {
+            setIsSubBomConfirmOpen(false);
+            setSubBomConfirmData(null);
+          }}
+        >
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur transition-opacity dark:bg-black/40" />
+          </TransitionChild>
+
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out transform-gpu transition-transform duration-300"
+            enterFrom="translate-x-full"
+            enterTo="translate-x-0"
+            leave="ease-in transform-gpu transition-transform duration-300"
+            leaveFrom="translate-x-0"
+            leaveTo="translate-x-full"
+          >
+            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-2xl transform-gpu flex-col bg-white transition-transform duration-300">
+              {subBomConfirmData && (
+                <>
+                  {/* Header */}
+                  <div className="dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                      <h3 className="dark:text-dark-100 text-lg font-medium text-gray-900">
+                        Confirm Sub BOM Addition
+                      </h3>
+                      <p className="dark:text-dark-300 text-sm text-gray-500">
+                        Review the items before adding to the BOM structure
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsSubBomConfirmOpen(false);
+                        setSubBomConfirmData(null);
+                      }}
+                      className="dark:hover:bg-dark-600 rounded-md p-1.5 hover:bg-gray-100"
+                    >
+                      <XMarkIcon className="size-5 text-gray-500" />
+                    </button>
+                  </div>
+
+                  {/* Body */}
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <div className="dark:bg-dark-700/50 mb-4 grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
+                      <div>
+                        <p className="dark:text-dark-400 text-xs text-gray-500">
+                          Parent
+                        </p>
+                        <p className="dark:text-dark-200 text-sm font-medium text-gray-900">
+                          {subBomConfirmData.parentCode} -{" "}
+                          {subBomConfirmData.parentName}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="dark:text-dark-400 text-xs text-gray-500">
+                          Sub BOM
+                        </p>
+                        <p className="dark:text-dark-200 text-sm font-medium text-gray-900">
+                          {subBomConfirmData.childCode} -{" "}
+                          {subBomConfirmData.childName}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="dark:text-dark-300 text-sm text-gray-500">
+                        {subBomConfirmData.selectedItems.length} item(s)
+                        selected
+                      </span>
+                    </div>
+
+                                    <div className="max-h-[400px] overflow-y-auto">
+                      <ul className="space-y-1">
+                        {subBomConfirmData.selectedItems.map((item) => {
+                          const hasChildren = item.children && item.children.length > 0;
+                          return (
+                            <li key={item.id} style={{ minHeight: 36 }}>
+                              <div
+                                className="dark:hover:bg-dark-600 flex items-center gap-2 rounded-md py-2 pr-2 pl-1 hover:bg-gray-50"
+                                style={{ minHeight: 36 }}
+                              >
+                                <span
+                                  className={clsx(
+                                    "size-5 shrink-0",
+                                    hasChildren ? "text-primary-600" : "text-gray-400",
+                                  )}
+                                >
+                                  {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+                                </span>
+
+                                <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                                  <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+                                    {item.itemCode}
+                                  </span>
+                                  <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+                                    {item.itemName}
+                                  </span>
+                                </div>
+
+                                <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
+                                  Qty: {item.quantity} {item.unit}
+                                </span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="dark:border-dark-500 dark:bg-dark-800 flex justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4">
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => {
+                        setIsSubBomConfirmOpen(false);
+                        setSubBomConfirmData(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button color="primary" onClick={handleSubBomConfirmSubmit}>
+                      Submit ({subBomConfirmData.selectedItems.length})
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DialogPanel>
+          </TransitionChild>
+        </Dialog>
+      </Transition>
     </Page>
   );
 }
