@@ -53,7 +53,7 @@ const protectedRoutes: RouteObject = {
                   .default,
               }),
             },
-        
+
             {
               path: "product-series",
               lazy: async () => ({
@@ -103,29 +103,36 @@ const protectedRoutes: RouteObject = {
               ],
             },
 
-                  {
+            {
               path: "item-master",
               children: [
                 {
                   index: true,
-                  element: <Navigate to="/master/item-master/item-list" replace />,
+                  element: (
+                    <Navigate to="/master/item-master/item-list" replace />
+                  ),
                 },
                 {
                   path: "item-list",
                   lazy: async () => ({
-                    Component: (await import("@/app/pages/master/item-master")).default,
+                    Component: (await import("@/app/pages/master/item-master"))
+                      .default,
                   }),
                 },
                 {
                   path: "create",
                   lazy: async () => ({
-                    Component: (await import("@/app/pages/master/item-master/form")).default,
+                    Component: (
+                      await import("@/app/pages/master/item-master/form")
+                    ).default,
                   }),
                 },
                 {
                   path: "edit/:id",
                   lazy: async () => ({
-                    Component: (await import("@/app/pages/master/item-master/form")).default,
+                    Component: (
+                      await import("@/app/pages/master/item-master/form")
+                    ).default,
                   }),
                 },
                 {
@@ -153,8 +160,7 @@ const protectedRoutes: RouteObject = {
                   }),
                 },
 
-
-                                {
+                {
                   path: "bom",
                   children: [
                     {
@@ -167,17 +173,15 @@ const protectedRoutes: RouteObject = {
                     {
                       path: "create",
                       lazy: async () => ({
-                        Component: (
-                          await import("@/app/pages/master/bom/form")
-                        ).default,
+                        Component: (await import("@/app/pages/master/bom/form"))
+                          .default,
                       }),
                     },
                     {
                       path: "edit/:id",
                       lazy: async () => ({
-                        Component: (
-                          await import("@/app/pages/master/bom/form")
-                        ).default,
+                        Component: (await import("@/app/pages/master/bom/form"))
+                          .default,
                       }),
                     },
                     {
@@ -251,7 +255,7 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
-             {
+            {
               path: "createpricing",
               lazy: async () => ({
                 Component: (
@@ -711,30 +715,28 @@ const protectedRoutes: RouteObject = {
             },
           ],
         },
-         // Followups
+        // Followups
         {
           path: "followups",
           children: [
             {
               index: true,
-              element: <Navigate to="todayfollowups" replace /> ,
+              element: <Navigate to="todayfollowups" replace />,
             },
 
             {
               path: "todayfollowups",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/followup/todayfolloups")
-                ).default,
+                Component: (await import("@/app/pages/followup/todayfolloups"))
+                  .default,
               }),
             },
 
             {
               path: "follow-up/:id",
               lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/followup/followup")
-                ).default,
+                Component: (await import("@/app/pages/followup/followup"))
+                  .default,
               }),
             },
 
@@ -746,13 +748,10 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
-
           ],
         },
 
-
-        
-           // ============================================================
+        // ============================================================
         // SETTINGS
         // ============================================================
         {

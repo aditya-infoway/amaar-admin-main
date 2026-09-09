@@ -1,7 +1,17 @@
-import { baseNavigationObj } from "../baseNavigation";
 import { NavigationTree } from "@/@types/navigation";
 
 export const dashboards: NavigationTree = {
-  ...baseNavigationObj["dashboards"],
-  type: "item",
+  id: "dashboards",
+  type: "collapse",
+  path: "/dashboards",
+  title: "Dashboard",
+  icon: "dashboards",
+  childs: [
+    {
+      id: "dashboard",
+      type: "item",
+      title: "Dashboard",
+      path: "dashboards",
+    },
+  ],
 };
