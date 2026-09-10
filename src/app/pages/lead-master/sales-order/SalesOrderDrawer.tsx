@@ -573,76 +573,78 @@ export function SalesOrderDrawer({
                     </p>
                   )}
                 </div>
-                {/* <Input
+                <Input
                   label="Sales Order No"
                   value={soNo || "Generating..."}
                   disabled
                   onChange={() => {}}
-                /> */}
+                />
               </div>
 
               {/* TOP BLOCK — read-only snapshot of the selected quotation.
     Never changed by the As Its / Manual toggle. */}
-              <div className="dark:border-dark-500 rounded-lg border border-gray-200 p-4 dark:border-gray-600">
-                <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+              {/* TOP BLOCK — read-only snapshot of the selected quotation.
+    Never changed by the As Its / Manual toggle. */}
+              <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="grid grid-cols-1 sm:grid-cols-2">
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Lead ID
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {leadId || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       City
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {city || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Client Name
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {customerName || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Address
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {address || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Client Number
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {mobile || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Model
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {model || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Email ID
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {email || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-24 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Remark
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -651,7 +653,6 @@ export function SalesOrderDrawer({
                   </div>
                 </div>
               </div>
-
               {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Client Name"

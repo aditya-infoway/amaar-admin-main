@@ -4,57 +4,57 @@ import { NavigationTree } from "@/@types/navigation";
 export const master: NavigationTree = {
   ...baseNavigationObj["master"],
   childs: [
-    {
-      id: "master.showroom",
-      type: "collapse",
-      path: "/master/showroom",
-      title: "Showroom Master",
-      transKey: "Showroom Master",
-      icon: "master.showroom",
-      childs: [
-        {
-          id: "master.category",
-          type: "item",
-          path: "/master/category",
-          title: "Category",
-          transKey: "nav.master.category",
-          icon: "master.category",
-        },
-        {
-          id: "master.productSeries",
-          type: "item",
-          path: "/master/product-series",
-          title: "Product Series",
-          transKey: "nav.master.productSeries",
-          icon: "master.productSeries",
-        },
-        {
-          id: "master.model",
-          type: "item",
-          path: "/master/model",
-          title: "Model",
-          transKey: "nav.master.model",
-          icon: "master.model",
-        },
-        {
-          id: "master.variant",
-          type: "item",
-          path: "/master/variant",
-          title: "Variant",
-          transKey: "nav.master.variant",
-          icon: "master.variant",
-        },
-        {
-          id: "master.variantStructure",
-          type: "item",
-          path: "/master/variant-structure",
-          title: "Variant Structure",
-          transKey: "nav.master.variantStructure",
-          icon: "master.variantStructure",
-        },
+    // {
+    //   id: "master.showroom",
+    //   type: "collapse",
+    //   path: "/master/showroom",
+    //   title: "Showroom Master",
+    //   transKey: "Showroom Master",
+    //   icon: "master.showroom",
+    //   childs: [
+    //     {
+    //       id: "master.category",
+    //       type: "item",
+    //       path: "/master/category",
+    //       title: "Category",
+    //       transKey: "nav.master.category",
+    //       icon: "master.category",
+    //     },
+    //     {
+    //       id: "master.productSeries",
+    //       type: "item",
+    //       path: "/master/product-series",
+    //       title: "Product Series",
+    //       transKey: "nav.master.productSeries",
+    //       icon: "master.productSeries",
+    //     },
+    //     {
+    //       id: "master.model",
+    //       type: "item",
+    //       path: "/master/model",
+    //       title: "Model",
+    //       transKey: "nav.master.model",
+    //       icon: "master.model",
+    //     },
+    //     {
+    //       id: "master.variant",
+    //       type: "item",
+    //       path: "/master/variant",
+    //       title: "Variant",
+    //       transKey: "nav.master.variant",
+    //       icon: "master.variant",
+    //     },
+    //     {
+    //       id: "master.variantStructure",
+    //       type: "item",
+    //       path: "/master/variant-structure",
+    //       title: "Variant Structure",
+    //       transKey: "nav.master.variantStructure",
+    //       icon: "master.variantStructure",
+    //     },
        
-      ],
-    },
+    //   ],
+    // },
 
     // Separate Brand dropdown
     // {

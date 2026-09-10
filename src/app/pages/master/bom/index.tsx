@@ -22,10 +22,11 @@ import { MasterToolbar } from "../shared/MasterToolbar";
 import { statusOptions } from "../shared/constants";
 import { columns, exportColumns } from "./columns";
 import { emptyBOM2, mapApiBOM2ToBOM2, BOM2 } from "./data";
+import clsx from "clsx";
 
 export default function BOM2Page() {
   const navigate = useNavigate();
-  const [data, setData] = useState<BOM2[]>([]);
+
   const [loading, setLoading] = useState(true);
 
   const [globalFilter, setGlobalFilter] = useState("");
@@ -35,21 +36,30 @@ export default function BOM2Page() {
   const [filterItemName, setFilterItemName] = useState("");
   const [filterBOMName, setFilterBOMName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [activeTab, setActiveTab] = useState<"bom" | "subBom">("bom");
+  const [data, setData] = useState<BOM2[]>([]);
+  const [subBomData, setSubBomData] = useState<BOM2[]>([]);
 
   // ---- Fetch BOM2 items ----
   const fetchAll = async () => {
     setLoading(true);
     try {
-      // 👇 FIX: was "master/bom2/list" — no such route exists.
-      // Your router mounts everything under /master/bom (see bom.routes.js).
-      const response = await Get("master/bom/list", {}, false);
-      if (response.data?.success) {
-        setData((response.data.data || []).map(mapApiBOM2ToBOM2));
+      const [bomRes, subRes] = await Promise.all([
+        Get("master/bom/list", {}, false),
+        Get("master/bom/sub-bom/list", {}, false),
+      ]);
+
+      if (bomRes.data?.success) {
+        setData((bomRes.data.data || []).map(mapApiBOM2ToBOM2));
       } else {
-        toasterrormsg(response.data?.message || "Failed to fetch BOM items.");
+        toasterrormsg(bomRes.data?.message || "Failed to fetch BOM items.");
+      }
+
+      if (subRes.data?.success) {
+        setSubBomData((subRes.data.data || []).map(mapApiBOM2ToBOM2));
       }
     } catch (error) {
-      toasterrormsg("Something went wrong while fetching BOM2 data.");
+      toasterrormsg("Something went wrong while fetching BOM data.");
     } finally {
       setLoading(false);
     }
@@ -61,7 +71,9 @@ export default function BOM2Page() {
   }, []);
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
+    const source = activeTab === "bom" ? data : subBomData;
+
+    return source.filter((item) => {
       if (
         filterItemName &&
         !item.itemName.toLowerCase().includes(filterItemName.toLowerCase())
@@ -75,7 +87,14 @@ export default function BOM2Page() {
       if (filterStatus && item.status !== filterStatus) return false;
       return true;
     });
-  }, [data, filterItemName, filterBOMName, filterStatus]);
+  }, [
+    data,
+    subBomData,
+    filterItemName,
+    filterBOMName,
+    filterStatus,
+    activeTab,
+  ]);
 
   const table = useReactTable({
     data: filteredData,
@@ -180,13 +199,50 @@ export default function BOM2Page() {
           }
         />
 
+        {/* Always visible tabs – same style as Item Category */}
+        <div className="dark:border-dark-500 mt-4 mb-4 ml-6 flex items-center cursor-pointer gap-6 border-b border-gray-200 px-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("bom")}
+            className={clsx(
+              "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
+              activeTab === "bom"
+                ? "text-primary-600 dark:text-primary-400"
+                : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
+            )}
+          >
+            BOM
+            {activeTab === "bom" && (
+              <span className="bg-primary-600 dark:bg-primary-400 absolute right-0 bottom-0 left-0 h-0.5 rounded-full" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("subBom")}
+            className={clsx(
+              "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
+              activeTab === "subBom"
+                ? "text-primary-600 dark:text-primary-400"
+                : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
+            )}
+          >
+            Sub BOM
+            {activeTab === "subBom" && (
+              <span className="bg-primary-600 dark:bg-primary-400 absolute right-0 bottom-0 left-0 h-0.5 rounded-full" />
+            )}
+          </button>
+        </div>
+
         <MasterTable
           table={table}
           columnCount={columns.length}
           emptyMessage={
             loading
-              ? "Loading BOM2 items..."
-              : "No BOM items found. Click Create BOM2 to add one."
+              ? "Loading BOM items..."
+              : activeTab === "bom"
+                ? "No BOM items found. Click Create BOM to add one."
+                : "No Sub BOM items found."
           }
         />
       </div>

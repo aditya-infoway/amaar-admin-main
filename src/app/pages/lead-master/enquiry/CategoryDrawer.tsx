@@ -104,25 +104,38 @@ export function EnquiryDrawer({
 }, []);
 
   // ===== Model list ab dynamic API se aayegi =====
-  useEffect(() => {
-    if (!isOpen) return;
-    (async () => {
-      try {
-        const response = await Get("master/model/list", {}, false);
-        if (response.data?.success) {
-          const options: ModelOption[] = (response.data.data || []).map(
-            (item: any) => ({
-              id: String(item.modelId ?? item.id),
-              label: item.modelName ?? item.label,
-            }),
-          );
-          setModelOptions(options);
-        }
-      } catch (error) {
-        toasterrormsg("Model list load nahi ho payi.");
+useEffect(() => {
+  if (!isOpen) return;
+
+  const loadFinishedGoods = async () => {
+    try {
+      const response = await Get(
+        "master/itemmaster/finished-goods/list",
+        {},
+        false,
+      );
+
+      if (response.data?.success) {
+        const options: ModelOption[] = (response.data.data || []).map(
+          (item: any) => ({
+            id: String(item.itemId),
+            label: item.itemName,
+          }),
+        );
+
+        setModelOptions(options);
+      } else {
+        setModelOptions([]);
       }
-    })();
-  }, [isOpen]);
+    } catch (error) {
+      console.error("Finished Goods load error:", error);
+      setModelOptions([]);
+      toasterrormsg("Unable to load Finished Goods items.");
+    }
+  };
+
+  loadFinishedGoods();
+}, [isOpen]);
 
   // ===== Naye enquiry ka Lead Code purchase ke bill-no ki tarah generate hoga =====
   const fetchNextLeadId = async () => {

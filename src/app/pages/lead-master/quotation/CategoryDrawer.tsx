@@ -30,6 +30,7 @@ import {
 interface DropdownOption {
   id: string;
   label: string;
+  code?: string;
   price?: number;
 }
 
@@ -79,6 +80,7 @@ interface CreateMasterOption {
   createMasterId: string | number;
   type: string;
   description: string;
+  code?: string;
   actualItem?: any[];
   exShowroom?: number;
   effectiveDate?: string;
@@ -146,9 +148,9 @@ export function QuotationDrawer({
     CreateMasterOption[]
   >([]);
 
-const [createPricingData, setCreatePricingData] = useState<{ code: string; exShowroomPrice: number }[]>([]);
-
-
+  const [createPricingData, setCreatePricingData] = useState<
+    { code: string; exShowroomPrice: number }[]
+  >([]);
 
   // Refreshed every time the drawer opens so newly added leads show up
   useEffect(() => {
@@ -573,8 +575,109 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
     return found ? [found] : [];
   };
 
+  const PRICE_ERROR =
+    "Price not set. Please set the price in Create Pricing first.";
+
+  const validatePrices = () => {
+    const nextErrors: Record<string, string> = {};
+
+    const fields: {
+      field: string;
+      selected: DropdownOption[];
+      optionalForTipper?: boolean;
+    }[] = [
+      { field: "trailer", selected: trailer },
+      { field: "chassis", selected: chassis },
+      { field: "body", selected: body },
+      { field: "hydraulic", selected: hydraulic },
+
+      {
+        field: "axle",
+        selected: axle,
+        optionalForTipper: true,
+      },
+      {
+        field: "suspension",
+        selected: suspension,
+        optionalForTipper: true,
+      },
+      {
+        field: "tyre",
+        selected: tyre,
+        optionalForTipper: true,
+      },
+      {
+        field: "rim",
+        selected: rim,
+        optionalForTipper: true,
+      },
+
+      { field: "kingPin", selected: kingPin },
+
+      {
+        field: "landingLeg",
+        selected: landingLeg,
+        optionalForTipper: true,
+      },
+
+      {
+        field: "brakeSystem",
+        selected: brakeSystem,
+        optionalForTipper: true,
+      },
+
+      { field: "mudguard", selected: mudguard },
+      { field: "color", selected: color },
+
+      {
+        field: "electricalTapes",
+        selected: electricalTapes,
+        optionalForTipper: true,
+      },
+
+      { field: "supdRupd", selected: supdRupd },
+      { field: "box", selected: box },
+
+      {
+        field: "spareWheelCarrier",
+        selected: spareWheelCarrier,
+        optionalForTipper: true,
+      },
+    ];
+
+    fields.forEach(({ field, selected, optionalForTipper }) => {
+      if (vehicleType === "tipper" && optionalForTipper) {
+        return;
+      }
+
+      const option = selected?.[0];
+
+      // Selection itself is handled by validate().
+      if (!option) {
+        return;
+      }
+
+      const price = Number(option.price);
+
+      if (!Number.isFinite(price) || price <= 0) {
+        nextErrors[field] = PRICE_ERROR;
+      }
+    });
+
+    setErrors((previous) => ({
+      ...previous,
+      ...nextErrors,
+    }));
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
+
+    if (!validatePrices()) {
+      return;
+    }
 
     const lead = selectedLead?.[0];
 
@@ -741,28 +844,32 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
   }, []);
 
   useEffect(() => {
-  const fetchCreatePricing = async () => {
-    try {
-      const response = await Get("master/createpricing/list", {}, false);
+    const fetchCreatePricing = async () => {
+      try {
+        const response = await Get("master/createpricing/list", {}, false);
 
-      if (response?.data?.status === 200 || response?.data?.success) {
-        setCreatePricingData(response?.data?.data || []);
+        if (response?.data?.status === 200 || response?.data?.success) {
+          setCreatePricingData(response?.data?.data || []);
+        }
+      } catch (error) {
+        console.error("Create Pricing list error:", error);
       }
-    } catch (error) {
-      console.error("Create Pricing list error:", error);
-    }
-  };
+    };
 
-  fetchCreatePricing();
-}, []);
+    fetchCreatePricing();
+  }, []);
 
-   const getMasterOptions = (type: string): DropdownOption[] => {
-    // Build a code -> price lookup once per call (cheap; list sizes here are small)
+  const getMasterOptions = (type: string): DropdownOption[] => {
     const priceByCode = new Map<string, number>();
 
     createPricingData.forEach((p: any) => {
       if (p.code) {
-        priceByCode.set(String(p.code).trim().toLowerCase(), Number(p.exShowroomPrice) || 0);
+        const price = Number(p.exShowroomPrice);
+
+        priceByCode.set(
+          String(p.code).trim().toLowerCase(),
+          Number.isFinite(price) ? price : 0,
+        );
       }
     });
 
@@ -770,12 +877,14 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
       .filter(
         (item) => item.type?.trim().toLowerCase() === type.trim().toLowerCase(),
       )
-      .map((item: any) => {
-        const codeKey = String(item.code || "").trim().toLowerCase();
+      .map((item: CreateMasterOption) => {
+        const code = String(item.code || "").trim();
+        const codeKey = code.toLowerCase();
 
         return {
           id: String(item.createMasterId),
           label: item.description,
+          code,
           price: codeKey ? (priceByCode.get(codeKey) ?? 0) : 0,
         };
       });
@@ -785,6 +894,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
     value: any,
     type: string,
     setter: React.Dispatch<React.SetStateAction<DropdownOption[]>>,
+    fieldName: string,
   ) => {
     const options = getMasterOptions(type);
 
@@ -792,6 +902,14 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
 
     if (!selected) {
       setter([]);
+
+      // Clear error when dropdown is cleared
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldName];
+        return next;
+      });
+
       return;
     }
 
@@ -802,6 +920,25 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
     );
 
     setter(matchedOption ? [matchedOption] : []);
+
+    // Check price immediately after selection
+    if (matchedOption) {
+      const price = Number(matchedOption.price);
+
+      if (!Number.isFinite(price) || price <= 0) {
+        setErrors((prev) => ({
+          ...prev,
+          [fieldName]: PRICE_ERROR,
+        }));
+      } else {
+        // Remove old price error if valid price is selected
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next[fieldName];
+          return next;
+        });
+      }
+    }
   };
 
   return (
@@ -868,88 +1005,84 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     <p className="text-error mt-1 text-xs">{errors.lead}</p>
                   )}
                 </div>
-
-                <Input
-                  label="Quotation No"
-                  required
-                  placeholder="Generating..."
-                  value={qNo || "Generating..."}
-                  disabled
-                  onChange={() => {}}
-                />
               </div>
 
-              {/* Row 2: Customer details split clean into 3-columns */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Input
-                  label="Customer"
-                  placeholder="Customer Name"
-                  value={customerName}
-                  disabled
-                  onChange={() => {}}
-                />
+              <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="grid grid-cols-1 sm:grid-cols-2">
+                  {/* Row 1: Quotation No & City */}
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      Quotation No
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {qNo || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      City
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {city || "-"}
+                    </span>
+                  </div>
 
-                <Input
-                  label="Mobile"
-                  placeholder="Mobile"
-                  value={mobile}
-                  disabled
-                  onChange={() => {}}
-                />
+                  {/* Row 2: Customer Name & Address */}
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      Customer
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {customerName || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      Address
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {address || "-"}
+                    </span>
+                  </div>
 
-                <Input
-                  label="Email"
-                  placeholder="Email"
-                  value={email}
-                  disabled
-                  onChange={() => {}}
-                />
-              </div>
+                  {/* Row 3: Mobile & Model */}
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      Mobile
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {mobile || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      Model
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {modelOptions?.find((item) => item.id === model)?.label ||
+                        model ||
+                        "-"}
+                    </span>
+                  </div>
 
-              {/* Row 3: City and Model split clean into 3-columns */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Input
-                  label="City"
-                  placeholder="City"
-                  value={city}
-                  disabled
-                  onChange={() => {}}
-                />
-
-                <div className="sm:col-span-2 lg:col-span-2">
-                  <Listbox
-                    label="Model"
-                    data={modelOptions}
-                    value={
-                      modelOptions.find((item) => item.id === model) || null
-                    }
-                    onChange={() => {}}
-                    placeholder="Model"
-                    displayField="label"
-                    disabled
-                  />
+                  {/* Row 4: Email & Remark */}
+                  <div className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      Email
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {email || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      Remark
+                    </span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {remark || "-"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              {/* Row 4: Large Textareas */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Textarea
-                  label="Address"
-                  rows={3}
-                  placeholder="Address"
-                  value={address}
-                  disabled
-                  onChange={() => {}}
-                />
-
-                <Textarea
-                  label="Remark"
-                  rows={3}
-                  placeholder="Remark"
-                  value={remark}
-                  disabled
-                  onChange={() => {}}
-                />
               </div>
 
               {/* Separator */}
@@ -974,7 +1107,6 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                 </div>
               </div>
 
-              {/* Row 5: All 17 technical spec dropdowns, matching sketch order */}
               {/* Row 5: All 17 technical spec dropdowns */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {/* 1 - Trailer / Tipper (label switches with Vehicle Type) */}
@@ -984,7 +1116,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={trailer[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "Trailer Detail", setTrailer)
+                      handleMasterChange(
+                        value,
+                        "Trailer Detail",
+                        setTrailer,
+                        "trailer",
+                      )
                     }
                     placeholder={
                       vehicleType === "tipper"
@@ -1010,7 +1147,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={chassis[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "Main Chassis", setChassis)
+                      handleMasterChange(
+                        value,
+                        "Main Chassis",
+                        setChassis,
+                        "chassis",
+                      )
                     }
                     placeholder="Select Main Chassis"
                     label="Select Main Chassis"
@@ -1028,7 +1170,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={body[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "Body Details", setBody)
+                      handleMasterChange(value, "Body Details", setBody, "body")
                     }
                     placeholder="Select Body"
                     label="Select Body"
@@ -1046,7 +1188,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={hydraulic[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "Hyd Kit", setHydraulic)
+                      handleMasterChange(
+                        value,
+                        "Hyd Kit",
+                        setHydraulic,
+                        "hydraulic",
+                      )
                     }
                     placeholder="Select Hydraulic"
                     label="Select Hyd"
@@ -1067,7 +1214,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                       displayField="label"
                       value={axle[0] || null}
                       onChange={(value: any) =>
-                        handleMasterChange(value, "Axle", setAxle)
+                        handleMasterChange(value, "Axle", setAxle, "axle")
                       }
                       placeholder="Select Axle"
                       label="Select Axle"
@@ -1087,7 +1234,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                       displayField="label"
                       value={suspension[0] || null}
                       onChange={(value: any) =>
-                        handleMasterChange(value, "Suspension", setSuspension)
+                        handleMasterChange(
+                          value,
+                          "Suspension",
+                          setSuspension,
+                          "suspension",
+                        )
                       }
                       placeholder="Select Suspension"
                       label="Select Suspension"
@@ -1109,7 +1261,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                       displayField="label"
                       value={tyre[0] || null}
                       onChange={(value: any) =>
-                        handleMasterChange(value, "Tyre", setTyre)
+                        handleMasterChange(value, "Tyre", setTyre, "tyre")
                       }
                       placeholder="Select Tyre"
                       label="Select Tyre"
@@ -1129,7 +1281,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                       displayField="label"
                       value={rim[0] || null}
                       onChange={(value: any) =>
-                        handleMasterChange(value, "Rim", setRim)
+                        handleMasterChange(value, "Rim", setRim, "rim")
                       }
                       placeholder="Select Rim"
                       label="Select Rim"
@@ -1148,7 +1300,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={kingPin[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "King Pin", setKingPin)
+                      handleMasterChange(
+                        value,
+                        "King Pin",
+                        setKingPin,
+                        "kingPin",
+                      )
                     }
                     placeholder="Select King Pin"
                     label="Select King Pin"
@@ -1167,7 +1324,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                       displayField="label"
                       value={landingLeg[0] || null}
                       onChange={(value: any) =>
-                        handleMasterChange(value, "Landing Leg", setLandingLeg)
+                        handleMasterChange(
+                          value,
+                          "Landing Leg",
+                          setLandingLeg,
+                          "landingLeg",
+                        )
                       }
                       placeholder="Select Landing Leg"
                       label="Select Landing Leg"
@@ -1193,6 +1355,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                           value,
                           "Brake system",
                           setBrakeSystem,
+                          "brakeSystem",
                         )
                       }
                       placeholder="Select Brake System"
@@ -1214,7 +1377,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={mudguard[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "Mudgaurd", setMudguard)
+                      handleMasterChange(
+                        value,
+                        "Mudgaurd",
+                        setMudguard,
+                        "mudguard",
+                      )
                     }
                     placeholder="Select Mudguard"
                     label="Select Mudguard"
@@ -1232,14 +1400,17 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={color[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "Paint", setColor)
+                      handleMasterChange(value, "Paint", setColor, "color")
                     }
                     placeholder="Select Paint"
                     label="Select Paint"
                     searchFields={["label"]}
                   />
-                </div>
 
+                  {errors.color && (
+                    <p className="text-error mt-1 text-xs">{errors.color}</p>
+                  )}
+                </div>
                 {/* 14 - Electrical & Reflective Tapes (Trailer only) */}
                 {vehicleType === "trailer" && (
                   <div>
@@ -1252,6 +1423,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                           value,
                           "Electrical & Reflective tapes",
                           setElectricalTapes,
+                          "electricalTapes",
                         )
                       }
                       placeholder="Electrical & Reflective Tapes"
@@ -1273,7 +1445,12 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={supdRupd[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "SUPD & RUPD", setSupdRupd)
+                      handleMasterChange(
+                        value,
+                        "SUPD & RUPD",
+                        setSupdRupd,
+                        "supdRupd",
+                      )
                     }
                     placeholder="SUPD & RUPD"
                     label="SUPD & RUPD"
@@ -1291,7 +1468,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                     displayField="label"
                     value={box[0] || null}
                     onChange={(value: any) =>
-                      handleMasterChange(value, "Tool Box", setBox)
+                      handleMasterChange(value, "Tool Box", setBox, "box")
                     }
                     placeholder="Tool Box"
                     label="Tool Box"
@@ -1314,6 +1491,7 @@ const [createPricingData, setCreatePricingData] = useState<{ code: string; exSho
                           value,
                           "Spare Wheel Carrier",
                           setSpareWheelCarrier,
+                          "spareWheelCarrier",
                         )
                       }
                       placeholder="Spare Wheel Carrier"
