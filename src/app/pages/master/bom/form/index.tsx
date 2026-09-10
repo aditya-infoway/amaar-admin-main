@@ -190,6 +190,91 @@ function computeTotalWeight(item: BOMItem): number {
   return ownWeight + childrenWeight;
 }
 
+// 👇 NEW: recursively filters a BOMItem tree by search query, keeping a
+// node if it matches OR if any of its descendants match (so a matching
+// deep child still shows its ancestor chain, same pattern search trees
+// commonly use).
+function filterTree(items: BOMItem[], query: string): BOMItem[] {
+  if (!query.trim()) return items;
+  const q = query.toLowerCase();
+  const result: BOMItem[] = [];
+
+  for (const item of items) {
+    const selfMatch =
+      item.itemCode.toLowerCase().includes(q) ||
+      item.itemName.toLowerCase().includes(q);
+    const filteredChildren = filterTree(item.children || [], query);
+
+    if (selfMatch || filteredChildren.length > 0) {
+      result.push({
+        ...item,
+        // If this node itself matched, show its full original subtree.
+        // If only some descendants matched, show just those descendants.
+        children: selfMatch ? item.children : filteredChildren,
+      });
+    }
+  }
+
+  return result;
+}
+
+// 👇 NEW: walks a nested BOMItem tree and collects every item whose id is
+// in the selected set, at any depth, into a flat array. Each returned
+// item keeps its own data but the caller is responsible for stripping
+// nested children when inserting into a different tree (handled already
+// in handleSubBomConfirmSubmit, which always forces children: []).
+// Keeps only selected nodes + their selected descendants.
+// Unselected nodes are dropped, but the parent chain of selected
+// nodes is preserved so the tree still looks correct.
+function collectSelectedTree(
+  items: BOMItem[],
+  selectedSet: Set<string>,
+): BOMItem[] {
+  const result: BOMItem[] = [];
+
+  for (const item of items) {
+    const selectedChildren = collectSelectedTree(
+      item.children || [],
+      selectedSet,
+    );
+    const isSelected = selectedSet.has(item.id);
+
+    if (isSelected || selectedChildren.length > 0) {
+      result.push({
+        ...item,
+        // Only keep selected children (or the full subtree if the
+        // node itself is selected — same pattern as filterTree)
+        children: isSelected ? item.children : selectedChildren,
+      });
+    }
+  }
+
+  return result;
+}
+
+function buildPreviewTree(
+  bomItems: BOMItem[],
+  parentId: string | null,
+  selectedItems: BOMItem[],
+): BOMItem[] {
+  if (!parentId) {
+    // No parent selected → just show the selected items as roots
+    return selectedItems;
+  }
+
+  // Deep clone the current tree and inject the selected items under the parent
+  const clone = (items: BOMItem[]): BOMItem[] =>
+    items.map((item) => ({
+      ...item,
+      children:
+        item.id === parentId
+          ? [...item.children, ...selectedItems]
+          : clone(item.children || []),
+    }));
+
+  return clone(bomItems);
+}
+
 const ROW_H = 36;
 const TICK_Y = 18;
 const INDENT = 24;
@@ -357,6 +442,290 @@ function BOMTreeNode({
   );
 }
 
+interface ConfirmTreeProps {
+  items: BOMItem[];
+  level: number;
+  expanded: Record<string, boolean>;
+  onToggle: (id: string) => void;
+}
+
+function ConfirmBomTreeList({
+  items,
+  level,
+  expanded,
+  onToggle,
+}: ConfirmTreeProps) {
+  return (
+    <ul
+      className="relative"
+      style={level > 0 ? { paddingLeft: INDENT } : undefined}
+    >
+      {items.map((item, index) => (
+        <ConfirmBomTreeNode
+          key={item.id}
+          item={item}
+          level={level}
+          isLast={index === items.length - 1}
+          expanded={expanded}
+          onToggle={onToggle}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function ConfirmBomTreeNode({
+  item,
+  level,
+  isLast,
+  expanded,
+  onToggle,
+}: Omit<ConfirmTreeProps, "items"> & { item: BOMItem; isLast: boolean }) {
+  const hasChildren = !!item.children && item.children.length > 0;
+  const isOpen = !!expanded[item.id];
+
+  return (
+    <li className="relative" style={{ minHeight: ROW_H }}>
+      {level > 0 && (
+        <>
+          <span
+            className="dark:bg-dark-500 absolute bg-gray-300"
+            style={{
+              left: -INDENT + 10,
+              top: 0,
+              width: 1,
+              height: isLast ? TICK_Y : "100%",
+            }}
+          />
+          <span
+            className="dark:bg-dark-500 absolute bg-gray-300"
+            style={{
+              left: -INDENT + 10,
+              top: TICK_Y,
+              width: INDENT - 10,
+              height: 1,
+            }}
+          />
+        </>
+      )}
+
+      <div
+        className="group flex items-center gap-2 rounded-md py-2 pr-2 pl-1"
+        style={{ minHeight: ROW_H }}
+      >
+        {/* Expand/collapse — same as selection tree */}
+        <button
+          type="button"
+          onClick={() => hasChildren && onToggle(item.id)}
+          className="flex size-5 shrink-0 items-center justify-center"
+        >
+          {hasChildren ? (
+            <ChevronDownIcon
+              className={clsx(
+                "size-4 text-gray-400 transition-transform",
+                !isOpen && "-rotate-90",
+              )}
+            />
+          ) : (
+            <span className="dark:bg-dark-500 block size-1 rounded-full bg-gray-300" />
+          )}
+        </button>
+
+        <span
+          className={clsx(
+            "size-5 shrink-0",
+            hasChildren ? "text-primary-600" : "text-gray-400",
+          )}
+        >
+          {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+        </span>
+
+        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+          <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+            {item.itemCode}
+          </span>
+          <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+            {item.itemName}
+          </span>
+        </div>
+
+        <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
+          Qty: {item.quantity} {item.unit}
+        </span>
+      </div>
+
+      {hasChildren && isOpen && (
+        <ConfirmBomTreeList
+          items={item.children}
+          level={level + 1}
+          expanded={expanded}
+          onToggle={onToggle}
+        />
+      )}
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 👇 NEW: Sub BOM selection tree — same visual style as BOMTreeNode
+// (connecting lines, folder/document icons, expand/collapse) but each
+// row has a checkbox instead of a highlight/remove action, since this
+// tree is for picking items rather than editing the main BOM.
+// ---------------------------------------------------------------------------
+
+interface SubBomTreeProps {
+  items: BOMItem[];
+  level: number;
+  expanded: Record<string, boolean>;
+  selected: Set<string>;
+  onToggleExpand: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+}
+
+function SubBomTreeList({
+  items,
+  level,
+  expanded,
+  selected,
+  onToggleExpand,
+  onToggleSelect,
+}: SubBomTreeProps) {
+  return (
+    <ul
+      className="relative"
+      style={level > 0 ? { paddingLeft: INDENT } : undefined}
+    >
+      {items.map((item, index) => (
+        <SubBomTreeNode
+          key={item.id}
+          item={item}
+          level={level}
+          isLast={index === items.length - 1}
+          expanded={expanded}
+          selected={selected}
+          onToggleExpand={onToggleExpand}
+          onToggleSelect={onToggleSelect}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function SubBomTreeNode({
+  item,
+  level,
+  isLast,
+  expanded,
+  selected,
+  onToggleExpand,
+  onToggleSelect,
+}: Omit<SubBomTreeProps, "items"> & { item: BOMItem; isLast: boolean }) {
+  const hasChildren = !!item.children && item.children.length > 0;
+  const isOpen = !!expanded[item.id];
+  const isSelected = selected.has(item.id);
+
+  return (
+    <li className="relative" style={{ minHeight: ROW_H }}>
+      {level > 0 && (
+        <>
+          <span
+            className="dark:bg-dark-500 absolute bg-gray-300"
+            style={{
+              left: -INDENT + 10,
+              top: 0,
+              width: 1,
+              height: isLast ? TICK_Y : "100%",
+            }}
+          />
+          <span
+            className="dark:bg-dark-500 absolute bg-gray-300"
+            style={{
+              left: -INDENT + 10,
+              top: TICK_Y,
+              width: INDENT - 10,
+              height: 1,
+            }}
+          />
+        </>
+      )}
+
+      <div
+        onClick={() => onToggleSelect(item.id)}
+        className={clsx(
+          "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 pl-1 transition",
+          isSelected
+            ? "bg-primary-50 ring-primary-400 dark:bg-primary-900/30 ring-1 ring-inset"
+            : "dark:hover:bg-dark-600 hover:bg-gray-50",
+        )}
+        style={{ minHeight: ROW_H }}
+      >
+        <span
+          className="flex size-5 shrink-0 items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={isSelected}
+            onChange={() => onToggleSelect(item.id)}
+          />
+        </span>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasChildren) onToggleExpand(item.id);
+          }}
+          className="flex size-5 shrink-0 items-center justify-center"
+        >
+          {hasChildren ? (
+            <ChevronDownIcon
+              className={clsx(
+                "size-4 text-gray-400 transition-transform",
+                !isOpen && "-rotate-90",
+              )}
+            />
+          ) : (
+            <span className="dark:bg-dark-500 block size-1 rounded-full bg-gray-300" />
+          )}
+        </button>
+
+        <span
+          className={clsx(
+            "size-5 shrink-0",
+            hasChildren ? "text-primary-600" : "text-gray-400",
+          )}
+        >
+          {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+        </span>
+
+        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+          <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+            {item.itemCode}
+          </span>
+          <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+            {item.itemName}
+          </span>
+        </div>
+
+        <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
+          Qty: {item.quantity} {item.unit}
+        </span>
+      </div>
+
+      {hasChildren && isOpen && (
+        <SubBomTreeList
+          items={item.children}
+          level={level + 1}
+          expanded={expanded}
+          selected={selected}
+          onToggleExpand={onToggleExpand}
+          onToggleSelect={onToggleSelect}
+        />
+      )}
+    </li>
+  );
+}
+
 export default function BOMFormPage() {
   const navigate = useNavigate();
 
@@ -422,10 +791,10 @@ export default function BOMFormPage() {
   const [weightReadOnly, setWeightReadOnly] = useState<boolean>(true);
   const baseWeightRef = useRef<string>("");
 
-  //  NEW: Entry mode state
+  // Entry mode state
   const [entryMode, setEntryMode] = useState<"normal" | "subBom">("normal");
 
-  //  NEW: Sub BOM right drawer states
+  // Sub BOM right drawer states
   const [isSubBomDrawerOpen, setIsSubBomDrawerOpen] = useState(false);
   const [subBomItems, setSubBomItems] = useState<BOMItem[]>([]);
   const [selectedSubBomItems, setSelectedSubBomItems] = useState<Set<string>>(
@@ -434,8 +803,17 @@ export default function BOMFormPage() {
   const [subBomSearchQuery, setSubBomSearchQuery] = useState("");
   const [subBomDrawerCode, setSubBomDrawerCode] = useState("");
   const [subBomDrawerName, setSubBomDrawerName] = useState("");
+  // 👇 NEW: expand/collapse state for the Sub BOM selection tree, kept
+  // separate from the main BOM Structure panel's expandedNodes
+  const [subBomExpandedNodes, setSubBomExpandedNodes] = useState<
+    Record<string, boolean>
+  >({});
 
-  //  NEW: Sub BOM confirmation modal states
+  const [confirmExpandedNodes, setConfirmExpandedNodes] = useState<
+    Record<string, boolean>
+  >({});
+
+  // Sub BOM confirmation modal states
   const [isSubBomConfirmOpen, setIsSubBomConfirmOpen] = useState(false);
   const [subBomConfirmData, setSubBomConfirmData] = useState<{
     parentCode: string;
@@ -827,7 +1205,7 @@ export default function BOMFormPage() {
     return String(existingCount + 1);
   };
 
-  //  NEW: Fetch sub BOM items for the drawer using the API
+  // Fetch sub BOM items for the drawer using the API
   const fetchSubBomItems = async (code: string) => {
     try {
       const response = await Get(`master/bom/sub-bom/${code}`, {}, false);
@@ -837,14 +1215,20 @@ export default function BOMFormPage() {
         setSubBomItems(items);
         setSubBomDrawerCode(data.bomCode || code);
         setSubBomDrawerName(data.bomName || code);
-        // CHANGED: start with nothing selected — user picks manually
+        // Start with nothing selected — user picks manually
         setSelectedSubBomItems(new Set());
+        // 👇 NEW: auto-expand every node so the full nested structure is
+        // visible immediately, matching the BOM Structure panel's default
+        setSubBomExpandedNodes(
+          Object.fromEntries(
+            collectIds(items).map((nid: string) => [nid, true]),
+          ),
+        );
         setIsSubBomDrawerOpen(true);
       } else {
         toasterrormsg(
           response.data?.message || "Failed to fetch Sub BOM items.",
         );
-        // Close drawer if no items or error
         setIsSubBomDrawerOpen(false);
       }
     } catch (error) {
@@ -854,7 +1238,7 @@ export default function BOMFormPage() {
     }
   };
 
-  //  NEW: Handle search icon click in Sub BOM mode
+  // Handle search icon click in Sub BOM mode
   const handleSubBomSearch = () => {
     if (!childCode.trim()) {
       toasterrormsg("Please enter a Child item code first.");
@@ -870,7 +1254,7 @@ export default function BOMFormPage() {
     fetchSubBomItems(childCode);
   };
 
-  // NEW: Toggle sub BOM item selection
+  // Toggle sub BOM item selection
   const toggleSubBomItem = (itemId: string) => {
     setSelectedSubBomItems((prev) => {
       const newSet = new Set(prev);
@@ -883,28 +1267,49 @@ export default function BOMFormPage() {
     });
   };
 
-  //  NEW: Toggle all sub BOM items
+  // 👇 NEW: Toggle expand/collapse for a node in the Sub BOM selection tree
+  const toggleSubBomNode = (nid: string) => {
+    setSubBomExpandedNodes((prev) => ({ ...prev, [nid]: !prev[nid] }));
+  };
+
+  const toggleConfirmNode = (nid: string) => {
+    setConfirmExpandedNodes((prev) => ({ ...prev, [nid]: !prev[nid] }));
+  };
+
+  // 👇 CHANGED: Toggle all sub BOM items — now walks the full nested tree
+  // (via collectIds) against whatever is currently visible (filtered),
+  // instead of only the old flat top-level list.
   const toggleAllSubBomItems = () => {
-    if (
-      selectedSubBomItems.size === subBomItems.length &&
-      subBomItems.length > 0
-    ) {
-      setSelectedSubBomItems(new Set());
+    const visibleIds = collectIds(filteredSubBomItems);
+    const allVisibleSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((vid) => selectedSubBomItems.has(vid));
+
+    if (allVisibleSelected) {
+      setSelectedSubBomItems((prev) => {
+        const next = new Set(prev);
+        visibleIds.forEach((vid) => next.delete(vid));
+        return next;
+      });
     } else {
-      setSelectedSubBomItems(new Set(subBomItems.map((item) => item.id)));
+      setSelectedSubBomItems((prev) => {
+        const next = new Set(prev);
+        visibleIds.forEach((vid) => next.add(vid));
+        return next;
+      });
     }
   };
 
-  //  NEW: Save sub BOM drawer selection (closes drawer, opens confirmation)
+  // Save sub BOM drawer selection (closes drawer, returns to entry panel)
   const handleSubBomDrawerSave = () => {
     if (selectedSubBomItems.size === 0) {
       toasterrormsg("Please select at least one item from the BOM.");
       return;
     }
 
-    const selectedItems = subBomItems.filter((item) =>
-      selectedSubBomItems.has(item.id),
-    );
+    // 👇 CHANGED: gather selected items recursively across every depth
+    // of the nested tree, not just the old flat top-level list.
+    const selectedItems = collectSelectedTree(subBomItems, selectedSubBomItems);
 
     const parentItem = findAvailableByCode(parentCode);
     const childItem = findAvailableByCode(childCode);
@@ -921,17 +1326,17 @@ export default function BOMFormPage() {
     setSubBomItems([]);
     setSelectedSubBomItems(new Set());
     setSubBomSearchQuery("");
+    setSubBomExpandedNodes({});
 
-    //  CHANGED: don't open the confirmation view yet — go back to the
-    // entry panel so the user can still adjust fields (Qty etc.) before
-    // finalizing. The confirmation view now opens from
-    // "Add to BOM Structure" instead.
+    // Don't open the confirmation view yet — go back to the entry panel
+    // so the user can still adjust fields (Qty etc.) before finalizing.
+    // The confirmation view now opens from "Add to BOM Structure" instead.
     toastsuccessmsg(
       `${selectedItems.length} item(s) selected from sub BOM. Review the entry fields, then click "Add to BOM Structure".`,
     );
   };
 
-  //  NEW: Submit sub BOM confirmation
+  // Submit sub BOM confirmation
   const handleSubBomConfirmSubmit = () => {
     if (!subBomConfirmData) return;
 
@@ -944,33 +1349,45 @@ export default function BOMFormPage() {
       return;
     }
 
-    // Add selected items to the current BOM
     if (!selectedParentId) {
       toasterrormsg("Please select a parent item before adding sub BOM items.");
       return;
     }
+
     const parentNode = findNodeById(bomItems, selectedParentId);
-    let newItems: BOMItem[] = [];
     let serialCounter = parentNode ? parentNode.children.length + 1 : 1;
 
-    selectedItems.forEach((subItem) => {
-      // Check for duplicates
-      const isDuplicate = parentNode?.children.some(
-        (child) =>
-          child.itemCode.toLowerCase() === subItem.itemCode.toLowerCase(),
-      );
+    // Recursively clone the selected tree, giving every node a fresh id
+    // and a sequential serialNo, while keeping the original children structure.
+    const cloneTree = (items: BOMItem[]): BOMItem[] => {
+      return items
+        .map((item) => {
+          const isDuplicate = parentNode?.children.some(
+            (child) =>
+              child.itemCode.toLowerCase() === item.itemCode.toLowerCase(),
+          );
 
-      if (!isDuplicate) {
-        const itemToAdd: BOMItem = {
-          ...subItem,
-          id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-          serialNo: String(serialCounter++),
-          quantity: subItem.quantity || "1",
-          children: [],
-        };
-        newItems.push(itemToAdd);
-      }
-    });
+          // Skip exact duplicates at the insertion point (top level only)
+          // Deeper nodes are always kept because they belong to a selected parent.
+          if (isDuplicate && items === selectedItems) {
+            return null as any; // filtered out below
+          }
+
+          const newId =
+            Date.now().toString() + Math.random().toString(36).slice(2, 6);
+
+          return {
+            ...item,
+            id: newId,
+            serialNo: String(serialCounter++),
+            quantity: item.quantity || "1",
+            children: item.children?.length ? cloneTree(item.children) : [],
+          };
+        })
+        .filter(Boolean);
+    };
+
+    const newItems = cloneTree(selectedItems);
 
     if (newItems.length === 0) {
       toasterrormsg("Selected items are already present in this BOM.");
@@ -979,7 +1396,6 @@ export default function BOMFormPage() {
       return;
     }
 
-    // Add all new items under the selected parent
     let updatedItems = [...bomItems];
     newItems.forEach((item) => {
       updatedItems = insertItem(updatedItems, selectedParentId, item);
@@ -992,30 +1408,26 @@ export default function BOMFormPage() {
       [selectedParentId as string]: true,
     }));
 
-    // Reset fields
     setChildCode("");
     resetEntryFields();
     setIsSubBomConfirmOpen(false);
     setSubBomConfirmData(null);
+    setConfirmExpandedNodes({});
 
-    toastsuccessmsg(`${newItems.length} item(s) added from sub BOM.`);
+    toastsuccessmsg(
+      `${collectIds(newItems).length} item(s) added from sub BOM (hierarchy preserved).`,
+    );
   };
 
-  //  NEW: Filter sub BOM items for search
-  const filteredSubBomItems = useMemo(() => {
-    if (!subBomSearchQuery.trim()) return subBomItems;
-    const query = subBomSearchQuery.toLowerCase();
-    return subBomItems.filter(
-      (item) =>
-        item.itemCode.toLowerCase().includes(query) ||
-        item.itemName.toLowerCase().includes(query),
-    );
-  }, [subBomItems, subBomSearchQuery]);
+  // 👇 CHANGED: Filter sub BOM items for search — now uses the recursive
+  // filterTree helper so matches at any depth keep their ancestor chain
+  // visible, instead of only filtering a flat top-level list.
+  // Avoid manual memoization here: the filter is cheap and React Compiler
+  // cannot preserve the existing useMemo optimization for this tree-shaped data.
+  const filteredSubBomItems = filterTree(subBomItems, subBomSearchQuery);
 
   const handleAddToTree = () => {
-    // =========================
     // FIRST ROOT ITEM
-    // =========================
     if (!hasBOMItems) {
       if (!parentCode.trim()) {
         toasterrormsg("Please enter an item code.");
@@ -1043,10 +1455,7 @@ export default function BOMFormPage() {
       return;
     }
 
-    // =========================
     // CHILD ITEM
-    // =========================
-
     if (!childCode.trim()) {
       toasterrormsg("Please enter the Child item code.");
       return;
@@ -1057,13 +1466,22 @@ export default function BOMFormPage() {
       return;
     }
 
-    //  In Sub BOM mode:
+    // In Sub BOM mode:
     // - If items were already picked from the drawer, this click opens
     //   the read-only confirmation view instead of submitting straight
     //   away, so there's a final check before it lands in the tree.
     // - Otherwise, this click just opens the drawer to pick items.
     if (entryMode === "subBom") {
       if (subBomConfirmData) {
+        const preview = buildPreviewTree(
+          bomItems,
+          selectedParentId,
+          subBomConfirmData.selectedItems,
+        );
+
+        setConfirmExpandedNodes(
+          Object.fromEntries(collectIds(preview).map((nid) => [nid, true])),
+        );
         setIsSubBomConfirmOpen(true);
         return;
       }
@@ -1078,9 +1496,7 @@ export default function BOMFormPage() {
       return;
     }
 
-    // =========================
     // NORMAL MODE
-    // =========================
     const newItem = buildItem(childCode);
 
     if (!newItem) {
@@ -1345,8 +1761,6 @@ export default function BOMFormPage() {
               </div>
 
               <div className="space-y-4">
-                {/*  NEW: Entry Mode Radio Buttons */}
-
                 <div>
                   <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                     Parent
@@ -1398,8 +1812,6 @@ export default function BOMFormPage() {
 
                 {hasBOMItems && (
                   <>
-                    {/*  Entry Mode — only shows once a root item exists,
-                        sits between Parent and Child */}
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                         Entry Mode
@@ -1859,7 +2271,7 @@ export default function BOMFormPage() {
         </Card>
       </div>
 
-      {/*  Sub BOM Right Drawer */}
+      {/* Sub BOM Right Drawer */}
       <Transition appear show={isSubBomDrawerOpen} as={Fragment}>
         <Dialog
           as="div"
@@ -1869,6 +2281,7 @@ export default function BOMFormPage() {
             setSelectedSubBomItems(new Set());
             setSubBomItems([]);
             setSubBomSearchQuery("");
+            setSubBomExpandedNodes({});
           }}
         >
           <TransitionChild
@@ -1900,8 +2313,8 @@ export default function BOMFormPage() {
                     Select Items from Sub BOM
                   </h3>
                   <p className="dark:text-dark-300 text-sm text-gray-500">
-                    BOM: {subBomDrawerCode} — {subBomItems.length} items
-                    available
+                    BOM: {subBomDrawerCode} — {collectIds(subBomItems).length}{" "}
+                    items available
                   </p>
                 </div>
                 <button
@@ -1910,6 +2323,7 @@ export default function BOMFormPage() {
                     setSelectedSubBomItems(new Set());
                     setSubBomItems([]);
                     setSubBomSearchQuery("");
+                    setSubBomExpandedNodes({});
                   }}
                   className="dark:hover:bg-dark-600 rounded-md p-1.5 hover:bg-gray-100"
                 >
@@ -1931,10 +2345,12 @@ export default function BOMFormPage() {
                   </div>
                   <button
                     onClick={toggleAllSubBomItems}
-                    className="dark:text-dark-300 text-sm text-gray-600 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200"
+                    className="dark:text-dark-300 cursor-pointer text-sm text-gray-600 hover:text-gray-900 dark:hover:text-gray-200"
                   >
-                    {selectedSubBomItems.size === subBomItems.length &&
-                    subBomItems.length > 0
+                    {collectIds(filteredSubBomItems).length > 0 &&
+                    collectIds(filteredSubBomItems).every((vid) =>
+                      selectedSubBomItems.has(vid),
+                    )
                       ? "Deselect All"
                       : "Select All"}
                   </button>
@@ -1943,64 +2359,22 @@ export default function BOMFormPage() {
                   </span>
                 </div>
 
-                              <div className="max-h-[400px] overflow-y-auto">
+                <div className="max-h-[400px] overflow-y-auto">
                   {filteredSubBomItems.length === 0 ? (
                     <div className="dark:text-dark-300 py-8 text-center text-gray-500">
-                      {subBomSearchQuery ? "No items match your search" : "No items in this BOM"}
+                      {subBomSearchQuery
+                        ? "No items match your search"
+                        : "No items in this BOM"}
                     </div>
                   ) : (
-                    <ul className="space-y-1">
-                      {filteredSubBomItems.map((item) => {
-                        const isSelected = selectedSubBomItems.has(item.id);
-                        const hasChildren = item.children && item.children.length > 0;
-                        return (
-                          <li key={item.id} style={{ minHeight: 36 }}>
-                            <div
-                              onClick={() => toggleSubBomItem(item.id)}
-                              className={clsx(
-                                "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 pl-1 transition",
-                                isSelected
-                                  ? "bg-primary-50 ring-primary-400 dark:bg-primary-900/30 ring-1 ring-inset"
-                                  : "dark:hover:bg-dark-600 hover:bg-gray-50",
-                              )}
-                              style={{ minHeight: 36 }}
-                            >
-                              <span
-                                className="flex size-5 shrink-0 items-center justify-center"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Checkbox
-                                  checked={isSelected}
-                                  onChange={() => toggleSubBomItem(item.id)}
-                                />
-                              </span>
-
-                              <span
-                                className={clsx(
-                                  "size-5 shrink-0",
-                                  hasChildren ? "text-primary-600" : "text-gray-400",
-                                )}
-                              >
-                                {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
-                              </span>
-
-                              <div className="flex min-w-0 flex-1 items-baseline gap-2">
-                                <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
-                                  {item.itemCode}
-                                </span>
-                                <span className="dark:text-dark-300 truncate text-xs text-gray-500">
-                                  {item.itemName}
-                                </span>
-                              </div>
-
-                              <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
-                                Qty: {item.quantity} {item.unit}
-                              </span>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <SubBomTreeList
+                      items={filteredSubBomItems}
+                      level={0}
+                      expanded={subBomExpandedNodes}
+                      selected={selectedSubBomItems}
+                      onToggleExpand={toggleSubBomNode}
+                      onToggleSelect={toggleSubBomItem}
+                    />
                   )}
                 </div>
               </div>
@@ -2015,6 +2389,7 @@ export default function BOMFormPage() {
                     setSelectedSubBomItems(new Set());
                     setSubBomItems([]);
                     setSubBomSearchQuery("");
+                    setSubBomExpandedNodes({});
                   }}
                 >
                   Cancel
@@ -2032,7 +2407,7 @@ export default function BOMFormPage() {
         </Dialog>
       </Transition>
 
-      {/*  Sub BOM Confirmation Drawer — right side, same style as the
+      {/* Sub BOM Confirmation Drawer — right side, same style as the
           Sub BOM selection drawer for theme consistency */}
       <Transition
         appear
@@ -2094,70 +2469,46 @@ export default function BOMFormPage() {
 
                   {/* Body */}
                   <div className="flex-1 overflow-y-auto p-4">
-                    <div className="dark:bg-dark-700/50 mb-4 grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
-                      <div>
-                        <p className="dark:text-dark-400 text-xs text-gray-500">
-                          Parent
-                        </p>
-                        <p className="dark:text-dark-200 text-sm font-medium text-gray-900">
-                          {subBomConfirmData.parentCode} -{" "}
-                          {subBomConfirmData.parentName}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="dark:text-dark-400 text-xs text-gray-500">
-                          Sub BOM
-                        </p>
-                        <p className="dark:text-dark-200 text-sm font-medium text-gray-900">
-                          {subBomConfirmData.childCode} -{" "}
-                          {subBomConfirmData.childName}
-                        </p>
-                      </div>
+                    {/* Parent only */}
+                    <div className="dark:bg-dark-700/50 mb-5 rounded-lg bg-gray-50 p-4">
+                      <p className="dark:text-dark-400 text-2xl font-bold text-gray-800">
+                        Parent
+                      </p>
+                      <p className="dark:text-dark-200 text-xl font-medium text-gray-900">
+                        {subBomConfirmData.parentCode} -{" "}
+                        {subBomConfirmData.parentName}
+                      </p>
                     </div>
+
+                    {/* Big heading */}
+                    <h1 className="dark:text-dark-100 mb-3 text-2xl font-semibold text-gray-800">
+                      Sub BOM
+                    </h1>
 
                     <div className="mb-2 flex items-center justify-between">
                       <span className="dark:text-dark-300 text-sm text-gray-500">
-                        {subBomConfirmData.selectedItems.length} item(s)
-                        selected
+                        {collectIds(subBomConfirmData.selectedItems).length}{" "}
+                        item(s) selected
                       </span>
                     </div>
 
-                                    <div className="max-h-[400px] overflow-y-auto">
-                      <ul className="space-y-1">
-                        {subBomConfirmData.selectedItems.map((item) => {
-                          const hasChildren = item.children && item.children.length > 0;
-                          return (
-                            <li key={item.id} style={{ minHeight: 36 }}>
-                              <div
-                                className="dark:hover:bg-dark-600 flex items-center gap-2 rounded-md py-2 pr-2 pl-1 hover:bg-gray-50"
-                                style={{ minHeight: 36 }}
-                              >
-                                <span
-                                  className={clsx(
-                                    "size-5 shrink-0",
-                                    hasChildren ? "text-primary-600" : "text-gray-400",
-                                  )}
-                                >
-                                  {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
-                                </span>
-
-                                <div className="flex min-w-0 flex-1 items-baseline gap-2">
-                                  <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
-                                    {item.itemCode}
-                                  </span>
-                                  <span className="dark:text-dark-300 truncate text-xs text-gray-500">
-                                    {item.itemName}
-                                  </span>
-                                </div>
-
-                                <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
-                                  Qty: {item.quantity} {item.unit}
-                                </span>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                    {/* Only the selected Sub BOM items (with their hierarchy) */}
+                    <div className="max-h-[400px] overflow-y-auto pr-1">
+                      {subBomConfirmData.selectedItems.length === 0 ? (
+                        <div className="dark:text-dark-300 py-8 text-center text-gray-500">
+                          No items selected
+                        </div>
+                      ) : (
+                        <BOMTreeList
+                          items={subBomConfirmData.selectedItems}
+                          level={0}
+                          highlightId={null}
+                          expanded={confirmExpandedNodes}
+                          onToggle={toggleConfirmNode}
+                          onPick={() => {}}
+                          onRemove={() => {}}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -2174,7 +2525,8 @@ export default function BOMFormPage() {
                       Cancel
                     </Button>
                     <Button color="primary" onClick={handleSubBomConfirmSubmit}>
-                      Submit ({subBomConfirmData.selectedItems.length})
+                      Submit (
+                      {collectIds(subBomConfirmData.selectedItems).length})
                     </Button>
                   </div>
                 </>
