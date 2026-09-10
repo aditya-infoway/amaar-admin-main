@@ -23,6 +23,7 @@ import { statusOptions } from "../shared/constants";
 import { columns, exportColumns } from "./columns";
 import { emptyBOM2, mapApiBOM2ToBOM2, BOM2 } from "./data";
 import clsx from "clsx";
+import { Boxes, GitBranch } from "lucide-react";
 
 export default function BOM2Page() {
   const navigate = useNavigate();
@@ -199,41 +200,48 @@ export default function BOM2Page() {
           }
         />
 
-        {/* Always visible tabs – same style as Item Category */}
-        <div className="dark:border-dark-500 mt-4 mb-4 ml-6 flex items-center cursor-pointer gap-6 border-b border-gray-200 px-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab("bom")}
-            className={clsx(
-              "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
-              activeTab === "bom"
-                ? "text-primary-600 dark:text-primary-400"
-                : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
-            )}
-          >
-            BOM
-            {activeTab === "bom" && (
-              <span className="bg-primary-600 dark:bg-primary-400 absolute right-0 bottom-0 left-0 h-0.5 rounded-full" />
-            )}
-          </button>
+      {/* Always visible tabs – BOM / Sub BOM */}
+<div className="dark:border-dark-500 mt-4 mb-4 ml-6 flex cursor-pointer items-center gap-6 border-b border-gray-200 px-1">
+  {/* BOM Tab */}
+  <button
+    type="button"
+    onClick={() => setActiveTab("bom")}
+    className={clsx(
+      "relative flex cursor-pointer items-center gap-2 pb-3 text-sm font-medium transition-colors",
+      activeTab === "bom"
+        ? "text-primary-600 dark:text-primary-400"
+        : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
+    )}
+  >
+    <Boxes className="size-4" />
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("subBom")}
-            className={clsx(
-              "relative pb-3 text-sm font-medium transition-colors cursor-pointer",
-              activeTab === "subBom"
-                ? "text-primary-600 dark:text-primary-400"
-                : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
-            )}
-          >
-            Sub BOM
-            {activeTab === "subBom" && (
-              <span className="bg-primary-600 dark:bg-primary-400 absolute right-0 bottom-0 left-0 h-0.5 rounded-full" />
-            )}
-          </button>
-        </div>
+    <span>BOM</span>
 
+    {activeTab === "bom" && (
+      <span className="bg-primary-600 dark:bg-primary-400 absolute right-0 bottom-0 left-0 h-0.5 rounded-full" />
+    )}
+  </button>
+
+  {/* Sub BOM Tab */}
+  <button
+    type="button"
+    onClick={() => setActiveTab("subBom")}
+    className={clsx(
+      "relative flex cursor-pointer items-center gap-2 pb-3 text-sm font-medium transition-colors",
+      activeTab === "subBom"
+        ? "text-primary-600 dark:text-primary-400"
+        : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
+    )}
+  >
+    <GitBranch className="size-4" />
+
+    <span>Sub BOM</span>
+
+    {activeTab === "subBom" && (
+      <span className="bg-primary-600 dark:bg-primary-400 absolute right-0 bottom-0 left-0 h-0.5 rounded-full" />
+    )}
+  </button>
+</div>
         <MasterTable
           table={table}
           columnCount={columns.length}

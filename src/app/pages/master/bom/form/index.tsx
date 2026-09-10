@@ -631,7 +631,7 @@ function SubBomTreeNode({
           <span
             className="dark:bg-dark-500 absolute bg-gray-300"
             style={{
-              left: -INDENT + 10,
+              left: -INDENT + 10 + level * INDENT, // 👈 added level*INDENT shift
               top: 0,
               width: 1,
               height: isLast ? TICK_Y : "100%",
@@ -640,7 +640,7 @@ function SubBomTreeNode({
           <span
             className="dark:bg-dark-500 absolute bg-gray-300"
             style={{
-              left: -INDENT + 10,
+              left: -INDENT + 10 + level * INDENT, // 👈 added level*INDENT shift
               top: TICK_Y,
               width: INDENT - 10,
               height: 1,
@@ -661,6 +661,7 @@ function SubBomTreeNode({
       >
         <span
           className="flex size-5 shrink-0 items-center justify-center"
+          style={{ marginLeft: -level * INDENT }} // 👈 pulls checkbox back to a fixed column
           onClick={(e) => e.stopPropagation()}
         >
           <Checkbox
@@ -676,6 +677,7 @@ function SubBomTreeNode({
             if (hasChildren) onToggleExpand(item.id);
           }}
           className="flex size-5 shrink-0 items-center justify-center"
+          style={{ marginLeft: level * INDENT }} // 👈 compensates, keeps chevron/icon/text indented as before
         >
           {hasChildren ? (
             <ChevronDownIcon
@@ -2305,7 +2307,7 @@ export default function BOMFormPage() {
             leaveFrom="translate-x-0"
             leaveTo="translate-x-full"
           >
-            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-2xl transform-gpu flex-col bg-white transition-transform duration-300">
+            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-7xl transform-gpu flex-col bg-white transition-transform duration-300">
               {/* Header */}
               <div className="dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-6 py-4">
                 <div>
@@ -2443,7 +2445,7 @@ export default function BOMFormPage() {
             leaveFrom="translate-x-0"
             leaveTo="translate-x-full"
           >
-            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-2xl transform-gpu flex-col bg-white transition-transform duration-300">
+            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-7xl transform-gpu flex-col bg-white transition-transform duration-300">
               {subBomConfirmData && (
                 <>
                   {/* Header */}

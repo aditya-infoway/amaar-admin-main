@@ -219,63 +219,62 @@ export function SalesOrderDrawer({
   }, [selectedQuotation]);
 
   // Prefill on edit / reset on add
-  useEffect(() => {
-    if (!isOpen) return;
+ // Prefill on edit / reset on add
+useEffect(() => {
+  if (!isOpen) return;
 
-    if (salesOrder && salesOrder.id) {
-      setSoNo((salesOrder as any).soNo || "");
-      const q = quotationOptions.find(
-        (item) => String(item.id) === String((salesOrder as any).quotationId),
-      );
-      setSelectedQuotation(q ? [q] : []);
-      setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
+  queueMicrotask(() => {
+  if (salesOrder && salesOrder.id) {
+    setSoNo((salesOrder as any).soNo || "");
+    const q = quotationOptions.find(
+      (item) => String(item.id) === String((salesOrder as any).quotationId),
+    );
+    setSelectedQuotation(q ? [q] : []);
+    setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
 
-      // TOP — snapshot from the linked quotation (fallback to saved order data)
-      setLeadId(String((salesOrder as any).leadId ?? q?.leadId ?? ""));
-      setCity(q?.city || (salesOrder as any).city || "");
-      setCustomerName(
-        q?.customerName || (salesOrder as any).customerName || "",
-      );
-      setMobile(q?.mobile || (salesOrder as any).mobile || "");
-      setEmail(q?.email || (salesOrder as any).email || "");
-      setAddress(q?.address || (salesOrder as any).address || "");
-      setModel(q?.model || (salesOrder as any).model || "");
-      setRemark(q?.remark || (salesOrder as any).remark || "");
+    setLeadId(String((salesOrder as any).leadId ?? q?.leadId ?? ""));
+    setCity(q?.city || (salesOrder as any).city || "");
+    setCustomerName(q?.customerName || (salesOrder as any).customerName || "");
+    setMobile(q?.mobile || (salesOrder as any).mobile || "");
+    setEmail(q?.email || (salesOrder as any).email || "");
+    setAddress(q?.address || (salesOrder as any).address || "");
+    setModel(q?.model || (salesOrder as any).model || "");
+    setRemark(q?.remark || (salesOrder as any).remark || "");
 
-      // BOTTOM — actual saved/editable contact details
-      setDetailCustomerName((salesOrder as any).customerName || "");
-      setDetailMobile((salesOrder as any).mobile || "");
-      setDetailEmail((salesOrder as any).email || "");
-      setDetailAddress((salesOrder as any).address || "");
-      setDetailCity((salesOrder as any).city || "");
+    setDetailCustomerName((salesOrder as any).customerName || "");
+    setDetailMobile((salesOrder as any).mobile || "");
+    setDetailEmail((salesOrder as any).email || "");
+    setDetailAddress((salesOrder as any).address || "");
+    setDetailCity((salesOrder as any).city || "");
 
-      setQty(String((salesOrder as any).qty ?? "1"));
-      setKyc({
-        aadhar: {
-          number: (salesOrder as any).aadharNumber || "",
-          file: null,
-          existingUrl: (salesOrder as any).aadharImage || "",
-        },
-        pan: {
-          number: (salesOrder as any).panNumber || "",
-          file: null,
-          existingUrl: (salesOrder as any).panImage || "",
-        },
-        gst: {
-          number: (salesOrder as any).gstNumber || "",
-          file: null,
-          existingUrl: (salesOrder as any).gstImage || "",
-        },
-      });
-    } else {
-      setSoNo("");
-      setSelectedQuotation([]);
-      setMode("asIs");
-      setQty("1");
-      setKyc({ aadhar: emptyKyc(), pan: emptyKyc(), gst: emptyKyc() });
-    }
+    setQty(String((salesOrder as any).qty ?? "1"));
+    setKyc({
+      aadhar: { number: (salesOrder as any).aadharNumber || "", file: null, existingUrl: (salesOrder as any).aadharImage || "" },
+      pan: { number: (salesOrder as any).panNumber || "", file: null, existingUrl: (salesOrder as any).panImage || "" },
+      gst: { number: (salesOrder as any).gstNumber || "", file: null, existingUrl: (salesOrder as any).gstImage || "" },
+    });
+  }
+  // NOTE: no "else" branch here anymore — the reset-for-add-mode
+  // now happens only once per drawer open, in the effect below.
+
+  setErrors({});
+  });
+}, [salesOrder, quotationOptions]); // isOpen removed from here on purpose, see below
+
+// Reset form for "Add" mode — runs once per drawer open, not on every quotationOptions change
+useEffect(() => {
+  if (!isOpen) return;
+  if (salesOrder && salesOrder.id) return; // editing — handled by the effect above
+
+  queueMicrotask(() => {
+    setSoNo("");
+    setSelectedQuotation([]);
+    setMode("asIs");
+    setQty("1");
+    setKyc({ aadhar: emptyKyc(), pan: emptyKyc(), gst: emptyKyc() });
     setErrors({});
-  }, [salesOrder, isOpen, quotationOptions]);
+  });
+}, [isOpen]); // ← only isOpen, nothing else
 
   // Generate next SO number, same pattern as quotation/next-number
   useEffect(() => {
@@ -291,13 +290,16 @@ export function SalesOrderDrawer({
           { financialYearId },
           false,
         );
-
-        if (response?.data?.success || response?.data?.status === 200) {
-          setSoNo(response.data.data.soNo);
-        }
-      } catch (error) {
-        console.error("SO number generation error:", error);
-      }
+if (response?.data?.success || response?.data?.status === 200) {
+  setSoNo(response.data.data.soNo);
+} else {
+  console.error("Unexpected next-number response:", response?.data);
+  toasterrormsg(response?.data?.message || "Failed to generate SO number. Please retry.");
+}
+    } catch (error) {
+  console.error("SO number generation error:", error);
+  toasterrormsg("Failed to generate SO number. Please retry.");
+}
     };
 
     fetchNextSoNo();
