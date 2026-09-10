@@ -9,12 +9,13 @@ import { purchaseMaster } from "./segments/purchaseMaster";
 import { stockReport } from "./segments/stockReport";
 import { userMaster } from "./segments/userMaster";
 import { followups } from "./segments/followups";
-
+import {workOrder } from "./segments/workorder"
 export const navigation = [
   dashboards,
   master,
   // itemMaster,
   leadMaster,
+  workOrder,
   followups,
   // enquiryMaster,
   accountingMaster,

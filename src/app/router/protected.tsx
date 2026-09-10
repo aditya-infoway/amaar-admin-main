@@ -715,6 +715,23 @@ const protectedRoutes: RouteObject = {
             },
           ],
         },
+          {
+          path: "work-order",
+          children: [
+            {
+              index: true,
+              element: <Navigate to="/work-order/create-order" replace />,
+            },
+           
+            {
+              path: "create-order",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/work-order/create-order"))
+                  .default,
+              }),
+            },
+          ],
+        },
         // Followups
         {
           path: "followups",
