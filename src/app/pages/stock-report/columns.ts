@@ -33,8 +33,8 @@ export const columns: ColumnDef<StockReportItem>[] = [
   { id: "unit", accessorKey: "unit", header: "Unit", cell: TextCell },
   { id: "categoryName", accessorKey: "categoryName", header: "Category", cell: TextCell },
   { id: "groupName", accessorKey: "groupName", header: "Group", cell: TextCell },
-  { id: "purchasePrice", accessorKey: "purchasePrice", header: "P.Price", cell: TextCell },
-  { id: "salesPrice", accessorKey: "salesPrice", header: "S.Price", cell: TextCell },
+  // { id: "purchasePrice", accessorKey: "purchasePrice", header: "P.Price", cell: TextCell },
+  // { id: "salesPrice", accessorKey: "salesPrice", header: "S.Price", cell: TextCell },
   { id: "currentStock", accessorKey: "currentStock", header: "Stock", cell: TextCell },
   { id: "actions", header: "Actions", cell: ViewActionCell, enableSorting: false },
 ];
@@ -46,7 +46,7 @@ export const exportColumns: ExportColumn<StockReportItem>[] = [
   { key: "unit", header: "Unit" },
   { key: "categoryName", header: "Category" },
   { key: "groupName", header: "Group" },
-  { key: "salesPrice", header: "Sales Price" },
-  { key: "purchasePrice", header: "Purchase Price" },
+  // { key: "salesPrice", header: "Sales Price" },
+  // { key: "purchasePrice", header: "Purchase Price" },
   { key: "currentStock", header: "Current Stock" },
 ];

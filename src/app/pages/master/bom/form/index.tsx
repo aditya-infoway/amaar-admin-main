@@ -819,9 +819,9 @@ export default function BOMFormPage() {
   // Main BOM save confirmation modal (centered scale-up popup)
   const [isBomConfirmOpen, setIsBomConfirmOpen] = useState(false);
   // Holds selected sub-BOM items after drawer save (added directly on "Add to BOM Structure")
-  const [pendingSubBomItems, setPendingSubBomItems] = useState<BOMItem[] | null>(
-    null,
-  );
+  const [pendingSubBomItems, setPendingSubBomItems] = useState<
+    BOMItem[] | null
+  >(null);
 
   useEffect(() => {
     setDirty(isBOMDirty);
@@ -888,37 +888,37 @@ export default function BOMFormPage() {
       }
     };
 
- const loadExistingBom = async () => {
-  if (!id) return;
-  isLoadingFieldsRef.current = true;
-  try {
-    const response = await Get(`master/bom/${id}`, {}, false);
-    if (response.data?.success) {
-      const data = response.data.data;
-      setBomName(data.bomName || "");
-      setBomCode(data.bomCode || "");
-      setBomStatus(data.status || "active");
-      setBomItems(data.items || []);
-      setExpandedNodes(
-        Object.fromEntries(
-          collectIds(data.items || []).map((nid: string) => [nid, true]),
-        ),
-      );
-      // finishedGoodsItemId is resolved separately in a useEffect
-      // once both bomCode and finishedGoodsItems are populated —
-      // the BOM GET endpoint doesn't return a linking id, so we
-      // match by bomCode === finished good's itemCode instead.
-    } else {
-      toasterrormsg(response.data?.message || "Failed to fetch BOM.");
-    }
-  } catch (error) {
-    toasterrormsg("Something went wrong while fetching BOM.");
-  } finally {
-    requestAnimationFrame(() => {
-      isLoadingFieldsRef.current = false;
-    });
-  }
-};
+    const loadExistingBom = async () => {
+      if (!id) return;
+      isLoadingFieldsRef.current = true;
+      try {
+        const response = await Get(`master/bom/${id}`, {}, false);
+        if (response.data?.success) {
+          const data = response.data.data;
+          setBomName(data.bomName || "");
+          setBomCode(data.bomCode || "");
+          setBomStatus(data.status || "active");
+          setBomItems(data.items || []);
+          setExpandedNodes(
+            Object.fromEntries(
+              collectIds(data.items || []).map((nid: string) => [nid, true]),
+            ),
+          );
+          // finishedGoodsItemId is resolved separately in a useEffect
+          // once both bomCode and finishedGoodsItems are populated —
+          // the BOM GET endpoint doesn't return a linking id, so we
+          // match by bomCode === finished good's itemCode instead.
+        } else {
+          toasterrormsg(response.data?.message || "Failed to fetch BOM.");
+        }
+      } catch (error) {
+        toasterrormsg("Something went wrong while fetching BOM.");
+      } finally {
+        requestAnimationFrame(() => {
+          isLoadingFieldsRef.current = false;
+        });
+      }
+    };
 
     const loadFinishedGoodsItems = async () => {
       try {
@@ -954,26 +954,25 @@ export default function BOMFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-
   // Resolve the BOM Name Combobox selection in edit mode.
-// The GET /master/bom/:id response has no finishedGoodsItemId field,
-// so we match the finished-goods item whose itemCode equals this
-// BOM's bomCode (bomCode is always set from the FG's itemCode when
-// a user picks it in the Combobox onChange below).
-useEffect(() => {
-  if (!isEditMode) return;
-  if (finishedGoodsItemId) return; // already resolved
-  if (!bomCode || finishedGoodsItems.length === 0) return;
+  // The GET /master/bom/:id response has no finishedGoodsItemId field,
+  // so we match the finished-goods item whose itemCode equals this
+  // BOM's bomCode (bomCode is always set from the FG's itemCode when
+  // a user picks it in the Combobox onChange below).
+  useEffect(() => {
+    if (!isEditMode) return;
+    if (finishedGoodsItemId) return; // already resolved
+    if (!bomCode || finishedGoodsItems.length === 0) return;
 
-  const matched = finishedGoodsItems.find(
-    (fg) =>
-      String(fg.itemCode).toLowerCase() === String(bomCode).toLowerCase(),
-  );
+    const matched = finishedGoodsItems.find(
+      (fg) =>
+        String(fg.itemCode).toLowerCase() === String(bomCode).toLowerCase(),
+    );
 
-  if (matched) {
-    setFinishedGoodsItemId(String(matched.itemId));
-  }
-}, [isEditMode, bomCode, finishedGoodsItems, finishedGoodsItemId]);
+    if (matched) {
+      setFinishedGoodsItemId(String(matched.itemId));
+    }
+  }, [isEditMode, bomCode, finishedGoodsItems, finishedGoodsItemId]);
 
   const totalItems = useMemo(() => countAll(bomItems), [bomItems]);
   const hasBOMItems = bomItems.length > 0;
@@ -1842,7 +1841,7 @@ useEffect(() => {
 
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
-                         {entryMode === "subBom" ? "Sub BOM" : "Child"}
+                        {entryMode === "subBom" ? "Sub BOM" : "Child"}
                       </label>
                       <div className="relative">
                         <Input
@@ -1873,7 +1872,7 @@ useEffect(() => {
                             onClick={handleSubBomSearch}
                             className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                           >
-                            <MagnifyingGlassIcon className="size-4 cursor-" />
+                            <MagnifyingGlassIcon className="cursor- size-4" />
                           </button>
                         )}
                       </div>
@@ -1904,7 +1903,7 @@ useEffect(() => {
                   </>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                       Serial#
@@ -1927,7 +1926,7 @@ useEffect(() => {
                       placeholder="Assly Qty"
                     />
                   </div>
-                </div>
+                </div> */}
 
                 <div className="dark:border-dark-500 mt-4 border-t border-gray-200 pt-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -1967,6 +1966,37 @@ useEffect(() => {
                         value={width}
                         onChange={(e) => setWidth(e.target.value)}
                         placeholder="Width(mm)"
+                      />
+                    </div>
+
+                      <div>
+                      <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
+                        Qty
+                      </label>
+                      <Input
+                        type="number"
+                        step="any"
+                        value={qty}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setQty(value);
+
+                          const quantity = parseFloat(value || "");
+                          const baseWeight = parseFloat(
+                            baseWeightRef.current || "",
+                          );
+
+                          if (
+                            !isNaN(baseWeight) &&
+                            !isNaN(quantity) &&
+                            quantity > 0
+                          ) {
+                            setWeight((baseWeight * quantity).toFixed(3));
+                          } else if (weightReadOnly) {
+                            setWeight("");
+                          }
+                        }}
+                        placeholder="Qty"
                       />
                     </div>
 
@@ -2015,36 +2045,7 @@ useEffect(() => {
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
-                        Qty
-                      </label>
-                      <Input
-                        type="number"
-                        step="any"
-                        value={qty}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setQty(value);
-
-                          const quantity = parseFloat(value || "");
-                          const baseWeight = parseFloat(
-                            baseWeightRef.current || "",
-                          );
-
-                          if (
-                            !isNaN(baseWeight) &&
-                            !isNaN(quantity) &&
-                            quantity > 0
-                          ) {
-                            setWeight((baseWeight * quantity).toFixed(3));
-                          } else if (weightReadOnly) {
-                            setWeight("");
-                          }
-                        }}
-                        placeholder="Qty"
-                      />
-                    </div>
+                  
                   </div>
                 </div>
                 <Button
@@ -2434,12 +2435,12 @@ useEffect(() => {
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className="relative flex w-full max-w-2xl origin-top flex-col overflow-hidden rounded-lg bg-white transition-all duration-300 dark:bg-dark-700">
+            <DialogPanel className="dark:bg-dark-700 relative flex w-full max-w-2xl origin-top flex-col overflow-hidden rounded-lg bg-white transition-all duration-300">
               {/* Header */}
-              <div className="flex items-center justify-between rounded-t-lg bg-gray-200 px-4 py-3 dark:bg-dark-800 sm:px-5">
+              <div className="dark:bg-dark-800 flex items-center justify-between rounded-t-lg bg-gray-200 px-4 py-3 sm:px-5">
                 <DialogTitle
                   as="h3"
-                  className="text-base font-medium text-gray-800 dark:text-dark-100"
+                  className="dark:text-dark-100 text-base font-medium text-gray-800"
                 >
                   {isEditMode ? "Confirm Update BOM" : "Confirm Create BOM"}
                 </DialogTitle>
@@ -2453,63 +2454,63 @@ useEffect(() => {
                 </Button>
               </div>
 
-             {/* Body — same layout as old confirm: Parent once, then Sub BOM tree */}
-<div className="flex flex-col overflow-y-auto px-4 py-4 sm:px-5">
-  {/* Main Parent (root) — shown only once */}
-  {bomItems[0] && (
-    <div className="dark:bg-dark-700/50 mb-5 rounded-lg bg-gray-50 p-4">
-      <p className="dark:text-dark-400 text-2xl font-bold text-gray-800">
-        Parent
-      </p>
-      <p className="dark:text-dark-200 text-xl font-medium text-gray-900">
-        {bomItems[0].itemCode} - {bomItems[0].itemName}
-      </p>
-    </div>
-  )}
+              {/* Body — same layout as old confirm: Parent once, then Sub BOM tree */}
+              <div className="flex flex-col overflow-y-auto px-4 py-4 sm:px-5">
+                {/* Main Parent (root) — shown only once */}
+                {bomItems[0] && (
+                  <div className="dark:bg-dark-700/50 mb-5 rounded-lg bg-gray-50 p-4">
+                    <p className="dark:text-dark-400 text-2xl font-bold text-gray-800">
+                      Parent
+                    </p>
+                    <p className="dark:text-dark-200 text-xl font-medium text-gray-900">
+                      {bomItems[0].itemCode} - {bomItems[0].itemName}
+                    </p>
+                  </div>
+                )}
 
-  {/* Sub BOM heading + tree (children of root) */}
-  <h1 className="dark:text-dark-100 mb-3 text-2xl font-semibold text-gray-800">
-    Sub BOM
-  </h1>
+                {/* Sub BOM heading + tree (children of root) */}
+                <h1 className="dark:text-dark-100 mb-3 text-2xl font-semibold text-gray-800">
+                  Sub BOM
+                </h1>
 
-  <div className="mb-2 flex items-center justify-between">
-    <span className="dark:text-dark-300 text-sm text-gray-500">
-      {Math.max(totalItems - (bomItems[0] ? 1 : 0), 0)} item(s)
-    </span>
-  </div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="dark:text-dark-300 text-sm text-gray-500">
+                    {Math.max(totalItems - (bomItems[0] ? 1 : 0), 0)} item(s)
+                  </span>
+                </div>
 
-  <div className="max-h-[360px] overflow-y-auto pr-1">
-    {!bomItems[0]?.children?.length ? (
-      <div className="dark:text-dark-300 py-8 text-center text-gray-500">
-        No sub items
-      </div>
-    ) : (
-      <ConfirmBomTreeList
-        items={bomItems[0].children}
-        level={0}
-        expanded={confirmExpandedNodes}
-        onToggle={toggleConfirmNode}
-      />
-    )}
-  </div>
+                <div className="max-h-[360px] overflow-y-auto pr-1">
+                  {!bomItems[0]?.children?.length ? (
+                    <div className="dark:text-dark-300 py-8 text-center text-gray-500">
+                      No sub items
+                    </div>
+                  ) : (
+                    <ConfirmBomTreeList
+                      items={bomItems[0].children}
+                      level={0}
+                      expanded={confirmExpandedNodes}
+                      onToggle={toggleConfirmNode}
+                    />
+                  )}
+                </div>
 
-  <div className="mt-5 space-x-3 text-end">
-    <Button
-      onClick={() => setIsBomConfirmOpen(false)}
-      variant="outlined"
-      className="min-w-[7rem] rounded-full"
-    >
-      Cancel
-    </Button>
-    <Button
-      onClick={handleConfirmSaveBOM}
-      color="primary"
-      className="min-w-[7rem] rounded-full"
-    >
-      {isEditMode ? "Update BOM" : "Create BOM"}
-    </Button>
-  </div>
-</div>
+                <div className="mt-5 space-x-3 text-end">
+                  <Button
+                    onClick={() => setIsBomConfirmOpen(false)}
+                    variant="outlined"
+                    className="min-w-[7rem] rounded-full"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmSaveBOM}
+                    color="primary"
+                    className="min-w-[7rem] rounded-full"
+                  >
+                    {isEditMode ? "Update BOM" : "Create BOM"}
+                  </Button>
+                </div>
+              </div>
             </DialogPanel>
           </TransitionChild>
         </Dialog>

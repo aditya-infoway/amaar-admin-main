@@ -160,6 +160,15 @@ const protectedRoutes: RouteObject = {
                   }),
                 },
 
+                 {
+                  path: "item-location",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/item-master/location-master")
+                    ).default,
+                  }),
+                },
+
                 {
                   path: "bom",
                   children: [
