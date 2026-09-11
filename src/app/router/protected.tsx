@@ -668,6 +668,7 @@ const protectedRoutes: RouteObject = {
               index: true,
               element: <Navigate to="/lead-master/enquiry" replace />,
             },
+
             {
               path: "enquiry",
               lazy: async () => ({
@@ -675,22 +676,7 @@ const protectedRoutes: RouteObject = {
                   .default,
               }),
             },
-            // {
-            //   path: "enquiry/create",
-            //   lazy: async () => ({
-            //     Component: (
-            //       await import("@/app/pages/lead-master/enquiry/form")
-            //     ).EnquiryForm,
-            //   }),
-            // },
-            // {
-            //   path: "enquiry/edit/:id",
-            //   lazy: async () => ({
-            //     Component: (
-            //       await import("@/app/pages/lead-master/enquiry/form")
-            //     ).EnquiryForm,
-            //   }),
-            // },
+
             {
               path: "quotation",
               lazy: async () => ({
@@ -698,22 +684,6 @@ const protectedRoutes: RouteObject = {
                   .default,
               }),
             },
-            // {
-            //   path: "quotation/create",
-            //   lazy: async () => ({
-            //     Component: (
-            //       await import("@/app/pages/lead-master/quotation/form")
-            //     ).QuotationForm,
-            //   }),
-            // },
-            // {
-            //   path: "quotation/edit/:id",
-            //   lazy: async () => ({
-            //     Component: (
-            //       await import("@/app/pages/lead-master/quotation/form")
-            //     ).QuotationForm,
-            //   }),
-            // },
 
             {
               path: "sales-order",
@@ -722,25 +692,43 @@ const protectedRoutes: RouteObject = {
                   .default,
               }),
             },
+
+            // ✅ WORK ORDER
+            {
+              path: "work-order",
+              children: [
+                {
+                  index: true,
+                  element: (
+                    <Navigate
+                      to="/lead-master/work-order/create-order"
+                      replace
+                    />
+                  ),
+                },
+
+                {
+                  path: "create-order",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/lead-master/work-order/create-order")
+                    ).default,
+                  }),
+                },
+
+                {
+                  path: "work-proccess",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/lead-master/work-order/work-proccess")
+                    ).default,
+                  }),
+                },
+              ],
+            },
           ],
         },
-          {
-          path: "work-order",
-          children: [
-            {
-              index: true,
-              element: <Navigate to="/work-order/create-order" replace />,
-            },
-           
-            {
-              path: "create-order",
-              lazy: async () => ({
-                Component: (await import("@/app/pages/work-order/create-order"))
-                  .default,
-              }),
-            },
-          ],
-        },
+
         // Followups
         {
           path: "followups",

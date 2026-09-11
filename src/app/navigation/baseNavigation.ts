@@ -39,13 +39,7 @@ export const baseNavigationObj: Record<string, NavigationTree> = {
     title: "Lead Master",
     icon: "leadMaster",
   },
-   workOrder: {
-    id: "workOrder",
-    type: "collapse", 
-    path: "/work-order",
-    title: "Work Order",
-    icon: "leadMaster",
-  },
+  
 
   enquiryMaster: {
     id: "enquiryMaster",
