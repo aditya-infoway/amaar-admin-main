@@ -69,7 +69,9 @@ export default function StockReportDetailPage() {
           <div className="rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 p-5 text-white shadow">
             <p className="text-sm opacity-90">Current Stock</p>
             <p className="mt-1 text-3xl font-bold">
-              {data?.currentStock ?? "—"}
+              {data && "currentStock" in data
+                ? String(data.currentStock ?? "—")
+                : "—"}
             </p>
           </div>
 
