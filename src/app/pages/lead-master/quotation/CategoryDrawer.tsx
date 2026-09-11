@@ -191,31 +191,34 @@ export function QuotationDrawer({
   }, [isOpen]);
 
   const [modelOptions, setModelOptions] = useState<DropdownOption[]>([]);
+useEffect(() => {
+  if (!isOpen) return;
 
-  useEffect(() => {
-    if (!isOpen) return;
+  const fetchModels = async () => {
+    try {
+      const response = await Get(
+        "master/itemmaster/finished-goods/list",   // 👈 same source as EnquiryDrawer
+        {},
+        false,
+      );
 
-    const fetchModels = async () => {
-      try {
-        const response = await Get("master/model/list", {}, false);
+      if (response?.data?.success || response?.data?.status === 200) {
+        const models = response.data.data || [];
 
-        if (response?.data?.success || response?.data?.status === 200) {
-          const models = response.data.data || [];
-
-          setModelOptions(
-            models.map((item: any) => ({
-              id: String(item.modelId ?? item.id),
-              label: item.modelName ?? item.label,
-            })),
-          );
-        }
-      } catch (error) {
-        console.error("Model list error:", error);
+        setModelOptions(
+          models.map((item: any) => ({
+            id: String(item.itemId),   // 👈 match EnquiryDrawer's saved id
+            label: item.itemName,
+          })),
+        );
       }
-    };
+    } catch (error) {
+      console.error("Model list error:", error);
+    }
+  };
 
-    fetchModels();
-  }, [isOpen]);
+  fetchModels();
+}, [isOpen]);
 
   // Pre-fill on edit, or reset on add
   useEffect(() => {
@@ -380,42 +383,40 @@ export function QuotationDrawer({
       setPosition("");
     }
     setErrors({});
-  }, [quotation, isOpen, createMasterData]);
+ }, [quotation, isOpen, createMasterData, leadOptions]);
 
   // Handle auto-fill reliably by parsing both arrays or direct single objects
-  useEffect(() => {
-    const lead = Array.isArray(selectedLead)
-      ? selectedLead[0]
-      : (selectedLead as LeadOption | null);
-    if (!lead) {
-      // Clear fields if lead is deselected
-      setCustomerName("");
-      setMobile("");
-      setEmail("");
-      setAddress("");
-      setCity("");
-      setModel("");
-      setRemark("");
-      return;
-    }
+useEffect(() => {
+  if (leadOptions.length === 0) return; // don't clear fields while leads are still loading
 
-    const fullLead = leadOptions.find(
-      (item) => Number(item.leadId) === Number(lead.leadId),
-    );
+  const lead = Array.isArray(selectedLead)
+    ? selectedLead[0]
+    : (selectedLead as LeadOption | null);
+  if (!lead) {
+    setCustomerName("");
+    setMobile("");
+    setEmail("");
+    setAddress("");
+    setCity("");
+    setModel("");
+    setRemark("");
+    return;
+  }
 
-    if (!fullLead) return;
+  const fullLead = leadOptions.find(
+    (item) => Number(item.leadId) === Number(lead.leadId),
+  );
 
-    console.log("fullLead.model:", fullLead.model);
-    console.log("modelOptions:", modelOptions);
+  if (!fullLead) return;
 
-    setCustomerName(fullLead.name || "");
-    setMobile(fullLead.number || "");
-    setEmail(fullLead.email || "");
-    setAddress(fullLead.address || "");
-    setCity(fullLead.city || "");
-    setModel(String(fullLead.model ?? ""));
-    setRemark(fullLead.remark || "");
-  }, [selectedLead, leadOptions]);
+  setCustomerName(fullLead.name || "");
+  setMobile(fullLead.number || "");
+  setEmail(fullLead.email || "");
+  setAddress(fullLead.address || "");
+  setCity(fullLead.city || "");
+  setModel(String(fullLead.model ?? ""));
+  setRemark(fullLead.remark || "");
+}, [selectedLead, leadOptions]);
 
   // When switching to Tipper, clear the Main Chassis selection since it's hidden
   useEffect(() => {

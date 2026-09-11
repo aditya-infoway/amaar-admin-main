@@ -21,6 +21,8 @@ interface ItemMasterFormValues {
   groupId: string;
   unit: string;
   taxSlab: string;
+  openingStock: string;
+  stockValue: string;
   thickness: string;
   length: string;
   width: string;
@@ -47,6 +49,8 @@ const emptyFormValues: ItemMasterFormValues = {
   groupId: "",
   unit: "",
   taxSlab: "",
+  openingStock: "",
+  stockValue: "",
   thickness: "",
   length: "",
   width: "",
@@ -85,6 +89,8 @@ export default function ItemMasterFormPage() {
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
 
   const {
     register,
@@ -159,6 +165,29 @@ export default function ItemMasterFormPage() {
     })();
   }, []);
 
+  // ---- Location — dynamic from Location Master ----
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingLocations(true);
+
+        const res = await Get("master/location/list", {}, false);
+        const list = res?.data?.data || [];
+
+        setLocationOptions(
+          list.map((location: any) => ({
+            id: String(location.locationId),
+            label: location.locationName,
+          })),
+        );
+      } catch (err) {
+        toasterrormsg("Failed to load locations");
+      } finally {
+        setLoadingLocations(false);
+      }
+    })();
+  }, []);
+
   // ---- Selected category ke hisab se groups filter ----
   const filteredGroupOptions = useMemo(() => {
     if (!selectedCategoryId) return [];
@@ -188,6 +217,9 @@ export default function ItemMasterFormPage() {
             groupId: item.groupId ? String(item.groupId) : "",
             unit: item.unit || "",
             taxSlab: item.taxSlab || "",
+            openingStock:
+              item.openingStock != null ? String(item.openingStock) : "",
+            stockValue: item.stockValue != null ? String(item.stockValue) : "",
             thickness: item.thickness != null ? String(item.thickness) : "",
             length: item.length != null ? String(item.length) : "",
             width: item.width != null ? String(item.width) : "",
@@ -413,11 +445,34 @@ export default function ItemMasterFormPage() {
                   placeholder="Enter HSN Code"
                   error={errors.hsnCode?.message}
                 />
-                <Input
-                  {...register("itemLocation")}
-                  label="Item Location"
-                  placeholder="Enter item location"
-                  error={errors.itemLocation?.message}
+
+                <Controller
+                  control={control}
+                  name="itemLocation"
+                  rules={{ required: "Item location is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <Combobox
+                      data={locationOptions}
+                      value={
+                        locationOptions.find((item) => item.id === value) ||
+                        null
+                      }
+                      onChange={(item: any) => {
+                        onChange(item?.id || "");
+                      }}
+                      label="Item Location"
+                      placeholder={
+                        loadingLocations
+                          ? "Loading locations..."
+                          : locationOptions.length === 0
+                            ? "No locations available"
+                            : "Select location"
+                      }
+                      displayField="label"
+                      error={errors.itemLocation?.message}
+                      searchFields={["label"]}
+                    />
+                  )}
                 />
 
                 {/* Item Category — dynamic */}
@@ -629,6 +684,38 @@ export default function ItemMasterFormPage() {
                 )}
               </div>
             </section>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                {...register("openingStock", {
+                  required: "Opening stock is required",
+                  min: {
+                    value: 0,
+                    message: "Opening stock cannot be negative",
+                  },
+                })}
+                label="Opening Stock"
+                type="number"
+                step="any"
+                placeholder="Enter opening stock"
+                error={errors.openingStock?.message}
+              />
+
+              <Input
+                {...register("stockValue", {
+                  required: "Stock value is required",
+                  min: {
+                    value: 0,
+                    message: "Stock value cannot be negative",
+                  },
+                })}
+                label="Stock Value"
+                type="number"
+                step="any"
+                placeholder="Enter stock value"
+                error={errors.stockValue?.message}
+              />
+            </div>
 
             {/* <section>
               <h3 className="dark:text-dark-100 mb-4 text-lg font-medium text-gray-800">

@@ -1,5 +1,6 @@
 import { NavigationTree } from "@/@types/navigation";
 
+
 /**
  * Object containing the base navigation items for the application.
  * This object serves as a centralized configuration for main navigation elements.
@@ -38,6 +39,7 @@ export const baseNavigationObj: Record<string, NavigationTree> = {
     title: "Lead Master",
     icon: "leadMaster",
   },
+  
 
   enquiryMaster: {
     id: "enquiryMaster",

@@ -15,6 +15,7 @@ export const navigation = [
   master,
   // itemMaster,
   leadMaster,
+ 
   followups,
   // enquiryMaster,
   accountingMaster,

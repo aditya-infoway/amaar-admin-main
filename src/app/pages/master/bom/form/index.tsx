@@ -28,10 +28,11 @@ import { statusOptions } from "../../shared/constants";
 import { useUnsavedChanges } from "@/app/contexts/unsavedChanges/context";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 
-// Import Dialog components for the right drawer
+// Import Dialog components (drawer + centered confirmation popup)
 import {
   Dialog,
   DialogPanel,
+  DialogTitle,
   Transition,
   TransitionChild,
 } from "@headlessui/react";
@@ -631,7 +632,7 @@ function SubBomTreeNode({
           <span
             className="dark:bg-dark-500 absolute bg-gray-300"
             style={{
-              left: -INDENT + 10,
+              left: -INDENT + 10 + level * INDENT, // 👈 added level*INDENT shift
               top: 0,
               width: 1,
               height: isLast ? TICK_Y : "100%",
@@ -640,7 +641,7 @@ function SubBomTreeNode({
           <span
             className="dark:bg-dark-500 absolute bg-gray-300"
             style={{
-              left: -INDENT + 10,
+              left: -INDENT + 10 + level * INDENT, // 👈 added level*INDENT shift
               top: TICK_Y,
               width: INDENT - 10,
               height: 1,
@@ -661,6 +662,7 @@ function SubBomTreeNode({
       >
         <span
           className="flex size-5 shrink-0 items-center justify-center"
+          style={{ marginLeft: -level * INDENT }} // 👈 pulls checkbox back to a fixed column
           onClick={(e) => e.stopPropagation()}
         >
           <Checkbox
@@ -676,6 +678,7 @@ function SubBomTreeNode({
             if (hasChildren) onToggleExpand(item.id);
           }}
           className="flex size-5 shrink-0 items-center justify-center"
+          style={{ marginLeft: level * INDENT }} // 👈 compensates, keeps chevron/icon/text indented as before
         >
           {hasChildren ? (
             <ChevronDownIcon
@@ -813,15 +816,12 @@ export default function BOMFormPage() {
     Record<string, boolean>
   >({});
 
-  // Sub BOM confirmation modal states
-  const [isSubBomConfirmOpen, setIsSubBomConfirmOpen] = useState(false);
-  const [subBomConfirmData, setSubBomConfirmData] = useState<{
-    parentCode: string;
-    parentName: string;
-    childCode: string;
-    childName: string;
-    selectedItems: BOMItem[];
-  } | null>(null);
+  // Main BOM save confirmation modal (centered scale-up popup)
+  const [isBomConfirmOpen, setIsBomConfirmOpen] = useState(false);
+  // Holds selected sub-BOM items after drawer save (added directly on "Add to BOM Structure")
+  const [pendingSubBomItems, setPendingSubBomItems] = useState<
+    BOMItem[] | null
+  >(null);
 
   useEffect(() => {
     setDirty(isBOMDirty);
@@ -904,6 +904,10 @@ export default function BOMFormPage() {
               collectIds(data.items || []).map((nid: string) => [nid, true]),
             ),
           );
+          // finishedGoodsItemId is resolved separately in a useEffect
+          // once both bomCode and finishedGoodsItems are populated —
+          // the BOM GET endpoint doesn't return a linking id, so we
+          // match by bomCode === finished good's itemCode instead.
         } else {
           toasterrormsg(response.data?.message || "Failed to fetch BOM.");
         }
@@ -949,6 +953,26 @@ export default function BOMFormPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Resolve the BOM Name Combobox selection in edit mode.
+  // The GET /master/bom/:id response has no finishedGoodsItemId field,
+  // so we match the finished-goods item whose itemCode equals this
+  // BOM's bomCode (bomCode is always set from the FG's itemCode when
+  // a user picks it in the Combobox onChange below).
+  useEffect(() => {
+    if (!isEditMode) return;
+    if (finishedGoodsItemId) return; // already resolved
+    if (!bomCode || finishedGoodsItems.length === 0) return;
+
+    const matched = finishedGoodsItems.find(
+      (fg) =>
+        String(fg.itemCode).toLowerCase() === String(bomCode).toLowerCase(),
+    );
+
+    if (matched) {
+      setFinishedGoodsItemId(String(matched.itemId));
+    }
+  }, [isEditMode, bomCode, finishedGoodsItems, finishedGoodsItemId]);
 
   const totalItems = useMemo(() => countAll(bomItems), [bomItems]);
   const hasBOMItems = bomItems.length > 0;
@@ -1301,26 +1325,16 @@ export default function BOMFormPage() {
   };
 
   // Save sub BOM drawer selection (closes drawer, returns to entry panel)
+  // Items are stored as pending and added directly when user clicks "Add to BOM Structure"
   const handleSubBomDrawerSave = () => {
     if (selectedSubBomItems.size === 0) {
       toasterrormsg("Please select at least one item from the BOM.");
       return;
     }
 
-    // 👇 CHANGED: gather selected items recursively across every depth
-    // of the nested tree, not just the old flat top-level list.
     const selectedItems = collectSelectedTree(subBomItems, selectedSubBomItems);
 
-    const parentItem = findAvailableByCode(parentCode);
-    const childItem = findAvailableByCode(childCode);
-
-    setSubBomConfirmData({
-      parentCode: parentCode,
-      parentName: parentItem?.itemName || parentCode,
-      childCode: childCode,
-      childName: childItem?.itemName || childCode,
-      selectedItems: selectedItems,
-    });
+    setPendingSubBomItems(selectedItems);
 
     setIsSubBomDrawerOpen(false);
     setSubBomItems([]);
@@ -1328,24 +1342,15 @@ export default function BOMFormPage() {
     setSubBomSearchQuery("");
     setSubBomExpandedNodes({});
 
-    // Don't open the confirmation view yet — go back to the entry panel
-    // so the user can still adjust fields (Qty etc.) before finalizing.
-    // The confirmation view now opens from "Add to BOM Structure" instead.
     toastsuccessmsg(
-      `${selectedItems.length} item(s) selected from sub BOM. Review the entry fields, then click "Add to BOM Structure".`,
+      `${selectedItems.length} item(s) selected from sub BOM. Click "Add to BOM Structure" to add them.`,
     );
   };
 
-  // Submit sub BOM confirmation
-  const handleSubBomConfirmSubmit = () => {
-    if (!subBomConfirmData) return;
-
-    const { selectedItems } = subBomConfirmData;
-
-    if (selectedItems.length === 0) {
+  // Directly insert selected sub-BOM items into the tree (no intermediate confirm)
+  const addPendingSubBomItems = () => {
+    if (!pendingSubBomItems || pendingSubBomItems.length === 0) {
       toasterrormsg("No items selected to add.");
-      setIsSubBomConfirmOpen(false);
-      setSubBomConfirmData(null);
       return;
     }
 
@@ -1354,11 +1359,10 @@ export default function BOMFormPage() {
       return;
     }
 
+    const selectedItems = pendingSubBomItems;
     const parentNode = findNodeById(bomItems, selectedParentId);
     let serialCounter = parentNode ? parentNode.children.length + 1 : 1;
 
-    // Recursively clone the selected tree, giving every node a fresh id
-    // and a sequential serialNo, while keeping the original children structure.
     const cloneTree = (items: BOMItem[]): BOMItem[] => {
       return items
         .map((item) => {
@@ -1367,10 +1371,8 @@ export default function BOMFormPage() {
               child.itemCode.toLowerCase() === item.itemCode.toLowerCase(),
           );
 
-          // Skip exact duplicates at the insertion point (top level only)
-          // Deeper nodes are always kept because they belong to a selected parent.
           if (isDuplicate && items === selectedItems) {
-            return null as any; // filtered out below
+            return null as any;
           }
 
           const newId =
@@ -1391,8 +1393,7 @@ export default function BOMFormPage() {
 
     if (newItems.length === 0) {
       toasterrormsg("Selected items are already present in this BOM.");
-      setIsSubBomConfirmOpen(false);
-      setSubBomConfirmData(null);
+      setPendingSubBomItems(null);
       return;
     }
 
@@ -1410,9 +1411,7 @@ export default function BOMFormPage() {
 
     setChildCode("");
     resetEntryFields();
-    setIsSubBomConfirmOpen(false);
-    setSubBomConfirmData(null);
-    setConfirmExpandedNodes({});
+    setPendingSubBomItems(null);
 
     toastsuccessmsg(
       `${collectIds(newItems).length} item(s) added from sub BOM (hierarchy preserved).`,
@@ -1467,22 +1466,11 @@ export default function BOMFormPage() {
     }
 
     // In Sub BOM mode:
-    // - If items were already picked from the drawer, this click opens
-    //   the read-only confirmation view instead of submitting straight
-    //   away, so there's a final check before it lands in the tree.
-    // - Otherwise, this click just opens the drawer to pick items.
+    // - If items were already picked from the drawer, add them directly.
+    // - Otherwise, open the drawer to pick items.
     if (entryMode === "subBom") {
-      if (subBomConfirmData) {
-        const preview = buildPreviewTree(
-          bomItems,
-          selectedParentId,
-          subBomConfirmData.selectedItems,
-        );
-
-        setConfirmExpandedNodes(
-          Object.fromEntries(collectIds(preview).map((nid) => [nid, true])),
-        );
-        setIsSubBomConfirmOpen(true);
+      if (pendingSubBomItems && pendingSubBomItems.length > 0) {
+        addPendingSubBomItems();
         return;
       }
 
@@ -1547,7 +1535,8 @@ export default function BOMFormPage() {
     toastsuccessmsg(`Child item added with Serial# ${newSerialNo}.`);
   };
 
-  const handleSaveBOM = async () => {
+  // Opens the centered read-only confirmation popup before saving
+  const handleSaveBOM = () => {
     if (!bomName) {
       toasterrormsg("Please enter BOM name.");
       return;
@@ -1562,6 +1551,16 @@ export default function BOMFormPage() {
       toasterrormsg("Please add at least one item to BOM.");
       return;
     }
+
+    setConfirmExpandedNodes(
+      Object.fromEntries(collectIds(bomItems).map((nid) => [nid, true])),
+    );
+    setIsBomConfirmOpen(true);
+  };
+
+  // Actual create / update after user confirms in the popup
+  const handleConfirmSaveBOM = async () => {
+    setIsBomConfirmOpen(false);
 
     try {
       if (isEditMode) {
@@ -1822,10 +1821,9 @@ export default function BOMFormPage() {
                           onChange={() => {
                             setEntryMode("normal");
                             setIsSubBomDrawerOpen(false);
-                            setIsSubBomConfirmOpen(false);
-                            setSubBomConfirmData(null);
+                            setPendingSubBomItems(null);
                           }}
-                          label="Normal"
+                          label="Child"
                         />
                         <Radio
                           checked={entryMode === "subBom"}
@@ -1843,7 +1841,7 @@ export default function BOMFormPage() {
 
                     <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
-                        Child
+                        {entryMode === "subBom" ? "Sub BOM" : "Child"}
                       </label>
                       <div className="relative">
                         <Input
@@ -1874,7 +1872,7 @@ export default function BOMFormPage() {
                             onClick={handleSubBomSearch}
                             className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                           >
-                            <MagnifyingGlassIcon className="size-4" />
+                            <MagnifyingGlassIcon className="cursor- size-4" />
                           </button>
                         )}
                       </div>
@@ -1905,7 +1903,7 @@ export default function BOMFormPage() {
                   </>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                       Serial#
@@ -1928,7 +1926,7 @@ export default function BOMFormPage() {
                       placeholder="Assly Qty"
                     />
                   </div>
-                </div>
+                </div> */}
 
                 <div className="dark:border-dark-500 mt-4 border-t border-gray-200 pt-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -1968,6 +1966,37 @@ export default function BOMFormPage() {
                         value={width}
                         onChange={(e) => setWidth(e.target.value)}
                         placeholder="Width(mm)"
+                      />
+                    </div>
+
+                      <div>
+                      <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
+                        Qty
+                      </label>
+                      <Input
+                        type="number"
+                        step="any"
+                        value={qty}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setQty(value);
+
+                          const quantity = parseFloat(value || "");
+                          const baseWeight = parseFloat(
+                            baseWeightRef.current || "",
+                          );
+
+                          if (
+                            !isNaN(baseWeight) &&
+                            !isNaN(quantity) &&
+                            quantity > 0
+                          ) {
+                            setWeight((baseWeight * quantity).toFixed(3));
+                          } else if (weightReadOnly) {
+                            setWeight("");
+                          }
+                        }}
+                        placeholder="Qty"
                       />
                     </div>
 
@@ -2016,36 +2045,7 @@ export default function BOMFormPage() {
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
-                        Qty
-                      </label>
-                      <Input
-                        type="number"
-                        step="any"
-                        value={qty}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setQty(value);
-
-                          const quantity = parseFloat(value || "");
-                          const baseWeight = parseFloat(
-                            baseWeightRef.current || "",
-                          );
-
-                          if (
-                            !isNaN(baseWeight) &&
-                            !isNaN(quantity) &&
-                            quantity > 0
-                          ) {
-                            setWeight((baseWeight * quantity).toFixed(3));
-                          } else if (weightReadOnly) {
-                            setWeight("");
-                          }
-                        }}
-                        placeholder="Qty"
-                      />
-                    </div>
+                  
                   </div>
                 </div>
                 <Button
@@ -2305,7 +2305,7 @@ export default function BOMFormPage() {
             leaveFrom="translate-x-0"
             leaveTo="translate-x-full"
           >
-            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-2xl transform-gpu flex-col bg-white transition-transform duration-300">
+            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-7xl transform-gpu flex-col bg-white transition-transform duration-300">
               {/* Header */}
               <div className="dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-6 py-4">
                 <div>
@@ -2407,20 +2407,12 @@ export default function BOMFormPage() {
         </Dialog>
       </Transition>
 
-      {/* Sub BOM Confirmation Drawer — right side, same style as the
-          Sub BOM selection drawer for theme consistency */}
-      <Transition
-        appear
-        show={isSubBomConfirmOpen && !!subBomConfirmData}
-        as={Fragment}
-      >
+      {/* BOM Save Confirmation — centered scale-up popup (read-only view) */}
+      <Transition appear show={isBomConfirmOpen} as={Fragment}>
         <Dialog
           as="div"
-          className="relative z-[100]"
-          onClose={() => {
-            setIsSubBomConfirmOpen(false);
-            setSubBomConfirmData(null);
-          }}
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden px-4 py-6 sm:px-5"
+          onClose={() => setIsBomConfirmOpen(false)}
         >
           <TransitionChild
             as={Fragment}
@@ -2431,106 +2423,94 @@ export default function BOMFormPage() {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur transition-opacity dark:bg-black/40" />
+            <div className="absolute inset-0 bg-gray-900/50 backdrop-blur transition-opacity dark:bg-black/30" />
           </TransitionChild>
 
           <TransitionChild
             as={Fragment}
-            enter="ease-out transform-gpu transition-transform duration-300"
-            enterFrom="translate-x-full"
-            enterTo="translate-x-0"
-            leave="ease-in transform-gpu transition-transform duration-300"
-            leaveFrom="translate-x-0"
-            leaveTo="translate-x-full"
+            enter="ease-out duration-300"
+            enterFrom="opacity-0 scale-95"
+            enterTo="opacity-100 scale-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100 scale-100"
+            leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className="dark:bg-dark-800 fixed top-0 right-0 flex h-full w-full max-w-2xl transform-gpu flex-col bg-white transition-transform duration-300">
-              {subBomConfirmData && (
-                <>
-                  {/* Header */}
-                  <div className="dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                    <div>
-                      <h3 className="dark:text-dark-100 text-lg font-medium text-gray-900">
-                        Confirm Sub BOM Addition
-                      </h3>
-                      <p className="dark:text-dark-300 text-sm text-gray-500">
-                        Review the items before adding to the BOM structure
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setIsSubBomConfirmOpen(false);
-                        setSubBomConfirmData(null);
-                      }}
-                      className="dark:hover:bg-dark-600 rounded-md p-1.5 hover:bg-gray-100"
-                    >
-                      <XMarkIcon className="size-5 text-gray-500" />
-                    </button>
+            <DialogPanel className="dark:bg-dark-700 relative flex w-full max-w-2xl origin-top flex-col overflow-hidden rounded-lg bg-white transition-all duration-300">
+              {/* Header */}
+              <div className="dark:bg-dark-800 flex items-center justify-between rounded-t-lg bg-gray-200 px-4 py-3 sm:px-5">
+                <DialogTitle
+                  as="h3"
+                  className="dark:text-dark-100 text-base font-medium text-gray-800"
+                >
+                  {isEditMode ? "Confirm Update BOM" : "Confirm Create BOM"}
+                </DialogTitle>
+                <Button
+                  onClick={() => setIsBomConfirmOpen(false)}
+                  variant="flat"
+                  isIcon
+                  className="size-7 rounded-full ltr:-mr-1.5 rtl:-ml-1.5"
+                >
+                  <XMarkIcon className="size-4.5" />
+                </Button>
+              </div>
+
+              {/* Body — same layout as old confirm: Parent once, then Sub BOM tree */}
+              <div className="flex flex-col overflow-y-auto px-4 py-4 sm:px-5">
+                {/* Main Parent (root) — shown only once */}
+                {bomItems[0] && (
+                  <div className="dark:bg-dark-700/50 mb-5 rounded-lg bg-gray-50 p-4">
+                    <p className="dark:text-dark-400 text-2xl font-bold text-gray-800">
+                      Parent
+                    </p>
+                    <p className="dark:text-dark-200 text-xl font-medium text-gray-900">
+                      {bomItems[0].itemCode} - {bomItems[0].itemName}
+                    </p>
                   </div>
+                )}
 
-                  {/* Body */}
-                  <div className="flex-1 overflow-y-auto p-4">
-                    {/* Parent only */}
-                    <div className="dark:bg-dark-700/50 mb-5 rounded-lg bg-gray-50 p-4">
-                      <p className="dark:text-dark-400 text-2xl font-bold text-gray-800">
-                        Parent
-                      </p>
-                      <p className="dark:text-dark-200 text-xl font-medium text-gray-900">
-                        {subBomConfirmData.parentCode} -{" "}
-                        {subBomConfirmData.parentName}
-                      </p>
+                {/* Sub BOM heading + tree (children of root) */}
+                <h1 className="dark:text-dark-100 mb-3 text-2xl font-semibold text-gray-800">
+                  Sub BOM
+                </h1>
+
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="dark:text-dark-300 text-sm text-gray-500">
+                    {Math.max(totalItems - (bomItems[0] ? 1 : 0), 0)} item(s)
+                  </span>
+                </div>
+
+                <div className="max-h-[360px] overflow-y-auto pr-1">
+                  {!bomItems[0]?.children?.length ? (
+                    <div className="dark:text-dark-300 py-8 text-center text-gray-500">
+                      No sub items
                     </div>
+                  ) : (
+                    <ConfirmBomTreeList
+                      items={bomItems[0].children}
+                      level={0}
+                      expanded={confirmExpandedNodes}
+                      onToggle={toggleConfirmNode}
+                    />
+                  )}
+                </div>
 
-                    {/* Big heading */}
-                    <h1 className="dark:text-dark-100 mb-3 text-2xl font-semibold text-gray-800">
-                      Sub BOM
-                    </h1>
-
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="dark:text-dark-300 text-sm text-gray-500">
-                        {collectIds(subBomConfirmData.selectedItems).length}{" "}
-                        item(s) selected
-                      </span>
-                    </div>
-
-                    {/* Only the selected Sub BOM items (with their hierarchy) */}
-                    <div className="max-h-[400px] overflow-y-auto pr-1">
-                      {subBomConfirmData.selectedItems.length === 0 ? (
-                        <div className="dark:text-dark-300 py-8 text-center text-gray-500">
-                          No items selected
-                        </div>
-                      ) : (
-                        <BOMTreeList
-                          items={subBomConfirmData.selectedItems}
-                          level={0}
-                          highlightId={null}
-                          expanded={confirmExpandedNodes}
-                          onToggle={toggleConfirmNode}
-                          onPick={() => {}}
-                          onRemove={() => {}}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="dark:border-dark-500 dark:bg-dark-800 flex justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4">
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      onClick={() => {
-                        setIsSubBomConfirmOpen(false);
-                        setSubBomConfirmData(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button color="primary" onClick={handleSubBomConfirmSubmit}>
-                      Submit (
-                      {collectIds(subBomConfirmData.selectedItems).length})
-                    </Button>
-                  </div>
-                </>
-              )}
+                <div className="mt-5 space-x-3 text-end">
+                  <Button
+                    onClick={() => setIsBomConfirmOpen(false)}
+                    variant="outlined"
+                    className="min-w-[7rem] rounded-full"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmSaveBOM}
+                    color="primary"
+                    className="min-w-[7rem] rounded-full"
+                  >
+                    {isEditMode ? "Update BOM" : "Create BOM"}
+                  </Button>
+                </div>
+              </div>
             </DialogPanel>
           </TransitionChild>
         </Dialog>

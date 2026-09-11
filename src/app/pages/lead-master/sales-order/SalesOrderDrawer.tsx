@@ -32,6 +32,7 @@ interface QuotationOption {
   id: number;
   qNo: string;
   leadId: number;
+    leadCode?: string; 
   customerName: string;
   mobile: string;
   email?: string;
@@ -86,7 +87,7 @@ export function SalesOrderDrawer({
   // ---- TOP BLOCK: read-only snapshot of the selected quotation ----
   // Set ONLY when a quotation is selected (or on edit-prefill).
   // Never touched by the As Its / Manual toggle.
-  const [leadId, setLeadId] = useState("");
+  const [leadCode, setLeadCode] = useState("");   // renamed from leadId
   const [city, setCity] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -103,7 +104,7 @@ export function SalesOrderDrawer({
   const [detailEmail, setDetailEmail] = useState("");
   const [detailAddress, setDetailAddress] = useState("");
   const [detailCity, setDetailCity] = useState("");
-
+const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [qty, setQty] = useState("1");
 
   // KYC — each doc independent, upload only appears once its number is typed
@@ -126,6 +127,45 @@ export function SalesOrderDrawer({
     return quotationAmount * quantity;
   }, [qty, quotationAmount]);
 
+
+  interface ModelOption {
+  id: string;
+  label: string;
+}
+
+
+
+useEffect(() => {
+  const fetchModels = async () => {
+    try {
+      const response = await Get(
+        "master/itemmaster/finished-goods/list",
+        {},
+        false,
+      );
+
+      if (response?.data?.success || response?.data?.status === 200) {
+        const models = response.data.data || [];
+
+        setModelOptions(
+          models.map((item: any) => ({
+            id: String(item.itemId),
+            label: item.itemName,
+          })),
+        );
+      }
+    } catch (error) {
+      console.error("Model list error:", error);
+    }
+  };
+
+  fetchModels();
+}, []);
+
+const modelLabel = useMemo(() => {
+  return modelOptions.find((item) => item.id === model)?.label || model || "-";
+}, [modelOptions, model]);
+
   // Fetch quotations to populate "Select Quotation"
   useEffect(() => {
     if (!isOpen) return;
@@ -147,6 +187,7 @@ export function SalesOrderDrawer({
               id: Number(q.id ?? q.quotationId),
               qNo: q.qNo,
               leadId: Number(q.leadId),
+              leadCode: q.leadCode || "",   
               customerName: q.customerName,
               mobile: q.mobile,
               email: q.email || "",
@@ -174,9 +215,10 @@ export function SalesOrderDrawer({
   useEffect(() => {
     const q = selectedQuotation?.[0];
 
+    queueMicrotask(() => {
     if (!q) {
       // Nothing selected — clear everything.
-      setLeadId("");
+      setLeadCode("");
       setCity("");
       setCustomerName("");
       setMobile("");
@@ -197,7 +239,7 @@ export function SalesOrderDrawer({
     }
 
     // TOP — always set from the quotation, read-only.
-    setLeadId(String(q.leadId));
+    setLeadCode(q.leadCode || "");
     setCity(q.city || "");
     setCustomerName(q.customerName || "");
     setMobile(q.mobile || "");
@@ -216,66 +258,66 @@ export function SalesOrderDrawer({
       setQty("1");
       setQuotationAmount(Number(q.finalPrice) || 0);
     }
+    });
   }, [selectedQuotation]);
 
   // Prefill on edit / reset on add
-  useEffect(() => {
-    if (!isOpen) return;
+ // Prefill on edit / reset on add
+useEffect(() => {
+  if (!isOpen) return;
 
-    if (salesOrder && salesOrder.id) {
-      setSoNo((salesOrder as any).soNo || "");
-      const q = quotationOptions.find(
-        (item) => String(item.id) === String((salesOrder as any).quotationId),
-      );
-      setSelectedQuotation(q ? [q] : []);
-      setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
+  queueMicrotask(() => {
+  if (salesOrder && salesOrder.id) {
+    setSoNo((salesOrder as any).soNo || "");
+    const q = quotationOptions.find(
+      (item) => String(item.id) === String((salesOrder as any).quotationId),
+    );
+    setSelectedQuotation(q ? [q] : []);
+    setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
 
-      // TOP — snapshot from the linked quotation (fallback to saved order data)
-      setLeadId(String((salesOrder as any).leadId ?? q?.leadId ?? ""));
-      setCity(q?.city || (salesOrder as any).city || "");
-      setCustomerName(
-        q?.customerName || (salesOrder as any).customerName || "",
-      );
-      setMobile(q?.mobile || (salesOrder as any).mobile || "");
-      setEmail(q?.email || (salesOrder as any).email || "");
-      setAddress(q?.address || (salesOrder as any).address || "");
-      setModel(q?.model || (salesOrder as any).model || "");
-      setRemark(q?.remark || (salesOrder as any).remark || "");
+   setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
+    setCity(q?.city || (salesOrder as any).city || "");
+    setCustomerName(q?.customerName || (salesOrder as any).customerName || "");
+    setMobile(q?.mobile || (salesOrder as any).mobile || "");
+    setEmail(q?.email || (salesOrder as any).email || "");
+    setAddress(q?.address || (salesOrder as any).address || "");
+    setModel(q?.model || (salesOrder as any).model || "");
+    setRemark(q?.remark || (salesOrder as any).remark || "");
 
-      // BOTTOM — actual saved/editable contact details
-      setDetailCustomerName((salesOrder as any).customerName || "");
-      setDetailMobile((salesOrder as any).mobile || "");
-      setDetailEmail((salesOrder as any).email || "");
-      setDetailAddress((salesOrder as any).address || "");
-      setDetailCity((salesOrder as any).city || "");
+    setDetailCustomerName((salesOrder as any).customerName || "");
+    setDetailMobile((salesOrder as any).mobile || "");
+    setDetailEmail((salesOrder as any).email || "");
+    setDetailAddress((salesOrder as any).address || "");
+    setDetailCity((salesOrder as any).city || "");
 
-      setQty(String((salesOrder as any).qty ?? "1"));
-      setKyc({
-        aadhar: {
-          number: (salesOrder as any).aadharNumber || "",
-          file: null,
-          existingUrl: (salesOrder as any).aadharImage || "",
-        },
-        pan: {
-          number: (salesOrder as any).panNumber || "",
-          file: null,
-          existingUrl: (salesOrder as any).panImage || "",
-        },
-        gst: {
-          number: (salesOrder as any).gstNumber || "",
-          file: null,
-          existingUrl: (salesOrder as any).gstImage || "",
-        },
-      });
-    } else {
-      setSoNo("");
-      setSelectedQuotation([]);
-      setMode("asIs");
-      setQty("1");
-      setKyc({ aadhar: emptyKyc(), pan: emptyKyc(), gst: emptyKyc() });
-    }
+    setQty(String((salesOrder as any).qty ?? "1"));
+    setKyc({
+      aadhar: { number: (salesOrder as any).aadharNumber || "", file: null, existingUrl: (salesOrder as any).aadharImage || "" },
+      pan: { number: (salesOrder as any).panNumber || "", file: null, existingUrl: (salesOrder as any).panImage || "" },
+      gst: { number: (salesOrder as any).gstNumber || "", file: null, existingUrl: (salesOrder as any).gstImage || "" },
+    });
+  }
+  // NOTE: no "else" branch here anymore — the reset-for-add-mode
+  // now happens only once per drawer open, in the effect below.
+
+  setErrors({});
+  });
+}, [salesOrder, quotationOptions]); // isOpen removed from here on purpose, see below
+
+// Reset form for "Add" mode — runs once per drawer open, not on every quotationOptions change
+useEffect(() => {
+  if (!isOpen) return;
+  if (salesOrder && salesOrder.id) return; // editing — handled by the effect above
+
+  queueMicrotask(() => {
+    setSoNo("");
+    setSelectedQuotation([]);
+    setMode("asIs");
+    setQty("1");
+    setKyc({ aadhar: emptyKyc(), pan: emptyKyc(), gst: emptyKyc() });
     setErrors({});
-  }, [salesOrder, isOpen, quotationOptions]);
+  });
+}, [isOpen]); // ← only isOpen, nothing else
 
   // Generate next SO number, same pattern as quotation/next-number
   useEffect(() => {
@@ -291,13 +333,16 @@ export function SalesOrderDrawer({
           { financialYearId },
           false,
         );
-
-        if (response?.data?.success || response?.data?.status === 200) {
-          setSoNo(response.data.data.soNo);
-        }
-      } catch (error) {
-        console.error("SO number generation error:", error);
-      }
+if (response?.data?.success || response?.data?.status === 200) {
+  setSoNo(response.data.data.soNo);
+} else {
+  console.error("Unexpected next-number response:", response?.data);
+  toasterrormsg(response?.data?.message || "Failed to generate SO number. Please retry.");
+}
+    } catch (error) {
+  console.error("SO number generation error:", error);
+  toasterrormsg("Failed to generate SO number. Please retry.");
+}
     };
 
     fetchNextSoNo();
@@ -349,7 +394,7 @@ export function SalesOrderDrawer({
     const formData = new FormData();
     formData.append("financialYearId", financialYearId);
     formData.append("quotationId", String(q?.id ?? ""));
-    formData.append("leadId", leadId);
+   formData.append("leadId", String(q?.leadId ?? ""));
     formData.append("mode", mode);
 
     // Actual saved contact info comes from the editable (bottom) fields
@@ -592,8 +637,8 @@ export function SalesOrderDrawer({
                       Lead ID
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {leadId || "-"}
-                    </span>
+  {leadCode || "-"}
+</span>
                   </div>
                   <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
                     <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
@@ -632,7 +677,7 @@ export function SalesOrderDrawer({
                       Model
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {model || "-"}
+                       {modelLabel}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-2.5">
@@ -799,12 +844,12 @@ export function SalesOrderDrawer({
               {/* Model / Qty / Amount + GST note */}
               <div className="dark:border-dark-500 border-t border-dashed border-gray-300 pt-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Input
-                    label="Model"
-                    value={model}
-                    disabled
-                    onChange={() => {}}
-                  />
+                 <Input
+  label="Model"
+  value={modelLabel === "-" ? "" : modelLabel}
+  disabled
+  onChange={() => {}}
+/>
 
                   <Input
                     type="number"

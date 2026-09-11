@@ -6,8 +6,8 @@ export interface StockReportItem {
   unit: string;
   categoryName: string;
   groupName: string;
-  purchasePrice: string;
-  salesPrice: string;
+  // purchasePrice: string;
+  // salesPrice: string;
   taxSlab: string;
   currentStock: string;
 }
@@ -20,8 +20,8 @@ export const mapApiStockReportItemToStockReportItem = (item: any): StockReportIt
   unit: item.unit ?? "",
   categoryName: item.categoryName ?? "",
   groupName: item.groupName ?? "",
-  purchasePrice: item.purchasePrice ?? "0",
-  salesPrice: item.salesPrice ?? "0",
+  // purchasePrice: item.purchasePrice ?? "0",
+  // salesPrice: item.salesPrice ?? "0",
   taxSlab: item.taxSlab ?? "0",
   currentStock: item.currentStock ?? "0",
 });
@@ -42,7 +42,7 @@ export interface StockReportDetail {
   itemName: string;
   hsnCode: string;
   unit: string;
-  categoryName: string;
-  groupName: string;
+  category: string;
+  group: string;
   rows: StockReportDetailRow[];
 }

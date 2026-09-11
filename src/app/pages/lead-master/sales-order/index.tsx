@@ -124,7 +124,10 @@ export default function SalesOrderPage() {
   /*
    * Columns
    */
-  const salesOrderColumns = useMemo(() => createColumns(), []);
+  const salesOrderColumns = useMemo(
+    () => createColumns(),
+    [],
+  );
 
   const salesOrderExportColumns = useMemo(() => createExportColumns(), []);
 

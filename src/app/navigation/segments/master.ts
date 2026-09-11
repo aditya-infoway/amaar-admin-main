@@ -147,6 +147,14 @@ export const master: NavigationTree = {
           transKey: "Barcode Manager",
           icon: "itemBarcode.list",
         },
+         {
+          id: "itemlocation.list",
+          type: "item",
+          path: "/master/item-master/item-location",
+          title: "Item Location",
+          transKey: "Item Location",
+          icon: "itemlocation.list",
+        },
         {
           id: "itemCategory.list",
           type: "item",

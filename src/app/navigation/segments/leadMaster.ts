@@ -25,5 +25,36 @@ export const leadMaster: NavigationTree = {
             title: "Sales Order",
             icon: "quotation.list",
         },
+         {
+              id: "leadMaster.work-order",
+              type: "collapse",
+              path: "/lead-master/work-order",
+              title: "work order",
+              transKey: "work order",
+              icon: "leadMaster.work-order",
+              childs: [
+                {
+                  id: "leadMaster.work-order.create-order",
+                  type: "item",
+                  path: "/lead-master/work-order/create-order",
+                  title: "Create Order",
+                  transKey: "Create Order",
+                },
+                {
+                  id: "leadMaster.work-order.work-proccess",
+                  type: "item",
+                  path: "/lead-master/work-order/work-proccess",
+                  title: "Work Proccess",
+                  transKey: "Work Proccess",
+                },
+                  {
+                  id: "leadMaster.material-availability.material-availability",
+                  type: "item",
+                  path: "/lead-master/work-order/material-availability",
+                  title: "Material  Availability",
+                  transKey: "Material  Availability",
+                },
+              ],
+            },
     ],
 };

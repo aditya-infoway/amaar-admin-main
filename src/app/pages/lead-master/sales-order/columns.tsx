@@ -184,143 +184,159 @@ const RowActions = createRowActions<SalesOrder>("sales order", {
   },
 });
 
-export const createColumns = () => [
+export const createColumns = (
+  modelOptions: { id: string; label: string }[] = [],
+) => {
+  const modelLabelById = new Map(
+    modelOptions.map((item) => [item.id, item.label]),
+  );
 
-   columnHelper.display({
-    id: "select",
-    header: SelectHeader,
-    cell: SelectCell,
-    enableSorting: false,
-  }),
+  return [
+    columnHelper.display({
+      id: "select",
+      header: SelectHeader,
+      cell: SelectCell,
+      enableSorting: false,
+    }),
 
-  columnHelper.display({
-    id: "srNo",
-    header: "Sr. No.",
-    cell: ({ row, table }) => {
-      const pagination = table.getState().pagination;
+    columnHelper.display({
+      id: "srNo",
+      header: "Sr. No.",
+      cell: ({ row, table }) => {
+        const pagination = table.getState().pagination;
 
-      return (
-        pagination.pageIndex * pagination.pageSize +
-        row.index +
-        1
-      );
-    },
-  }),
-
-
-  
-
-  columnHelper.accessor("soNo", {
-    header: "SO No",
-    cell: ({ getValue }) => (
-      <span className="font-medium">
-        {getValue() || "-"}
-      </span>
-    ),
-  }),
-
-  columnHelper.accessor("quotationId", {
-    header: "Quotation",
-    cell: ({ getValue }) => getValue() || "-",
-  }),
-
-  columnHelper.accessor("customerName", {
-    header: "Customer Name",
-    cell: ({ getValue }) => getValue() || "-",
-  }),
-
-  columnHelper.accessor("mobile", {
-    header: "Mobile",
-    cell: ({ getValue }) => getValue() || "-",
-  }),
-
-  columnHelper.accessor("city", {
-    header: "City",
-    cell: ({ getValue }) => getValue() || "-",
-  }),
-
-  columnHelper.accessor("model", {
-    header: "Model",
-    cell: ({ getValue }) => getValue() || "-",
-  }),
-
-  columnHelper.accessor("qty", {
-    header: "Qty",
-    cell: ({ getValue }) => getValue() ?? 0,
-  }),
-
-  columnHelper.accessor("totalAmount", {
-    header: "Total Amount",
-    cell: ({ getValue }) => {
-      const amount = Number(getValue()) || 0;
-
-      return `₹ ${amount.toLocaleString("en-IN")}`;
-    },
-  }),
-
-  columnHelper.accessor("mode", {
-    header: "Mode",
-    cell: ({ getValue }) => {
-      const mode = getValue();
-
-      return mode === "manual" ? "Manual" : "As Its";
-    },
-  }),
-
-  columnHelper.display({
-    id: "kyc",
-    header: "KYC",
-    cell: ({ row }) => {
-      const item = row.original as any;
-
-      const hasAadhar =
-        !!item.aadharNumber || !!item.aadharImage;
-
-      const hasPan =
-        !!item.panNumber || !!item.panImage;
-
-      const hasGst =
-        !!item.gstNumber || !!item.gstImage;
-
-      if (!hasAadhar && !hasPan && !hasGst) {
         return (
-          <span className="text-gray-400">
-            -
-          </span>
+          pagination.pageIndex * pagination.pageSize +
+          row.index +
+          1
         );
-      }
+      },
+    }),
 
-      return (
-        <div className="flex flex-wrap gap-1">
-          {hasAadhar && (
-            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">
-              Aadhar
+    columnHelper.accessor("soNo", {
+      header: "SO No",
+      cell: ({ getValue }) => (
+        <span className="font-medium">
+          {getValue() || "-"}
+        </span>
+      ),
+    }),
+
+    columnHelper.accessor("quotationId", {
+      header: "Quotation",
+      cell: ({ row }) =>
+        (row.original as any).qNo ||
+        row.original.quotationId ||
+        "-",
+    }),
+
+    columnHelper.accessor("customerName", {
+      header: "Customer Name",
+      cell: ({ getValue }) => getValue() || "-",
+    }),
+
+    columnHelper.accessor("mobile", {
+      header: "Mobile",
+      cell: ({ getValue }) => getValue() || "-",
+    }),
+
+    columnHelper.accessor("city", {
+      header: "City",
+      cell: ({ getValue }) => getValue() || "-",
+    }),
+
+    columnHelper.accessor("model", {
+      header: "Model",
+      cell: ({ row }) => {
+        const item = row.original as any;
+
+        return (
+          item.modelName ||
+          modelLabelById.get(String(item.model)) ||
+          item.model ||
+          "-"
+        );
+      },
+    }),
+
+    columnHelper.accessor("qty", {
+      header: "Qty",
+      cell: ({ getValue }) => getValue() ?? 0,
+    }),
+
+    columnHelper.accessor("totalAmount", {
+      header: "Total Amount",
+      cell: ({ getValue }) => {
+        const amount = Number(getValue()) || 0;
+
+        return `₹ ${amount.toLocaleString("en-IN")}`;
+      },
+    }),
+
+    columnHelper.accessor("mode", {
+      header: "Mode",
+      cell: ({ getValue }) => {
+        const mode = getValue();
+
+        return mode === "manual" ? "Manual" : "As Its";
+      },
+    }),
+
+    columnHelper.display({
+      id: "kyc",
+      header: "KYC",
+      cell: ({ row }) => {
+        const item = row.original as any;
+
+        const hasAadhar =
+          !!item.aadharNumber || !!item.aadharImage;
+
+        const hasPan =
+          !!item.panNumber || !!item.panImage;
+
+        const hasGst =
+          !!item.gstNumber || !!item.gstImage;
+
+        if (!hasAadhar && !hasPan && !hasGst) {
+          return (
+            <span className="text-gray-400">
+              -
             </span>
-          )}
+          );
+        }
 
-          {hasPan && (
-            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">
-              PAN
-            </span>
-          )}
+        return (
+          <div className="flex flex-wrap gap-1">
+            {hasAadhar && (
+              <span className="rounded bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">
+                Aadhar
+              </span>
+            )}
 
-          {hasGst && (
-            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">
-              GST
-            </span>
-          )}
-        </div>
-      );
-    },
-  }),
+            {hasPan && (
+              <span className="rounded bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">
+                PAN
+              </span>
+            )}
 
-   columnHelper.display({
-    id: "actions",
-    header: "Action",
-    cell: RowActions,
-    enableSorting: false,
-  }),
-];
+            {hasGst && (
+              <span className="rounded bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">
+                GST
+              </span>
+            )}
+          </div>
+        );
+      },
+    }),
+
+    columnHelper.display({
+      id: "actions",
+      header: "Action",
+      cell: RowActions,
+      enableSorting: false,
+    }),
+  ];
+};
 
 /*
  * Columns used for Excel/PDF export
@@ -331,7 +347,7 @@ export const createExportColumns = (): ExportColumn<SalesOrder>[] => [
     header: "SO No",
   },
   {
-    key: "quotationId",
+    key: "qNo",
     header: "Quotation",
   },
   {
@@ -347,7 +363,7 @@ export const createExportColumns = (): ExportColumn<SalesOrder>[] => [
     header: "City",
   },
   {
-    key: "model",
+    key: "modelName",
     header: "Model",
   },
   {
