@@ -78,6 +78,7 @@ export function UnitCell({ getValue }: { getValue: Getter<any> }) {
       {getValue()}
     </span>
   );
+  
 }
 
 // Available stock: red/warning tint when below required, green when enough
