@@ -3,17 +3,26 @@ import { Row } from "@tanstack/react-table";
 
 // Local Imports
 import { Table, Tag, THead, TBody, Th, Tr, Td } from "@/components/ui";
-import { Order } from "./data";
 
 // ----------------------------------------------------------------------
 
 const cols = ["Name", "SKU", "Price", "Quantity", "Discount", "Total"];
 
+type Product = {
+  sku: string;
+  image: string;
+  name: string;
+  price: string | number;
+  qty: string | number;
+  discount: string | number;
+  total: string | number;
+};
+
 export function SubRowComponent({
   row,
   cardWidth,
 }: {
-  row: Row<Order>;
+  row: Row<any>;
   cardWidth?: number;
 }) {
   return (
@@ -43,7 +52,7 @@ export function SubRowComponent({
             </Tr>
           </THead>
           <TBody>
-            {row.original.products.map((tr) => (
+            {row.original.products.map((tr: Product) => (
               <Tr
                 key={tr.sku}
                 className="dark:border-b-dark-500 border-y border-transparent border-b-gray-200"

@@ -50,7 +50,7 @@ export function LocationDrawer({
 
   // Check uniqueness for locationCode + locationName
   const checkUnique = async (code: string, name: string) => {
-    if (!code && !name) return true;
+    if (!code && !name) return { codeTaken: false, nameTaken: false };
     setChecking(true);
     try {
       const response = await Get("master/location/list", {}, false);

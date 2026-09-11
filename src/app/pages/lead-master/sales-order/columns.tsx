@@ -347,7 +347,7 @@ export const createExportColumns = (): ExportColumn<SalesOrder>[] => [
     header: "SO No",
   },
   {
-    key: "qNo",
+    key: "quotationId",
     header: "Quotation",
   },
   {
@@ -363,7 +363,7 @@ export const createExportColumns = (): ExportColumn<SalesOrder>[] => [
     header: "City",
   },
   {
-    key: "modelName",
+    key: "model",
     header: "Model",
   },
   {
