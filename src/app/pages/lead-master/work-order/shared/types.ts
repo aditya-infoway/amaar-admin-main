@@ -14,7 +14,8 @@ export interface WorkOrder {
 
   model: string;
   qty: number;
-
+salesOrderNo?: string;
+modelName?: string;
   totalPrice: number;
   gst: number;
   grandTotal: number;

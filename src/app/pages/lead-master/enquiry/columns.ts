@@ -18,22 +18,45 @@ export function createColumns(
     modelOptions.find((item) => item.id === modelId)?.label || "—";
 
   return [
-    { id: "select", header: SelectHeader, cell: SelectCell, enableSorting: false },
+    {
+      id: "select",
+      header: SelectHeader,
+      cell: SelectCell,
+      enableSorting: false,
+    },
     // ===== display column me "Lead Id" label rakha, data leadCode se aa raha hai =====
-    { id: "leadCode", accessorKey: "leadCode", header: "Lead Id", cell: TextCell },
+    {
+      id: "leadCode",
+      accessorKey: "leadCode",
+      header: "Lead Id",
+      cell: TextCell,
+    },
     { id: "name", accessorKey: "name", header: "Name", cell: TextCell },
     { id: "number", accessorKey: "number", header: "Number", cell: TextCell },
     { id: "email", accessorKey: "email", header: "Email", cell: TextCell },
-    { id: "address", accessorKey: "address", header: "Address", cell: TextCell },
+    {
+      id: "address",
+      accessorKey: "address",
+      header: "Address",
+      cell: TextCell,
+    },
     { id: "city", accessorKey: "city", header: "City", cell: TextCell },
     {
       id: "model",
       accessorKey: "model",
       header: "Select Model",
-      cell: (info) => modelLabel(info.getValue<string>()),
+      cell: (info) => {
+        const row = info.row.original as any;
+        return row.modelName || modelLabel(info.getValue<string>()) || "—";
+      },
     },
     { id: "remark", accessorKey: "remark", header: "Remark", cell: TextCell },
-    { id: "nextFollowupDate", accessorKey: "nextFollowupDate", header: "Next Followup Date", cell: TextCell },
+    {
+      id: "nextFollowupDate",
+      accessorKey: "nextFollowupDate",
+      header: "Next Followup Date",
+      cell: TextCell,
+    },
     { id: "actions", header: "Action", cell: RowActions, enableSorting: false },
   ];
 }
@@ -51,7 +74,12 @@ export function createExportColumns(
     { key: "email", header: "Email" },
     { key: "address", header: "Address" },
     { key: "city", header: "City" },
-    { key: "model", header: "Select Model", format: (value: unknown) => modelLabel(value as string) },
+    {
+      key: "model",
+      header: "Select Model",
+      format: (value: unknown, row?: any) =>
+        row?.modelName || modelLabel(value as string) || "—",
+    },
     { key: "remark", header: "Remark" },
     { key: "nextFollowupDate", header: "Next Followup Date" },
   ];

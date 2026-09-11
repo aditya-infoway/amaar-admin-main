@@ -724,6 +724,14 @@ const protectedRoutes: RouteObject = {
                     ).default,
                   }),
                 },
+                {
+                  path: "material-availability",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/lead-master/work-order/material-availability")
+                    ).default,
+                  }),
+                },
               ],
             },
           ],

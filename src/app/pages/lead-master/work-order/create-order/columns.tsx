@@ -3,7 +3,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { SelectCell, SelectHeader } from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../shared/createRowActions";
 import type { WorkOrder } from "../shared/types";
-
+import type { ExportColumn } from "../shared/export";
 const columnHelper = createColumnHelper<WorkOrder>();
 
 const RowActions = createRowActions<WorkOrder>("work order", {
@@ -41,10 +41,11 @@ export const createColumns = () => [
     ),
   }),
 
-  columnHelper.accessor("salesOrderId", {
-    header: "Sales Order ID",
-    cell: ({ getValue }) => getValue() || "-",
-  }),
+ columnHelper.accessor("salesOrderNo", {
+   header: "Sales Order ID",
+   cell: ({ row }) =>
+     row.original.salesOrderNo || row.original.salesOrderId || "-",
+ }),
 
   columnHelper.accessor("customerName", {
     header: "Name",
@@ -61,10 +62,11 @@ export const createColumns = () => [
     cell: ({ getValue }) => getValue() || "-",
   }),
 
-  columnHelper.accessor("model", {
-    header: "Model",
-    cell: ({ getValue }) => getValue() || "-",
-  }),
+  columnHelper.accessor("modelName", {
+   header: "Model",
+   cell: ({ row }) =>
+     row.original.modelName || row.original.model || "-",
+ }),
 
   columnHelper.accessor("totalPrice", {
     header: "Total Price",
@@ -99,4 +101,57 @@ export const createColumns = () => [
     cell: RowActions,
     enableSorting: false,
   }),
+];
+/*
+ * Columns used for Excel/PDF export
+ */
+export const createExportColumns = (): ExportColumn<WorkOrder>[] => [
+  {
+    key: "workOrderNo",
+    header: "Work Order No",
+  },
+  {
+    key: "salesOrderNo",
+    header: "Sales Order ID",
+  },
+  {
+    key: "customerName",
+    header: "Customer Name",
+  },
+  {
+    key: "mobile",
+    header: "Mobile",
+  },
+  {
+    key: "email",
+    header: "Email",
+  },
+  {
+    key: "address",
+    header: "Address",
+  },
+  {
+    key: "city",
+    header: "City",
+  },
+  {
+    key: "modelName",
+    header: "Model",
+  },
+  {
+    key: "qty",
+    header: "Qty",
+  },
+  {
+    key: "totalPrice",
+    header: "Total Price",
+  },
+  {
+    key: "gst",
+    header: "GST",
+  },
+  {
+    key: "grandTotal",
+    header: "Grand Total",
+  },
 ];

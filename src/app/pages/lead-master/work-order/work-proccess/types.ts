@@ -9,7 +9,8 @@ export interface WorkProcessStep {
 
 export interface WorkOrderOption {
   id: number;
-  workOrderId: string;
-  name: string;
-  model: string;
+  workOrderNo: string;
+  customerName: string;
+  model?: string;
+  label: string; // combobox display: "WO-No | Name | Model"
 }

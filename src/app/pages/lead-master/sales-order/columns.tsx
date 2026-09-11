@@ -224,7 +224,10 @@ export const createColumns = (
 
     columnHelper.accessor("quotationId", {
       header: "Quotation",
-      cell: ({ getValue }) => getValue() || "-",
+      cell: ({ row }) =>
+        (row.original as any).qNo ||
+        row.original.quotationId ||
+        "-",
     }),
 
     columnHelper.accessor("customerName", {
@@ -244,10 +247,15 @@ export const createColumns = (
 
     columnHelper.accessor("model", {
       header: "Model",
-      cell: ({ getValue }) => {
-        const raw = getValue();
-        if (!raw) return "-";
-        return modelLabelById.get(String(raw)) || raw;
+      cell: ({ row }) => {
+        const item = row.original as any;
+
+        return (
+          item.modelName ||
+          modelLabelById.get(String(item.model)) ||
+          item.model ||
+          "-"
+        );
       },
     }),
 
@@ -339,7 +347,7 @@ export const createExportColumns = (): ExportColumn<SalesOrder>[] => [
     header: "SO No",
   },
   {
-    key: "quotationId",
+    key: "qNo",
     header: "Quotation",
   },
   {
@@ -355,7 +363,7 @@ export const createExportColumns = (): ExportColumn<SalesOrder>[] => [
     header: "City",
   },
   {
-    key: "model",
+    key: "modelName",
     header: "Model",
   },
   {

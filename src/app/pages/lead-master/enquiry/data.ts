@@ -7,6 +7,7 @@ export interface Enquiry {
   address: string;
   city: string;
   model: string;
+  modelName?: string;
   remark: string;
   nextFollowupDate: string;
   createdBy: string;
@@ -23,6 +24,7 @@ export const emptyEnquiry = (): Enquiry => ({
   address: "",
   city: "",
   model: "",
+  modelName: "",
   remark: "",
   nextFollowupDate: "",
   createdBy: "",
@@ -40,6 +42,7 @@ export function mapApiLeadToEnquiry(api: any): Enquiry {
     address: api.address ?? "",
     city: api.city ?? "",
     model: api.model != null ? String(api.model) : "",
+    modelName: api.modelName ?? "",
     remark: api.remark ?? "",
     nextFollowupDate: api.nextFollowupDate ?? "",
     createdBy: api.createdBy != null ? String(api.createdBy) : "",

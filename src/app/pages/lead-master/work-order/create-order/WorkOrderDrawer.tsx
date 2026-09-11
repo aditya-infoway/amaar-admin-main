@@ -35,6 +35,7 @@ interface SalesOrderOption {
   city?: string;
 
   model?: string;
+   modelName?: string;
   qty?: number;
 
   totalAmount?: number;
@@ -90,6 +91,7 @@ export default function WorkOrderDrawer({
               city: item.city || "",
 
               model: item.model || "",
+              modelName: item.modelName || "",
               qty: Number(item.qty) || 1,
 
               totalAmount: Number(item.totalAmount) || 0,
@@ -370,7 +372,7 @@ export default function WorkOrderDrawer({
 
                   <SummaryItem
                     label="Model"
-                    value={selectedSalesOrder?.model}
+                      value={selectedSalesOrder?.modelName || selectedSalesOrder?.model}
                     borderLeft
                   />
 

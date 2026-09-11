@@ -47,6 +47,13 @@ export const leadMaster: NavigationTree = {
                   title: "Work Proccess",
                   transKey: "Work Proccess",
                 },
+                  {
+                  id: "leadMaster.material-availability.material-availability",
+                  type: "item",
+                  path: "/lead-master/work-order/material-availability",
+                  title: "Material  Availability",
+                  transKey: "Material  Availability",
+                },
               ],
             },
     ],

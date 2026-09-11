@@ -1,63 +1,115 @@
-import { CheckCircle2, Circle } from "lucide-react";
-import type { WorkProcessStatus, WorkProcessStep } from "./types";
+import clsx from "clsx";
+import type { CSSProperties } from "react";
+import {
+  Flame,
+  PaintBucket,
+  Package,
+  ClipboardCheck,
+  Scissors,
+  Truck,
+  Wind,
+  Check,
+} from "lucide-react";
+
+import type { WorkProcessStep } from "./types";
 
 interface WorkProcessStepperProps {
   steps: WorkProcessStep[];
-  onToggleStatus: (stepId: number) => void;
 }
 
-const statusStyles: Record<WorkProcessStatus, string> = {
-  Pending: "text-amber-600 bg-amber-50 border-amber-200",
-  Completed: "text-emerald-600 bg-emerald-50 border-emerald-200",
+// Content-relevant icon per step key
+const stepIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  material_availability: Package,
+  material_cutting: Scissors,
+  welding: Flame,
+  blasting: Wind,
+  paint: PaintBucket,
+  qc: ClipboardCheck,
+  ready_for_dispatch: Truck,
 };
 
-export default function WorkProcessStepper({
-  steps,
-  onToggleStatus,
-}: WorkProcessStepperProps) {
+export default function WorkProcessStepper({ steps }: WorkProcessStepperProps) {
   return (
-    <div className="relative pl-2">
-      {steps.map((step, index) => {
-        const isLast = index === steps.length - 1;
+    <ol
+      className={clsx(
+        "steps line-space is-vertical text-xs sm:text-sm",
+      )}
+      style={{ "--size": "2.75rem", "--line": "0.5rem" } as CSSProperties}
+    >
+      {steps.map((step, i) => {
         const isCompleted = step.status === "Completed";
+        const StepIcon = stepIcons[step.key] ?? Package;
 
         return (
-          <div key={step.id} className="relative flex gap-4 pb-8 last:pb-0">
-            {!isLast && (
-              <span
-                className={`absolute left-[15px] top-8 h-full w-0.5 ${
-                  isCompleted ? "bg-emerald-400" : "bg-gray-200"
-                }`}
-              />
+          <li
+            key={step.id}
+            className={clsx(
+              "step items-start",
+              "pb-12 last:pb-0", // Vertical space wapas normal kar diya
+              isCompleted
+                ? "before:bg-primary-500"
+                : "dark:before:bg-dark-500 before:bg-gray-200",
             )}
-
-            <button
-              type="button"
-              onClick={() => onToggleStatus(step.id)}
-              className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white shadow"
-              title={isCompleted ? "Mark as Pending" : "Mark as Completed"}
+          >
+            {/* Circle / Icon */}
+            <span
+              className={clsx(
+                "step-header rounded-full dark:text-white shrink-0",
+                isCompleted
+                  ? "bg-primary-600 dark:bg-primary-500 dark:ring-offset-dark-900 text-white ring-offset-[3px] ring-offset-gray-100"
+                  : "dark:bg-dark-500 bg-gray-200 text-gray-950",
+              )}
             >
               {isCompleted ? (
-                <CheckCircle2 className="h-8 w-8 text-emerald-500" strokeWidth={2} />
+                <Check className="size-5" strokeWidth={2.5} />
               ) : (
-                <Circle className="h-8 w-8 text-gray-300" strokeWidth={2} />
+                <StepIcon className="size-4.5 opacity-80" />
               )}
-            </button>
+            </span>
 
-            <div className="flex-1 pt-1">
-              <p className="text-sm font-semibold text-gray-500">
-                {String(index + 1).padStart(2, "0")}
-              </p>
-              <h4 className="text-base font-medium text-gray-900">{step.label}</h4>
-              <span
-                className={`mt-1 inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusStyles[step.status]}`}
-              >
-                {step.status}
+            {/* Content Area: Number + (Title & Status) */}
+            {/* Yahan gap-3 ko gap-6 kar diya (Circle aur Number ke beech space) */}
+            <div className="text-start ltr:ml-4 rtl:mr-4 flex gap-6">
+              
+              {/* Number (Left side) */}
+              {/* Yahan pr-4 add kiya (Number aur Title ke beech space) */}
+              <span className="text-2xl font-bold text-primary-500 dark:text-primary-500 mt-0.5 pr-4">
+                {String(i + 1).padStart(2, "0")}
               </span>
+
+              {/* Title and Status (Stacked vertically) */}
+              <div className="flex flex-col justify-center">
+                <h3
+                  className={clsx(
+                    "text-base font-medium leading-tight",
+                    isCompleted
+                      ? "text-primary-600 dark:text-primary-400"
+                      : "dark:text-dark-100 text-gray-800",
+                  )}
+                >
+                  {step.label}
+                </h3>
+                
+                {/* Status neeche */}
+                <span
+                  className={clsx(
+                    "mt-1 inline-flex items-center gap-1.5 text-xs font-medium",
+                    isCompleted ? "text-emerald-600" : "text-amber-600",
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      "inline-block h-1.5 w-1.5 rounded-full",
+                      isCompleted ? "bg-emerald-500" : "bg-amber-500",
+                    )}
+                  />
+                  {step.status}
+                </span>
+              </div>
             </div>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

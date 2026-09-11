@@ -14,19 +14,17 @@ import {
   useState,
 } from "react";
 
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 
 import { Get, Delete, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 
+import { exportToExcel, exportToPdf } from "../shared/export";
+
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 
-import { createColumns } from "./columns";
+import { createColumns, createExportColumns } from "./columns";
 import WorkOrderDrawer from "./WorkOrderDrawer";
 
 import type { WorkOrder } from "../shared/types";
@@ -118,7 +116,7 @@ export default function CreateOrderPage() {
 
       if (
         filterSalesOrderId &&
-        !String(item.salesOrderId || "")
+        !String(item.salesOrderNo || item.salesOrderId || "")
           .toLowerCase()
           .includes(
             filterSalesOrderId.toLowerCase(),
@@ -137,6 +135,11 @@ export default function CreateOrderPage() {
 
   const columns = useMemo(
     () => createColumns(),
+    [],
+  );
+
+  const exportColumns = useMemo(
+    () => createExportColumns(),
     [],
   );
 
@@ -267,83 +270,6 @@ export default function CreateOrderPage() {
       getPaginationRowModel(),
   });
 
-  const handleExportExcel = () => {
-    if (!filteredData.length) {
-      toasterrormsg("No data to export");
-      return;
-    }
-
-    const exportRows = filteredData.map((row) => ({
-      "Work Order No": row.workOrderNo,
-      "Sales Order ID": row.salesOrderId,
-      "Customer Name": row.customerName,
-      Mobile: row.mobile,
-      Email: row.email,
-      Address: row.address,
-      City: row.city,
-      Model: row.model,
-      Qty: row.qty,
-      "Total Price": row.totalPrice,
-      GST: row.gst,
-      "Grand Total": row.grandTotal,
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Work Orders");
-
-    XLSX.writeFile(
-      workbook,
-      `WorkOrders_${new Date().toISOString().slice(0, 10)}.xlsx`,
-    );
-  };
-
-  const handleExportPdf = () => {
-    if (!filteredData.length) {
-      toasterrormsg("No data to export");
-      return;
-    }
-
-    const doc = new jsPDF({ orientation: "landscape" });
-
-    doc.setFontSize(14);
-    doc.text("Work Orders", 14, 15);
-
-    autoTable(doc, {
-      startY: 20,
-      head: [
-        [
-          "Work Order No",
-          "Sales Order ID",
-          "Customer Name",
-          "Mobile",
-          "City",
-          "Model",
-          "Qty",
-          "Total Price",
-          "GST",
-          "Grand Total",
-        ],
-      ],
-      body: filteredData.map((row) => [
-        row.workOrderNo,
-        row.salesOrderId,
-        row.customerName,
-        row.mobile,
-        row.city,
-        row.model,
-        row.qty,
-        row.totalPrice,
-        row.gst,
-        row.grandTotal,
-      ]),
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [41, 128, 185] },
-    });
-
-    doc.save(`WorkOrders_${new Date().toISOString().slice(0, 10)}.pdf`);
-  };
-
   return (
     <Page title="Create Work Order">
       <div className="transition-content w-full pb-5">
@@ -364,8 +290,21 @@ export default function CreateOrderPage() {
             setViewOnly(false);
             setDrawerOpen(true);
           }}
-          onExportExcel={handleExportExcel}
-          onExportPdf={handleExportPdf}
+          onExportExcel={() =>
+            exportToExcel(
+              filteredData,
+              exportColumns,
+              "work_orders",
+            )
+          }
+          onExportPdf={() =>
+            exportToPdf(
+              filteredData,
+              exportColumns,
+              "Work Order List",
+              "work_orders",
+            )
+          }
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-2">
 
