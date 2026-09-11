@@ -32,6 +32,7 @@ interface QuotationOption {
   id: number;
   qNo: string;
   leadId: number;
+    leadCode?: string; 
   customerName: string;
   mobile: string;
   email?: string;
@@ -86,7 +87,7 @@ export function SalesOrderDrawer({
   // ---- TOP BLOCK: read-only snapshot of the selected quotation ----
   // Set ONLY when a quotation is selected (or on edit-prefill).
   // Never touched by the As Its / Manual toggle.
-  const [leadId, setLeadId] = useState("");
+  const [leadCode, setLeadCode] = useState("");   // renamed from leadId
   const [city, setCity] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -103,7 +104,7 @@ export function SalesOrderDrawer({
   const [detailEmail, setDetailEmail] = useState("");
   const [detailAddress, setDetailAddress] = useState("");
   const [detailCity, setDetailCity] = useState("");
-
+const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [qty, setQty] = useState("1");
 
   // KYC — each doc independent, upload only appears once its number is typed
@@ -126,6 +127,45 @@ export function SalesOrderDrawer({
     return quotationAmount * quantity;
   }, [qty, quotationAmount]);
 
+
+  interface ModelOption {
+  id: string;
+  label: string;
+}
+
+
+
+useEffect(() => {
+  const fetchModels = async () => {
+    try {
+      const response = await Get(
+        "master/itemmaster/finished-goods/list",
+        {},
+        false,
+      );
+
+      if (response?.data?.success || response?.data?.status === 200) {
+        const models = response.data.data || [];
+
+        setModelOptions(
+          models.map((item: any) => ({
+            id: String(item.itemId),
+            label: item.itemName,
+          })),
+        );
+      }
+    } catch (error) {
+      console.error("Model list error:", error);
+    }
+  };
+
+  fetchModels();
+}, []);
+
+const modelLabel = useMemo(() => {
+  return modelOptions.find((item) => item.id === model)?.label || model || "-";
+}, [modelOptions, model]);
+
   // Fetch quotations to populate "Select Quotation"
   useEffect(() => {
     if (!isOpen) return;
@@ -147,6 +187,7 @@ export function SalesOrderDrawer({
               id: Number(q.id ?? q.quotationId),
               qNo: q.qNo,
               leadId: Number(q.leadId),
+              leadCode: q.leadCode || "",   
               customerName: q.customerName,
               mobile: q.mobile,
               email: q.email || "",
@@ -174,9 +215,10 @@ export function SalesOrderDrawer({
   useEffect(() => {
     const q = selectedQuotation?.[0];
 
+    queueMicrotask(() => {
     if (!q) {
       // Nothing selected — clear everything.
-      setLeadId("");
+      setLeadCode("");
       setCity("");
       setCustomerName("");
       setMobile("");
@@ -197,7 +239,7 @@ export function SalesOrderDrawer({
     }
 
     // TOP — always set from the quotation, read-only.
-    setLeadId(String(q.leadId));
+    setLeadCode(q.leadCode || "");
     setCity(q.city || "");
     setCustomerName(q.customerName || "");
     setMobile(q.mobile || "");
@@ -216,6 +258,7 @@ export function SalesOrderDrawer({
       setQty("1");
       setQuotationAmount(Number(q.finalPrice) || 0);
     }
+    });
   }, [selectedQuotation]);
 
   // Prefill on edit / reset on add
@@ -232,7 +275,7 @@ useEffect(() => {
     setSelectedQuotation(q ? [q] : []);
     setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
 
-    setLeadId(String((salesOrder as any).leadId ?? q?.leadId ?? ""));
+   setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
     setCity(q?.city || (salesOrder as any).city || "");
     setCustomerName(q?.customerName || (salesOrder as any).customerName || "");
     setMobile(q?.mobile || (salesOrder as any).mobile || "");
@@ -351,7 +394,7 @@ if (response?.data?.success || response?.data?.status === 200) {
     const formData = new FormData();
     formData.append("financialYearId", financialYearId);
     formData.append("quotationId", String(q?.id ?? ""));
-    formData.append("leadId", leadId);
+   formData.append("leadId", String(q?.leadId ?? ""));
     formData.append("mode", mode);
 
     // Actual saved contact info comes from the editable (bottom) fields
@@ -594,8 +637,8 @@ if (response?.data?.success || response?.data?.status === 200) {
                       Lead ID
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {leadId || "-"}
-                    </span>
+  {leadCode || "-"}
+</span>
                   </div>
                   <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
                     <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
@@ -634,7 +677,7 @@ if (response?.data?.success || response?.data?.status === 200) {
                       Model
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {model || "-"}
+                       {modelLabel}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-2.5">
@@ -801,12 +844,12 @@ if (response?.data?.success || response?.data?.status === 200) {
               {/* Model / Qty / Amount + GST note */}
               <div className="dark:border-dark-500 border-t border-dashed border-gray-300 pt-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Input
-                    label="Model"
-                    value={model}
-                    disabled
-                    onChange={() => {}}
-                  />
+                 <Input
+  label="Model"
+  value={modelLabel === "-" ? "" : modelLabel}
+  disabled
+  onChange={() => {}}
+/>
 
                   <Input
                     type="number"

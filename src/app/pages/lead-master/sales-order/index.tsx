@@ -55,6 +55,8 @@ export default function SalesOrderPage() {
 
   const [viewOnly, setViewOnly] = useState(false);
 
+  const [modelOptions, setModelOptions] = useState<Array<{ id: string; label: string }>>([]);
+
   /*
    * Fetch Sales Orders
    */
@@ -124,7 +126,13 @@ export default function SalesOrderPage() {
   /*
    * Columns
    */
-  const salesOrderColumns = useMemo(() => createColumns(), []);
+
+
+
+  const salesOrderColumns = useMemo(
+    () => createColumns(modelOptions),   // 👈 changed
+    [modelOptions],                       // 👈 changed
+  );
 
   const salesOrderExportColumns = useMemo(() => createExportColumns(), []);
 
