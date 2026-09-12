@@ -2,15 +2,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { SelectCell, SelectHeader } from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../shared/createRowActions";
 import type { ExportColumn } from "../shared/export";
-
-type Indent = {
-  id: string;
-  indentNo?: string;
-  workOrderId?: string;
-  workOrderNo?: string;
-  modelName?: string;
-  date?: string;
-};
+import type { Indent } from "./types";
 
 const formatDate = (value?: string) => {
   if (!value) return "-";

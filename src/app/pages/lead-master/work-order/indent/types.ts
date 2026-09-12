@@ -10,10 +10,10 @@ export type IndentItem = {
 
 export type Indent = {
   id: string;
-  indentNo: string;
-  workOrderId: string;
+  indentNo?: string | number;
+  workOrderId?: string | number;
   workOrderNo?: string;
-  modelName: string;
-  date: string;
+  modelName?: string;
+  date?: string;
   items?: IndentItem[];
 };
