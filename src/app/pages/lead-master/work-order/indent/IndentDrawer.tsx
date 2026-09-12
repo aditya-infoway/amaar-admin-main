@@ -1,3 +1,5 @@
+
+import { XMarkIcon } from "@heroicons/react/24/solid";
 type IndentItem = {
   id?: string | number;
   itemCode?: string | number;
@@ -39,7 +41,7 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center  p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="indent-drawer-title"
@@ -47,7 +49,7 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
         if (event.target === event.currentTarget) close();
       }}
     >
-      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg bg-background p-6 shadow-lg">
+      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
         <div className="mb-6 flex items-center justify-between">
           <h2 id="indent-drawer-title" className="text-lg font-semibold">
             Indent Details – {indent.indentNo || "-"}
@@ -58,7 +60,7 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
             className="rounded-md p-2 text-muted-foreground hover:bg-muted"
             aria-label="Close"
           >
-            ×
+           <XMarkIcon className="size-4.5" />
           </button>
         </div>
 
