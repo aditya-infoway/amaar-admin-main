@@ -54,6 +54,13 @@ export const leadMaster: NavigationTree = {
                   title: "Material  Availability",
                   transKey: "Material  Availability",
                 },
+                    {
+                  id: "leadMaster.work-order.indent",
+                  type: "item",
+                  path: "/lead-master/work-order/indent",
+                  title: "Indent",
+                  transKey: "Indent",
+                },
               ],
             },
     ],

@@ -24,7 +24,7 @@ import { TableSortIcon } from "@/components/shared/table/TableSortIcon";
 import { ColumnFilter } from "@/components/shared/table/ColumnFilter";
 import { PaginationSection } from "@/components/shared/table/PaginationSection";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
-import { Card, Table, THead, TBody, Th, Tr, Td } from "@/components/ui";
+import {Button, Card, Table, THead, TBody, Th, Tr, Td } from "@/components/ui";
 import {
   useBoxSize,
   useLockScrollbar,
@@ -33,7 +33,7 @@ import {
 } from "@/hooks";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
 import { useSkipper } from "@/utils/react-table/useSkipper";
-import { Get, toasterrormsg } from "@/ApiHelper";
+import { Get, Post, toasterrormsg } from "@/ApiHelper";
 import { SelectedRowsActions } from "./SelectedRowsActions";
 import { columns } from "./columns";
 import type { MaterialItem } from "./data";
@@ -57,6 +57,8 @@ export default function MaterialAvailability() {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper();
   const [items, setItems] = useState<MaterialItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [indentInfo, setIndentInfo] = useState<{ exists: boolean; indentNo?: string } | null>(null);
+const [savingIndent, setSavingIndent] = useState(false);
 
   const [tableSettings, setTableSettings] = useState<TableSettings>({
     enableSorting: true,
@@ -172,6 +174,75 @@ export default function MaterialAvailability() {
     fetchMaterialAvailability();
   }, [selectedWorkOrder]);
 
+
+  useEffect(() => {
+  if (!selectedWorkOrder) {
+    setIndentInfo(null);
+    return;
+  }
+
+  const checkIndent = async () => {
+    try {
+      const response = await Get(`indent/check/${selectedWorkOrder.id}`, {}, false);
+      if (response?.data?.success || response?.data?.status === 200) {
+        const data = response?.data?.data;
+        setIndentInfo(
+          data?.exists
+            ? { exists: true, indentNo: data.indent?.indentNo }
+            : { exists: false },
+        );
+      }
+    } catch (error) {
+      console.error("Indent check error:", error);
+      setIndentInfo(null);
+    }
+  };
+
+  checkIndent();
+}, [selectedWorkOrder]);
+
+
+
+const handleSaveIndent = async () => {
+  if (!selectedWorkOrder || items.length === 0 || savingIndent) return;
+
+  try {
+    setSavingIndent(true);
+
+    const financialYearId = localStorage.getItem("financialYearId");
+
+    const payload = {
+      financialYearId,
+      workOrderId: selectedWorkOrder.id,
+      modelName: selectedWorkOrder.model || "",
+      items: items.map((item) => ({
+        bomItemId: item.item_id,
+        itemCode: item.item_code,
+        itemName: item.name,
+        itemLocation: item.item_location,
+        category: item.category,
+        unit: item.unit,
+        availableStock: item.available_stock,
+        requiredStock: item.required_stock,
+        purchaseRequired: item.purchaseRequired,
+      })),
+    };
+
+    const response = await Post("indent/create", payload, false);
+
+    if (response?.data?.success || response?.data?.status === 200) {
+      setIndentInfo({ exists: true, indentNo: response?.data?.data?.indentNo });
+    } else {
+      toasterrormsg(response?.data?.message || "Unable to generate indent.");
+    }
+  } catch (error) {
+    console.error("Indent save error:", error);
+    toasterrormsg("Unable to generate indent.");
+  } finally {
+    setSavingIndent(false);
+  }
+};
+
   const handleSelectWorkOrder = (value: any) => {
     const order: WorkOrderOption | null = Array.isArray(value)
       ? value[0] || null
@@ -267,13 +338,22 @@ export default function MaterialAvailability() {
             Material Availability
           </h2>
         </div>
-        {/* <Button
-          className="h-8 space-x-1.5 rounded-md px-3 text-xs"
-          color="primary"
-        >
-          <PlusIcon className="size-5" />
-          <span>Add Item</span>
-        </Button> */}
+      {selectedWorkOrder && items.length > 0 && (
+  <Button
+    className="h-8 space-x-1.5 rounded-md px-3 text-xs"
+    color="primary"
+    disabled={indentInfo?.exists || savingIndent}
+    onClick={handleSaveIndent}
+  >
+    <span>
+      {indentInfo?.exists
+        ? `Indent Already Generated${indentInfo.indentNo ? ` (${indentInfo.indentNo})` : ""}`
+        : savingIndent
+          ? "Saving..."
+          : "Save Indent"}
+    </span>
+  </Button>
+)}
       </div>
 
       <div className="mt-4 max-w-md">
