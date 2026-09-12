@@ -27,13 +27,14 @@ export const mapApiStockReportItemToStockReportItem = (item: any): StockReportIt
 });
 
 export interface StockReportDetailRow {
-  id: string;
-  date: string;
-  partyName: string;
-  billNo: string;
-  qty: string;
-  billAmount: string;
-  currentStock: string;
+  id?: number | string;
+  date?: string;
+  type?: string;
+  partyName?: string;
+  billNo?: string;
+  qty?: number | string;
+  billAmount?: number | string;
+  currentStock?: number | string;
 }
 
 export interface StockReportDetail {

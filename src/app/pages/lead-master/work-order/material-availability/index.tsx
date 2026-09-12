@@ -24,7 +24,7 @@ import { TableSortIcon } from "@/components/shared/table/TableSortIcon";
 import { ColumnFilter } from "@/components/shared/table/ColumnFilter";
 import { PaginationSection } from "@/components/shared/table/PaginationSection";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
-import {  Card, Table, THead, TBody, Th, Tr, Td } from "@/components/ui";
+import { Card, Table, THead, TBody, Th, Tr, Td } from "@/components/ui";
 import {
   useBoxSize,
   useLockScrollbar,
@@ -36,7 +36,7 @@ import { useSkipper } from "@/utils/react-table/useSkipper";
 import { Get, toasterrormsg } from "@/ApiHelper";
 import { SelectedRowsActions } from "./SelectedRowsActions";
 import { columns } from "./columns";
-import { materialList, type MaterialItem } from "./data";
+import type { MaterialItem } from "./data";
 import { Toolbar } from "./Toolbar";
 import { useThemeContext } from "@/app/contexts/theme/context";
 import { TableSettings } from "@/components/shared/table/TableSettings";
@@ -55,8 +55,8 @@ export default function MaterialAvailability() {
   const { cardSkin } = useThemeContext();
 
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper();
-
-  const [items, setItems] = useState<MaterialItem[]>([...materialList]);
+  const [items, setItems] = useState<MaterialItem[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
 
   const [tableSettings, setTableSettings] = useState<TableSettings>({
     enableSorting: true,
@@ -85,7 +85,8 @@ export default function MaterialAvailability() {
 
   // ---- Work Order selector ----
   const [workOrders, setWorkOrders] = useState<WorkOrderOption[]>([]);
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrderOption | null>(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] =
+    useState<WorkOrderOption | null>(null);
   const [workOrderLoading, setWorkOrderLoading] = useState(false);
 
   useEffect(() => {
@@ -125,6 +126,52 @@ export default function MaterialAvailability() {
     fetchWorkOrders();
   }, []);
 
+  useEffect(() => {
+    if (!selectedWorkOrder) {
+      setItems([]);
+      return;
+    }
+
+    const fetchMaterialAvailability = async () => {
+      try {
+        setItemsLoading(true);
+
+        const response = await Get(
+          `material-availability/${selectedWorkOrder.id}`,
+          {},
+          false,
+        );
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          const rows = response?.data?.data?.rows || [];
+
+          setItems(
+            rows.map((row: any) => ({
+              item_id: String(row.bomItemId),
+              name: row.itemName || "",
+              item_code: row.itemCode || "",
+              item_location: row.itemLocation || "",
+              category: row.category || "",
+              unit: row.unit || "",
+              available_stock: Number(row.availableStock) || 0,
+              required_stock: Number(row.requiredStock) || 0,
+              purchaseRequired: Number(row.purchaseRequired) || 0,
+              
+              po_status: "none",
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("Material availability error:", error);
+        toasterrormsg("Unable to load material availability.");
+      } finally {
+        setItemsLoading(false);
+      }
+    };
+
+    fetchMaterialAvailability();
+  }, [selectedWorkOrder]);
+
   const handleSelectWorkOrder = (value: any) => {
     const order: WorkOrderOption | null = Array.isArray(value)
       ? value[0] || null
@@ -132,17 +179,18 @@ export default function MaterialAvailability() {
 
     setSelectedWorkOrder(order);
 
+    // Delete this line from handleSelectWorkOrder:
     // TODO: once material list is linked to a work order,
     // filter/fetch `items` here based on `order`.
   };
 
   // ---- Stat summary ----
   const totalItems = items.length;
-  const shortItems = items.filter(
-    (item) => item.available_stock < item.required_stock,
-  ).length;
-  const poPending = items.filter((item) => item.po_status === "pending").length;
-  const poRaised = items.filter((item) => item.po_status === "raised").length;
+  const shortItems = items.filter((item) => item.purchaseRequired > 0).length;
+  const totalPurchaseQty = items.reduce(
+    (sum, item) => sum + (item.purchaseRequired || 0),
+    0,
+  );
 
   const table = useReactTable({
     data: items,
@@ -241,6 +289,7 @@ export default function MaterialAvailability() {
         />
       </div>
 
+
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 2xl:gap-6">
         <div className="bg-gray-150 dark:bg-dark-700 rounded-lg p-3 2xl:p-4">
           <div className="flex justify-between space-x-1">
@@ -256,27 +305,18 @@ export default function MaterialAvailability() {
             <p className="dark:text-dark-100 text-xl font-semibold text-gray-800">
               {shortItems}
             </p>
-            <ExclamationTriangleIcon className="text-error size-5" />
-          </div>
-          <p className="text-xs-plus mt-1">Short Stock</p>
-        </div>
-        <div className="bg-gray-150 dark:bg-dark-700 rounded-lg p-3 2xl:p-4">
-          <div className="flex justify-between space-x-1">
-            <p className="dark:text-dark-100 text-xl font-semibold text-gray-800">
-              {poPending}
-            </p>
             <ClipboardDocumentCheckIcon className="text-warning size-5" />
           </div>
-          <p className="text-xs-plus mt-1">PO Pending</p>
+          <p className="text-xs-plus mt-1">Items To Purchase</p>
         </div>
         <div className="bg-gray-150 dark:bg-dark-700 rounded-lg p-3 2xl:p-4">
           <div className="flex justify-between space-x-1">
             <p className="dark:text-dark-100 text-xl font-semibold text-gray-800">
-              {poRaised}
+              {totalPurchaseQty}
             </p>
             <ClipboardDocumentCheckIcon className="text-info size-5" />
           </div>
-          <p className="text-xs-plus mt-1">PO Raised</p>
+          <p className="text-xs-plus mt-1">Total Purchase Qty</p>
         </div>
       </div>
       <div
@@ -401,7 +441,7 @@ export default function MaterialAvailability() {
             </Table>
           </div>
           <SelectedRowsActions table={table} />
-          {table.getCoreRowModel().rows.length && (
+          {table.getCoreRowModel().rows.length > 0 && (
             <div
               className={clsx(
                 "px-4 pb-4 sm:px-5 sm:pt-4",
