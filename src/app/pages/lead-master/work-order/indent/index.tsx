@@ -20,13 +20,7 @@ import { MasterToolbar } from "../shared/MasterToolbar";
 import IndentDrawer from "./IndentDrawer";
 
 import { createColumns, createExportColumns } from "./columns";
-type Indent = {
-  id: string;
-  indentNo?: string | number;
-  workOrderNo?: string | number;
-  workOrderId?: string | number;
-  [key: string]: unknown;
-};
+import type { Indent } from "./types";
 
 
 
