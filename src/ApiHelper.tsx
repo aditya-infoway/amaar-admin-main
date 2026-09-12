@@ -30,38 +30,38 @@ function Header(useHeader: any) {
   const xToken = getToken();
   return useHeader
     ? {
-      headers: {
-        "x-token": xToken,
-        apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
-        "Content-Type": "multipart/form-data",
-        "elevel": 0,
-      },
-    }
+        headers: {
+          "x-token": xToken,
+          apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
+          "Content-Type": "multipart/form-data",
+          elevel: 0,
+        },
+      }
     : {
-      headers: {
-        "x-token": xToken,
-        apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
-        "Content-Type": "application/json",
-        "elevel": 0,
-      },
-    };
+        headers: {
+          "x-token": xToken,
+          apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
+          "Content-Type": "application/json",
+          elevel: 0,
+        },
+      };
 }
 //header for delete method
 function Header_delete(useHeader: any) {
   const xToken = getToken();
   return useHeader
     ? {
-      "x-token": xToken,
-      apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
-      "Content-Type": "multipart/form-data",
-      "elevel": 0,
-    }
+        "x-token": xToken,
+        apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
+        "Content-Type": "multipart/form-data",
+        elevel: 0,
+      }
     : {
-      "x-token": xToken,
-      apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
-      "Content-Type": "application/json",
-      "elevel": 0,
-    };
+        "x-token": xToken,
+        apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
+        "Content-Type": "application/json",
+        elevel: 0,
+      };
 }
 
 //Logout
@@ -143,7 +143,10 @@ export const Patch = async (fileName: string, data: any, useHeader: any) => {
 export const Get = async (fileName: string, data: any, useHeader: any) => {
   try {
     const url = `${URL.localurl}${fileName}`;
-    const response = await axios.get(url, { params: data, ...Header(useHeader) });
+    const response = await axios.get(url, {
+      params: data,
+      ...Header(useHeader),
+    });
 
     if (response.data.status === 401 || response.data.status === 403) {
       Logout();
@@ -186,7 +189,9 @@ export const Put = async (fileName: string, data: any, useHeader: any) => {
   }
 };
 
-export const formatDateDDMMYYYY = (value: string | null | undefined): string => {
+export const formatDateDDMMYYYY = (
+  value: string | null | undefined,
+): string => {
   if (!value) return "—";
   const date = new Date(value);
   if (isNaN(date.getTime())) return "—";

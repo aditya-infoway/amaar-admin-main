@@ -22,16 +22,52 @@ function formatDateCell(info: CellContext<StockReportDetailRow, unknown>) {
 
 export const detailColumns: ColumnDef<StockReportDetailRow>[] = [
   {
+    id: "srNo",
+    header: "Sr. No.",
+    cell: ({ row }) => row.index + 1,
+  },
+  {
     id: "date",
     accessorKey: "date",
     header: "Date",
     cell: formatDateCell,
   },
-  { id: "partyName", accessorKey: "partyName", header: "Party Name", cell: TextCell },
-  { id: "billNo", accessorKey: "billNo", header: "Bill No", cell: TextCell },
-  { id: "qty", accessorKey: "qty", header: "Qty", cell: TextCell },
-  { id: "billAmount", accessorKey: "billAmount", header: "Bill Amount", cell: TextCell },
-  { id: "currentStock", accessorKey: "currentStock", header: "Current Stock", cell: TextCell },
+  {
+    id: "type",
+    accessorKey: "type",
+    header: "Type",
+    cell: TextCell,
+  },
+  {
+    id: "partyName",
+    accessorKey: "partyName",
+    header: "Party Name",
+    cell: TextCell,
+  },
+  {
+    id: "billNo",
+    accessorKey: "billNo",
+    header: "Bill No",
+    cell: TextCell,
+  },
+  {
+    id: "qty",
+    accessorKey: "qty",
+    header: "Qty",
+    cell: TextCell,
+  },
+  {
+    id: "billAmount",
+    accessorKey: "billAmount",
+    header: "Bill Amount",
+    cell: TextCell,
+  },
+  {
+    id: "currentStock",
+    accessorKey: "currentStock",
+    header: "Current Stock",
+    cell: TextCell,
+  },
 ];
 
 export const detailExportColumns: ExportColumn<StockReportDetailRow>[] = [
