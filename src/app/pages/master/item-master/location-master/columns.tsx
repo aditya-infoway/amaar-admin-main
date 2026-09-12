@@ -30,15 +30,22 @@ export const columns: ColumnDef<Location>[] = [
     header: "Location Name",
     cell: TextCell,
   },
-  {
-    id: "createdAt",
-    accessorKey: "createdAt",
-    header: "Created On",
-    cell: (info) => {
-      const value = info.getValue<string>();
-      return value ? new Date(value).toLocaleDateString() : "—";
-    },
+ {
+  id: "createdAt",
+  accessorKey: "createdAt",
+  header: "Created On",
+  cell: (info) => {
+    const value = info.getValue<string>();
+
+    if (!value) return "—";
+
+    const date = new Date(value);
+
+    return `${String(date.getDate()).padStart(2, "0")}-${String(
+      date.getMonth() + 1,
+    ).padStart(2, "0")}-${date.getFullYear()}`;
   },
+},
   {
     id: "status",
     accessorKey: "status",

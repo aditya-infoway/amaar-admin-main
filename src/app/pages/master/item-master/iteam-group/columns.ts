@@ -36,7 +36,9 @@ export const columns: ColumnDef<ItemGroup>[] = [
     header: "Created On",
     cell: (info) => {
       const value = info.getValue<string>();
-      return value ? new Date(value).toLocaleDateString() : "—";
+      if (!value) return "—";
+      const date = new Date(value);
+      return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
     },
   },
   {

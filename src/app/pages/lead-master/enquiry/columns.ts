@@ -51,12 +51,22 @@ export function createColumns(
       },
     },
     { id: "remark", accessorKey: "remark", header: "Remark", cell: TextCell },
-    {
-      id: "nextFollowupDate",
-      accessorKey: "nextFollowupDate",
-      header: "Next Followup Date",
-      cell: TextCell,
-    },
+   {
+  id: "nextFollowupDate",
+  accessorKey: "nextFollowupDate",
+  header: "Next Followup Date",
+  cell: (info) => {
+    const value = info.getValue<string>();
+
+    if (!value) return "—";
+
+    const date = new Date(value);
+
+    return `${String(date.getDate()).padStart(2, "0")}-${String(
+      date.getMonth() + 1,
+    ).padStart(2, "0")}-${date.getFullYear()}`;
+  },
+},
     { id: "actions", header: "Action", cell: RowActions, enableSorting: false },
   ];
 }

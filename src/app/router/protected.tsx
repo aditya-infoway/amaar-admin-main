@@ -732,6 +732,14 @@ const protectedRoutes: RouteObject = {
                     ).default,
                   }),
                 },
+                  {
+                  path: "indent",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/lead-master/work-order/indent")
+                    ).default,
+                  }),
+                },
               ],
             },
           ],
