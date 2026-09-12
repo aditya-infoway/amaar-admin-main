@@ -34,12 +34,11 @@ export const columns: ColumnDef<MaterialItem>[] = [
     header: "Name",
     cell: NameCell,
   },
-  {
+{
   id: "item_code",
   accessorKey: "item_code",
   label: "Item Code",
   header: "Item Code",
-  cell: "ItemCode",
 },
   {
     id: "item_location",
@@ -82,8 +81,7 @@ export const columns: ColumnDef<MaterialItem>[] = [
   },
   {
     id: "purchase_order",
-    accessorKey: "purchase_order",
-    label: "Purchase Order",
+    accessorKey: "purchaseRequired",
     header: "Purchase Order",
     cell: PurchaseOrderCell,
   },

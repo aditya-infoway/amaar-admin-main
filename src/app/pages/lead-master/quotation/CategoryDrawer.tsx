@@ -383,7 +383,7 @@ useEffect(() => {
       setPosition("");
     }
     setErrors({});
- }, [quotation, isOpen, createMasterData, leadOptions]);
+}, [quotation, isOpen]);
 
   // Handle auto-fill reliably by parsing both arrays or direct single objects
 useEffect(() => {
@@ -515,9 +515,16 @@ useEffect(() => {
           false,
         );
 
-        if (response?.data?.success || response?.data?.status === 200) {
-          setQNo(response.data.data.qNo);
-        }
+       console.log("NEXT QUOTATION API RESPONSE:", response?.data);
+
+const generatedQNo = response?.data?.data?.qNo;
+
+if (generatedQNo) {
+  setQNo(String(generatedQNo));
+} else {
+  console.error("Quotation number missing:", response?.data);
+  toasterrormsg("Quotation number was not generated.");
+}
       } catch (error) {
         console.error("Quotation number generation error:", error);
         toasterrormsg("Unable to generate quotation number.");
