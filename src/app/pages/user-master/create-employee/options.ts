@@ -7,11 +7,12 @@ export const departmentOptions: OptionItem[] = [
   { id: "sale", label: "Sale" },
   { id: "production", label: "Production" },
   { id: "security", label: "Security" },
+   { id: "hrms", label: "HRMS" },
 ];
 
 // Abhi sirf ek hi branch hai — hamesha default select rahega
 export const branchOptions: OptionItem[] = [
-  { id: "0", label: "Main Branch" },
+  { id: "Main Branch", label: "Main Branch" },
 ];
 
 export function getDepartmentLabel(departmentId: string): string {
