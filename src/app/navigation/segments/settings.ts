@@ -5,7 +5,7 @@ export const settings: NavigationTree = {
   type: "item",
   path: "/settings",
   title: "Settings",
-  transKey: "nav.settings.settings",
+  // transKey: "nav.settings.settings",
   icon: "settings",
   childs: [
     {
@@ -13,7 +13,7 @@ export const settings: NavigationTree = {
       type: "item",
       path: "/settings/general",
       title: "General",
-      transKey: "nav.settings.general",
+      // transKey: "nav.settings.general",
       icon: "settings.general",
     },
     {
@@ -28,7 +28,7 @@ export const settings: NavigationTree = {
       type: "item",
       path: "/settings/appearance",
       title: "Appearance",
-      transKey: "nav.settings.appearance",
+      // transKey: "nav.settings.appearance",
       icon: "settings.appearance",
     },
   ],
