@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 
-import { Get,  } from "@/ApiHelper";
+import { Get } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
@@ -21,8 +21,6 @@ import IndentDrawer from "./IndentDrawer";
 
 import { createColumns, createExportColumns } from "./columns";
 import type { Indent } from "./types";
-
-
 
 export default function IndentPage() {
   const [data, setData] = useState<Indent[]>([]);
@@ -111,31 +109,33 @@ export default function IndentPage() {
     getRowId: (row) => String(row.id),
 
     meta: {
-    viewRow: async (row: Indent) => {
-  setDrawerOpen(true);
-  setViewing(row); // show header immediately while items load
+      viewRow: async (row: Indent) => {
+        setDrawerOpen(true);
+        setViewing(row); // show header immediately while items load
 
-  try {
-    const response = await Get(`indent/${row.id}`, {}, false);
-    if (response?.data?.success || response?.data?.status === 200) {
-      const full = response?.data?.data;
-      setViewing({
-        ...row,
-        ...full,
-        date: full?.created || row.date,
-        items: (full?.items || []).map((it: any) => ({
-          id: it.indentItemId,
-          itemCode: it.itemCode,
-          itemName: it.itemName,
-          unit: it.unit,
-          requiredQty: it.requiredStock,
-        })),
-      });
-    }
-  } catch (error) {
-    console.error("Indent detail fetch error:", error);
-  }
-},
+        try {
+          const response = await Get(`indent/${row.id}`, {}, false);
+          if (response?.data?.success || response?.data?.status === 200) {
+            const full = response?.data?.data;
+            setViewing({
+              ...row,
+              ...full,
+              date: full?.created || row.date,
+              items: (full?.items || []).map((it: any) => ({
+                id: it.indentItemId,
+                itemCode: it.itemCode,
+                itemName: it.itemName,
+                unit: it.unit,
+                hsnCode: it.hsnCode,
+                tax: it.taxSlab,
+                requiredQty: it.requiredStock,
+              })),
+            });
+          }
+        } catch (error) {
+          console.error("Indent detail fetch error:", error);
+        }
+      },
       // No edit / delete as per your requirement
     },
 
@@ -154,8 +154,6 @@ export default function IndentPage() {
       <div className="transition-content w-full pb-5">
         <MasterToolbar
           title="Indent"
-          createLabel="" // no create button
-          onCreate={() => undefined}
           searchPlaceholder="Search indents..."
           table={table}
           showFilters={showFilters}

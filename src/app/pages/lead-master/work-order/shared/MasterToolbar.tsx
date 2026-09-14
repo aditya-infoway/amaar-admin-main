@@ -13,10 +13,10 @@ import { Button, Input } from "@/components/ui";
 
 interface MasterToolbarProps<T> {
   title: string;
-  createLabel: string;
+  createLabel?: string;
   searchPlaceholder: string;
   table: Table<T>;
-  onCreate: () => void;
+  onCreate?: () => void;
   showFilters: boolean;
   onToggleFilters: () => void;
   onExportExcel: () => void;
@@ -58,7 +58,7 @@ export function MasterToolbar<T>({
             className="h-9 gap-2 rounded-md px-3 text-sm"
             onClick={onExportExcel}
           >
-            <ArrowDownTrayIcon className="size-4 text-success-600" />
+            <ArrowDownTrayIcon className="text-success-600 size-4" />
             <span>Excel</span>
           </Button>
           <Button
@@ -66,17 +66,19 @@ export function MasterToolbar<T>({
             className="h-9 gap-2 rounded-md px-3 text-sm"
             onClick={onExportPdf}
           >
-            <DocumentArrowDownIcon className="size-4 text-error-600" />
+            <DocumentArrowDownIcon className="text-error-600 size-4" />
             <span>PDF</span>
           </Button>
-          <Button
-            color="primary"
-            className="h-9 gap-2 rounded-md px-4 text-sm"
-            onClick={onCreate}
-          >
-            <PlusIcon className="size-4" />
-            <span>{createLabel}</span>
-          </Button>
+          {onCreate && (
+            <Button
+              color="primary"
+              className="h-9 gap-2 rounded-md px-4 text-sm"
+              onClick={onCreate}
+            >
+              <PlusIcon className="size-4" />
+              <span>{createLabel}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -93,7 +95,7 @@ export function MasterToolbar<T>({
       </div>
 
       {showFilters && filterPanel && (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-500 dark:bg-dark-600">
+        <div className="dark:border-dark-500 dark:bg-dark-600 mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
           {filterPanel}
         </div>
       )}

@@ -1,5 +1,6 @@
-
 import { XMarkIcon } from "@heroicons/react/24/solid";
+import { Transition } from "@headlessui/react"; // optional – remove if you don't use headlessui
+
 type IndentItem = {
   id?: string | number;
   itemCode?: string | number;
@@ -25,101 +26,129 @@ interface Props {
   indent: IndentData | null;
 }
 
-function formatDate(date?: string) {
-  if (!date) return "-";
+const formatDate = (value?: string) => {
+  if (!value) return "-";
 
-  const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) return date;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
 
-  return parsedDate.toLocaleDateString();
-}
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = parsed.getFullYear();
+
+  return `${day}-${month}-${year}`;
+};
 
 export default function IndentDrawer({ isOpen, close, indent }: Props) {
-  if (!isOpen || !indent) return null;
+  if (!indent) return null;
 
   const items = indent.items || [];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center  p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="indent-drawer-title"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
-    >
-      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 id="indent-drawer-title" className="text-lg font-semibold">
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={close}
+      />
+
+      {/* Right Side Drawer */}
+      <div
+        className={`fixed inset-y-0 right-0 z-40 flex w-full max-w-4xl transform flex-col bg-white text-gray-900 shadow-xl transition-transform duration-300 ease-in-out dark:bg-dark-750 dark:text-gray-100 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-dark-600">
+          <h2 className="text-lg font-semibold">
             Indent Details – {indent.indentNo || "-"}
           </h2>
           <button
             type="button"
             onClick={close}
-            className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+            className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:text-muted-foreground dark:hover:bg-dark-600 cursor-pointer"
             aria-label="Close"
           >
-           <XMarkIcon className="size-4.5" />
+            <XMarkIcon className="size-5 dark:text-white" />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-          <div>
-            <span className="text-muted-foreground">Work Order ID:</span>{" "}
-            <strong>{indent.workOrderNo || indent.workOrderId || "-"}</strong>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Summary Info */}
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+            <div>
+              <span className="text-gray-500 dark:text-muted-foreground">
+                Work Order ID:
+              </span>{" "}
+              <strong>
+                {indent.workOrderNo || indent.workOrderId || "-"}
+              </strong>
+            </div>
+            <div>
+              <span className="text-gray-500 dark:text-muted-foreground">
+                Model Name:
+              </span>{" "}
+              <strong>{indent.modelName || "-"}</strong>
+            </div>
+            <div>
+              <span className="text-gray-500 dark:text-muted-foreground">
+                Date:
+              </span>{" "}
+              <strong>{formatDate(indent.date)}</strong>
+            </div>
           </div>
-          <div>
-            <span className="text-muted-foreground">Model Name:</span>{" "}
-            <strong>{indent.modelName || "-"}</strong>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Date:</span>{" "}
-            <strong>{formatDate(indent.date)}</strong>
-          </div>
-        </div>
 
-        <div className="rounded-md border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="w-12 p-3">Sr. No.</th>
-                <th className="p-3">Item Code</th>
-                <th className="p-3">Item Name</th>
-                <th className="p-3">Unit</th>
-                <th className="p-3">HSN Code</th>
-                <th className="p-3">Tax</th>
-                <th className="p-3 text-right">Required Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="h-24 text-center">
-                    No items found
-                  </td>
+          {/* Items Table */}
+          <div className="rounded-md border border-gray-200 overflow-hidden dark:border-dark-600">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 whitespace-nowrap dark:bg-dark-700">
+                <tr className="border-b border-gray-200 text-left dark:border-dark-600">
+                  <th className="w-12 p-3">Sr. No.</th>
+                  <th className="p-3">Item Code</th>
+                  <th className="p-3">Item Name</th>
+                  <th className="p-3">Unit</th>
+                  <th className="p-3">HSN Code</th>
+                  <th className="p-3">Tax</th>
+                  <th className="p-3 text-right">Required Qty</th>
                 </tr>
-              ) : (
-                items.map((item, index) => (
-                  <tr key={item.id || index}>
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3 font-medium">
-                      {item.itemCode || "-"}
-                    </td>
-                    <td className="p-3">{item.itemName || "-"}</td>
-                    <td className="p-3">{item.unit || "-"}</td>
-                    <td className="p-3">{item.hsnCode || "-"}</td>
-                    <td className="p-3">{item.tax ?? "-"}</td>
-                    <td className="p-3 text-right">
-                      {item.requiredQty ?? "-"}
+              </thead>
+              <tbody>
+                {items.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="h-24 text-center text-gray-500 dark:text-muted-foreground"
+                    >
+                      No items found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  items.map((item, index) => (
+                    <tr
+                      key={item.id || index}
+                      className="border-b border-gray-200 last:border-0 dark:border-dark-600"
+                    >
+                      <td className="p-3">{index + 1}</td>
+                      <td className="p-3 font-medium">
+                        {item.itemCode || "-"}
+                      </td>
+                      <td className="p-3">{item.itemName || "-"}</td>
+                      <td className="p-3">{item.unit || "-"}</td>
+                      <td className="p-3">{item.hsnCode || "-"}</td>
+                      <td className="p-3">{item.tax ?? "-"}</td>
+                      <td className="p-3 text-right">
+                        {item.requiredQty ?? "-"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
