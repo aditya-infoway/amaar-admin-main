@@ -6,13 +6,15 @@ import type { Indent } from "./types";
 
 const formatDate = (value?: string) => {
   if (!value) return "-";
+
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return String(value);
-  return parsed.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = parsed.getFullYear();
+
+  return `${day}-${month}-${year}`;
 };
 
 const columnHelper = createColumnHelper<Indent>();

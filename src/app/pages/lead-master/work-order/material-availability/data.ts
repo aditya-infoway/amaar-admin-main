@@ -46,6 +46,8 @@ export interface MaterialItem {
   item_location: string;
   category: string;
   unit: string;
+  hsn_code: string;
+  tax_slab: string;
   available_stock: number;
   required_stock: number;
   purchaseRequired: number;
