@@ -153,6 +153,7 @@ export default function MaterialAvailability() {
           setItems(
             rows.map((row: any) => ({
               item_id: String(row.bomItemId),
+              item_id_real: row.itemId ? Number(row.itemId) : null,
               name: row.itemName || "",
               item_code: row.itemCode || "",
               item_location: row.itemLocation || "",
@@ -223,13 +224,15 @@ export default function MaterialAvailability() {
         modelName: selectedWorkOrder.model || "",
         items: items.map((item) => ({
           bomItemId: item.item_id,
+          itemId: (item as MaterialItem & { item_id_real?: number | null })
+            .item_id_real,
           itemCode: item.item_code,
           itemName: item.name,
           itemLocation: item.item_location,
           category: item.category,
           unit: item.unit,
-           hsnCode: item.hsn_code,
-  taxSlab: item.tax_slab,
+          hsnCode: item.hsn_code,
+          taxSlab: item.tax_slab,
           availableStock: item.available_stock,
           requiredStock: item.required_stock,
           purchaseRequired: item.purchaseRequired,

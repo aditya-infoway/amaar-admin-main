@@ -596,6 +596,14 @@ const protectedRoutes: RouteObject = {
                     ).default,
                   }),
                 },
+                 {
+                  path: "summary",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/purchase-order/PurchaseOrderSummaryPage")
+                    ).default,
+                  }),
+                },
               ],
             },
           ],
