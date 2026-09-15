@@ -41,6 +41,7 @@ export const poStatusOptions: PoStatusOption[] = [
 
 export interface MaterialItem {
   item_id: string;
+  item_id_real: number | null;
   name: string;
   item_code: string;
   item_location: string;
