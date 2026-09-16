@@ -46,7 +46,7 @@ interface BOMItem {
   quantity: string;
   unit: string;
   serialNo?: string;
-
+  source?: "child" | "subbom";
   nextChildSerial?: number;
 
   asslyQty?: string;
@@ -250,6 +250,24 @@ function collectSelectedTree(
     }
   }
 
+  return result;
+}
+
+
+
+// Walks the whole tree and returns every "subbom" subtree, at any depth.
+// Once a node with source "subbom" is found, its children are already
+// tagged "subbom" too (cloneTree tags the whole inserted subtree), so we
+// stop recursing there and only keep digging into non-subbom branches.
+function collectSubBomSubtrees(items: BOMItem[]): BOMItem[] {
+  const result: BOMItem[] = [];
+  for (const item of items) {
+    if (item.source === "subbom") {
+      result.push(item);
+    } else {
+      result.push(...collectSubBomSubtrees(item.children || []));
+    }
+  }
   return result;
 }
 
@@ -1166,7 +1184,7 @@ export default function BOMFormPage() {
       itemName: known.itemName,
       quantity: qty || "1",
       unit: known.unit || "NOS",
-
+      source: "child",
       serialNo,
       asslyQty,
       ldDay,
@@ -1383,6 +1401,7 @@ export default function BOMFormPage() {
             id: newId,
             serialNo: String(serialCounter++),
             quantity: item.quantity || "1",
+            source: "subbom",
             children: item.children?.length ? cloneTree(item.children) : [],
           };
         })
@@ -1969,7 +1988,7 @@ export default function BOMFormPage() {
                       />
                     </div>
 
-                      <div>
+                    <div>
                       <label className="dark:text-dark-300 mb-2 block text-sm font-medium text-gray-700">
                         Qty
                       </label>
@@ -2044,9 +2063,7 @@ export default function BOMFormPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                  
-                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-4"></div>
                 </div>
                 <Button
                   color="success"
@@ -2468,32 +2485,41 @@ export default function BOMFormPage() {
                   </div>
                 )}
 
-                {/* Sub BOM heading + tree (children of root) */}
-                <h1 className="dark:text-dark-100 mb-3 text-2xl font-semibold text-gray-800">
-                  Sub BOM
-                </h1>
+               {(() => {
+                  const subBomChildren = bomItems[0]
+                    ? collectSubBomSubtrees(bomItems[0].children)
+                    : [];
 
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="dark:text-dark-300 text-sm text-gray-500">
-                    {Math.max(totalItems - (bomItems[0] ? 1 : 0), 0)} item(s)
-                  </span>
-                </div>
+                  if (subBomChildren.length === 0) {
+                    return (
+                      <p className="dark:text-dark-400 pl-4 text-sm text-gray-400">
+                        No Sub BOM items added.
+                      </p>
+                    );
+                  }
+                  return (
+                    <>
+                      <h1 className="dark:text-dark-100 mb-3 pl-4 text-2xl font-semibold text-gray-800">
+                        Sub BOM
+                      </h1>
 
-                <div className="max-h-[360px] overflow-y-auto pr-1">
-                  {!bomItems[0]?.children?.length ? (
-                    <div className="dark:text-dark-300 py-8 text-center text-gray-500">
-                      No sub items
-                    </div>
-                  ) : (
-                    <ConfirmBomTreeList
-                      items={bomItems[0].children}
-                      level={0}
-                      expanded={confirmExpandedNodes}
-                      onToggle={toggleConfirmNode}
-                    />
-                  )}
-                </div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="dark:text-dark-300 text-sm text-gray-500">
+                          {collectIds(subBomChildren).length} item(s)
+                        </span>
+                      </div>
 
+                      <div className="max-h-[360px] overflow-y-auto pr-1">
+                        <ConfirmBomTreeList
+                          items={subBomChildren}
+                          level={0}
+                          expanded={confirmExpandedNodes}
+                          onToggle={toggleConfirmNode}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
                 <div className="mt-5 space-x-3 text-end">
                   <Button
                     onClick={() => setIsBomConfirmOpen(false)}
