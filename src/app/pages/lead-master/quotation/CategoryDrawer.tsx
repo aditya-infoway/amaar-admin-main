@@ -142,7 +142,7 @@ export function QuotationDrawer({
   const [discountValue, setDiscountValue] = useState("0");
   const [position, setPosition] = useState("");
   const [leadOptions, setLeadOptions] = useState<LeadOption[]>([]);
-const [usedLeadIds, setUsedLeadIds] = useState<Set<string>>(new Set());
+  const [usedLeadIds, setUsedLeadIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [createMasterData, setCreateMasterData] = useState<
     CreateMasterOption[]
@@ -151,39 +151,41 @@ const [usedLeadIds, setUsedLeadIds] = useState<Set<string>>(new Set());
   const [createPricingData, setCreatePricingData] = useState<
     { code: string; exShowroomPrice: number }[]
   >([]);
-useEffect(() => {
-  const fetchUsedLeads = async () => {
-    if (!isOpen) return;
+  useEffect(() => {
+    const fetchUsedLeads = async () => {
+      if (!isOpen) return;
 
-    try {
-      const financialYearId = localStorage.getItem("financialYearId");
-      const role = localStorage.getItem("role") || "";
+      try {
+        const financialYearId = localStorage.getItem("financialYearId");
+        const role = localStorage.getItem("role") || "";
 
-      const response = await Get(
-        "quotation/list",
-        { financialYearId, role },
-        false,
-      );
-
-      if (response?.data?.success || response?.data?.status === 200) {
-        const quotations = response.data.data || [];
-
-        setUsedLeadIds(
-          new Set(
-            quotations
-              // don't exclude the lead belonging to the quotation currently being edited
-              .filter((q: any) => String(q.id) !== String(quotation?.id || ""))
-              .map((q: any) => String(q.leadId)),
-          ),
+        const response = await Get(
+          "quotation/list",
+          { financialYearId, role },
+          false,
         );
-      }
-    } catch (error) {
-      console.error("Quotation list error (lead filter):", error);
-    }
-  };
 
-  fetchUsedLeads();
-}, [isOpen, quotation?.id]);
+        if (response?.data?.success || response?.data?.status === 200) {
+          const quotations = response.data.data || [];
+
+          setUsedLeadIds(
+            new Set(
+              quotations
+                // don't exclude the lead belonging to the quotation currently being edited
+                .filter(
+                  (q: any) => String(q.id) !== String(quotation?.id || ""),
+                )
+                .map((q: any) => String(q.leadId)),
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("Quotation list error (lead filter):", error);
+      }
+    };
+
+    fetchUsedLeads();
+  }, [isOpen, quotation?.id]);
   // Refreshed every time the drawer opens so newly added leads show up
   useEffect(() => {
     const fetchLeads = async () => {
@@ -223,34 +225,34 @@ useEffect(() => {
   }, [isOpen]);
 
   const [modelOptions, setModelOptions] = useState<DropdownOption[]>([]);
-useEffect(() => {
-  if (!isOpen) return;
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const fetchModels = async () => {
-    try {
-      const response = await Get(
-        "master/itemmaster/finished-goods/list",   // 👈 same source as EnquiryDrawer
-        {},
-        false,
-      );
-
-      if (response?.data?.success || response?.data?.status === 200) {
-        const models = response.data.data || [];
-
-        setModelOptions(
-          models.map((item: any) => ({
-            id: String(item.itemId),   // 👈 match EnquiryDrawer's saved id
-            label: item.itemName,
-          })),
+    const fetchModels = async () => {
+      try {
+        const response = await Get(
+          "master/itemmaster/finished-goods/list", // 👈 same source as EnquiryDrawer
+          {},
+          false,
         );
-      }
-    } catch (error) {
-      console.error("Model list error:", error);
-    }
-  };
 
-  fetchModels();
-}, [isOpen]);
+        if (response?.data?.success || response?.data?.status === 200) {
+          const models = response.data.data || [];
+
+          setModelOptions(
+            models.map((item: any) => ({
+              id: String(item.itemId), // 👈 match EnquiryDrawer's saved id
+              label: item.itemName,
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("Model list error:", error);
+      }
+    };
+
+    fetchModels();
+  }, [isOpen]);
 
   // Pre-fill on edit, or reset on add
   useEffect(() => {
@@ -415,51 +417,52 @@ useEffect(() => {
       setPosition("");
     }
     setErrors({});
-}, [quotation, isOpen]);
-const availableLeadOptions = useMemo(() => {
-  if (isEditing) {
-    // Lock to the lead this quotation was created for
-    return selectedLead[0] ? [selectedLead[0]] : [];
-  }
+  }, [quotation, isOpen]);
+  const availableLeadOptions = useMemo(() => {
+    if (isEditing) {
+      // Lock to the lead this quotation was created for
+      return selectedLead[0] ? [selectedLead[0]] : [];
+    }
 
-  return leadOptions.filter(
-    (lead) =>
-      !usedLeadIds.has(String(lead.leadId)) ||
-      String(lead.leadId) === String(selectedLead[0]?.leadId),
-  );
-}, [leadOptions, usedLeadIds, selectedLead, isEditing]);
+    return leadOptions.filter(
+      (lead) =>
+        !usedLeadIds.has(String(lead.leadId)) ||
+        String(lead.leadId) === String(selectedLead[0]?.leadId),
+    );
+  }, [leadOptions, usedLeadIds, selectedLead, isEditing]);
   // Handle auto-fill reliably by parsing both arrays or direct single objects
-useEffect(() => {
-  if (leadOptions.length === 0) return; // don't clear fields while leads are still loading
+  useEffect(() => {
+    if (isEditing) return; // don't auto-fill/clear fields while editing an existing quotation
+    if (leadOptions.length === 0) return; // don't clear fields while leads are still loading
 
-  const lead = Array.isArray(selectedLead)
-    ? selectedLead[0]
-    : (selectedLead as LeadOption | null);
-  if (!lead) {
-    setCustomerName("");
-    setMobile("");
-    setEmail("");
-    setAddress("");
-    setCity("");
-    setModel("");
-    setRemark("");
-    return;
-  }
+    const lead = Array.isArray(selectedLead)
+      ? selectedLead[0]
+      : (selectedLead as LeadOption | null);
+    if (!lead) {
+      setCustomerName("");
+      setMobile("");
+      setEmail("");
+      setAddress("");
+      setCity("");
+      setModel("");
+      setRemark("");
+      return;
+    }
 
-  const fullLead = leadOptions.find(
-    (item) => Number(item.leadId) === Number(lead.leadId),
-  );
+    const fullLead = leadOptions.find(
+      (item) => Number(item.leadId) === Number(lead.leadId),
+    );
 
-  if (!fullLead) return;
+    if (!fullLead) return;
 
-  setCustomerName(fullLead.name || "");
-  setMobile(fullLead.number || "");
-  setEmail(fullLead.email || "");
-  setAddress(fullLead.address || "");
-  setCity(fullLead.city || "");
-  setModel(String(fullLead.model ?? ""));
-  setRemark(fullLead.remark || "");
-}, [selectedLead, leadOptions]);
+    setCustomerName(fullLead.name || "");
+    setMobile(fullLead.number || "");
+    setEmail(fullLead.email || "");
+    setAddress(fullLead.address || "");
+    setCity(fullLead.city || "");
+    setModel(String(fullLead.model ?? ""));
+    setRemark(fullLead.remark || "");
+ }, [selectedLead, leadOptions, isEditing]);
 
   // When switching to Tipper, clear the Main Chassis selection since it's hidden
   useEffect(() => {
@@ -558,16 +561,16 @@ useEffect(() => {
           false,
         );
 
-       console.log("NEXT QUOTATION API RESPONSE:", response?.data);
+        console.log("NEXT QUOTATION API RESPONSE:", response?.data);
 
-const generatedQNo = response?.data?.data?.qNo;
+        const generatedQNo = response?.data?.data?.qNo;
 
-if (generatedQNo) {
-  setQNo(String(generatedQNo));
-} else {
-  console.error("Quotation number missing:", response?.data);
-  toasterrormsg("Quotation number was not generated.");
-}
+        if (generatedQNo) {
+          setQNo(String(generatedQNo));
+        } else {
+          console.error("Quotation number missing:", response?.data);
+          toasterrormsg("Quotation number was not generated.");
+        }
       } catch (error) {
         console.error("Quotation number generation error:", error);
         toasterrormsg("Unable to generate quotation number.");
@@ -1036,24 +1039,25 @@ if (generatedQNo) {
               {/* Row 1: Lead Selector and Quotation number */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                 <Combobox
-  data={availableLeadOptions}
-  displayField="label"
-  value={normalizedComboboxValue}
-  onChange={(val: any) => {
-    if (isEditing) return; // lead is locked during edit
+                  <Combobox
+                    data={availableLeadOptions}
+                    displayField="label"
+                    value={normalizedComboboxValue}
+                    onChange={(val: any) => {
+                      if (isEditing) return; // lead is locked during edit
 
-    if (val && !Array.isArray(val)) {
-      setSelectedLead([val]);
-    } else {
-      setSelectedLead(val || []);
-    }
-  }}
-  placeholder="Select Lead No"
-  label="Select Lead No"
-  searchFields={["leadId", "name", "number"]}
-  disabled={isEditing}
-/> {errors.lead && (
+                      if (val && !Array.isArray(val)) {
+                        setSelectedLead([val]);
+                      } else {
+                        setSelectedLead(val || []);
+                      }
+                    }}
+                    placeholder="Select Lead No"
+                    label="Select Lead No"
+                    searchFields={["leadId", "name", "number"]}
+                    disabled={isEditing}
+                  />{" "}
+                  {errors.lead && (
                     <p className="text-error mt-1 text-xs">{errors.lead}</p>
                   )}
                 </div>

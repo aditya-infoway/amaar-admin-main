@@ -1170,18 +1170,21 @@ export default function PurchaseOrderPage() {
               <div className="table-wrapper dark:border-dark-500 overflow-x-auto rounded-lg border border-gray-200">
                 {/* ───────── STAGE 1: Indent items (unchanged from today) ───────── */}
                 {stage === "indent" && (
-                  <Table hoverable className="w-full min-w-[1000px] text-left">
+                  <Table
+                    hoverable
+                    className="w-full min-w-[1200px] table-fixed text-left"
+                  >
                     <THead>
                       <Tr>
                         <Th className="w-14 text-center">SR No</Th>
-                        <Th>Item Code</Th>
-                        <Th>Item Name</Th>
-                        <Th>HSN</Th>
-                        <Th>Unit</Th>
-                        <Th className="text-right">Qty</Th>
-                        <Th className="w-48 text-right">Rate</Th>
-                        <Th className="text-center">Tax</Th>
-                        <Th className="text-right">Net Amount</Th>
+                        <Th className="w-32">Item Code</Th>
+                        <Th className="w-64">Item Name</Th>
+                        <Th className="w-28">HSN</Th>
+                        <Th className="w-20">Unit</Th>
+                        <Th className="w-20 text-right">Qty</Th>
+                        <Th className="w-36 text-right">Rate</Th>
+                        <Th className="w-20 text-center">Tax</Th>
+                        <Th className="w-32 text-right">Net Amount</Th>
                         <Th className="w-16 text-center">Action</Th>
                       </Tr>
                     </THead>
