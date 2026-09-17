@@ -85,10 +85,10 @@ export const columns: ColumnDef<MaterialItem>[] = [
     header: "Purchase Order",
     cell: PurchaseOrderCell,
   },
-  {
-    id: "actions",
-    label: "Row Actions",
-    header: "Actions",
-    cell: RowActions,
-  },
+  // {
+  //   id: "actions",
+  //   label: "Row Actions",
+  //   header: "Actions",
+  //   cell: RowActions,
+  // },
 ];
