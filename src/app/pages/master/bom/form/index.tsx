@@ -1588,6 +1588,7 @@ export default function BOMFormPage() {
           bomName,
           bomCode,
           status: bomStatus,
+          finishedGoodsItemId,
           items: bomItems,
         };
 
@@ -1612,6 +1613,7 @@ export default function BOMFormPage() {
         bomName,
         bomCode,
         status: bomStatus,
+        finishedGoodsItemId,
         items: bomItems,
       };
 
