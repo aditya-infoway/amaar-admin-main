@@ -12,6 +12,33 @@ export default function WorkProccess() {
   const [selectedOrder, setSelectedOrder] = useState<WorkOrderOption | null>(null);
   const [processMap] = useState<Record<string, WorkProcessStep[]>>({});
   const [loading, setLoading] = useState(false);
+  const [hasIndent, setHasIndent] = useState(false);
+
+
+
+  useEffect(() => {
+  const checkIndent = async () => {
+    if (!selectedOrder) {
+      setHasIndent(false);
+      return;
+    }
+
+    try {
+      const response = await Get(`indent/check/${selectedOrder.id}`, {}, false);
+
+      if (response?.data?.success) {
+        setHasIndent(Boolean(response.data.data?.exists));
+      } else {
+        setHasIndent(false);
+      }
+    } catch (error) {
+      console.error("Indent check error:", error);
+      setHasIndent(false);
+    }
+  };
+
+  checkIndent();
+}, [selectedOrder]);
 
   /*
    * Fetch Work Orders for the dropdown
@@ -53,13 +80,19 @@ export default function WorkProccess() {
     fetchWorkOrders();
   }, []);
 
-  const currentSteps: WorkProcessStep[] = useMemo(() => {
-    if (!selectedOrder) return [];
-    return (
-      processMap[selectedOrder.workOrderNo] ??
-      defaultProcessSteps.map((step) => ({ ...step }))
-    );
-  }, [selectedOrder, processMap]);
+const currentSteps: WorkProcessStep[] = useMemo(() => {
+  if (!selectedOrder) return [];
+
+  const base =
+    processMap[selectedOrder.workOrderNo] ??
+    defaultProcessSteps.map((step) => ({ ...step }));
+
+  return base.map((step) =>
+    step.label === "Material Availability"
+      ? { ...step, status: hasIndent ? "Completed" : step.status }
+      : step,
+  );
+}, [selectedOrder, processMap, hasIndent]);
 
   const handleSelectOrder = (value: any) => {
     const order: WorkOrderOption | null = Array.isArray(value)
