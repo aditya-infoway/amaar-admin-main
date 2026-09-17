@@ -142,7 +142,7 @@ export function QuotationDrawer({
   const [discountValue, setDiscountValue] = useState("0");
   const [position, setPosition] = useState("");
   const [leadOptions, setLeadOptions] = useState<LeadOption[]>([]);
-
+const [usedLeadIds, setUsedLeadIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [createMasterData, setCreateMasterData] = useState<
     CreateMasterOption[]
@@ -151,7 +151,39 @@ export function QuotationDrawer({
   const [createPricingData, setCreatePricingData] = useState<
     { code: string; exShowroomPrice: number }[]
   >([]);
+useEffect(() => {
+  const fetchUsedLeads = async () => {
+    if (!isOpen) return;
 
+    try {
+      const financialYearId = localStorage.getItem("financialYearId");
+      const role = localStorage.getItem("role") || "";
+
+      const response = await Get(
+        "quotation/list",
+        { financialYearId, role },
+        false,
+      );
+
+      if (response?.data?.success || response?.data?.status === 200) {
+        const quotations = response.data.data || [];
+
+        setUsedLeadIds(
+          new Set(
+            quotations
+              // don't exclude the lead belonging to the quotation currently being edited
+              .filter((q: any) => String(q.id) !== String(quotation?.id || ""))
+              .map((q: any) => String(q.leadId)),
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Quotation list error (lead filter):", error);
+    }
+  };
+
+  fetchUsedLeads();
+}, [isOpen, quotation?.id]);
   // Refreshed every time the drawer opens so newly added leads show up
   useEffect(() => {
     const fetchLeads = async () => {
@@ -384,7 +416,18 @@ useEffect(() => {
     }
     setErrors({});
 }, [quotation, isOpen]);
+const availableLeadOptions = useMemo(() => {
+  if (isEditing) {
+    // Lock to the lead this quotation was created for
+    return selectedLead[0] ? [selectedLead[0]] : [];
+  }
 
+  return leadOptions.filter(
+    (lead) =>
+      !usedLeadIds.has(String(lead.leadId)) ||
+      String(lead.leadId) === String(selectedLead[0]?.leadId),
+  );
+}, [leadOptions, usedLeadIds, selectedLead, isEditing]);
   // Handle auto-fill reliably by parsing both arrays or direct single objects
 useEffect(() => {
   if (leadOptions.length === 0) return; // don't clear fields while leads are still loading
@@ -993,23 +1036,24 @@ if (generatedQNo) {
               {/* Row 1: Lead Selector and Quotation number */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <Combobox
-                    data={leadOptions}
-                    displayField="label"
-                    value={normalizedComboboxValue}
-                    onChange={(val: any) => {
-                      // Normalizes single-object select events into matching state shapes
-                      if (val && !Array.isArray(val)) {
-                        setSelectedLead([val]);
-                      } else {
-                        setSelectedLead(val || []);
-                      }
-                    }}
-                    placeholder="Select Lead No"
-                    label="Select Lead No"
-                    searchFields={["leadId", "name", "number"]}
-                  />
-                  {errors.lead && (
+                 <Combobox
+  data={availableLeadOptions}
+  displayField="label"
+  value={normalizedComboboxValue}
+  onChange={(val: any) => {
+    if (isEditing) return; // lead is locked during edit
+
+    if (val && !Array.isArray(val)) {
+      setSelectedLead([val]);
+    } else {
+      setSelectedLead(val || []);
+    }
+  }}
+  placeholder="Select Lead No"
+  label="Select Lead No"
+  searchFields={["leadId", "name", "number"]}
+  disabled={isEditing}
+/> {errors.lead && (
                     <p className="text-error mt-1 text-xs">{errors.lead}</p>
                   )}
                 </div>

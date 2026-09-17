@@ -77,6 +77,7 @@ export function SalesOrderDrawer({
   const [quotationOptions, setQuotationOptions] = useState<QuotationOption[]>(
     [],
   );
+  const [usedQuotationIds, setUsedQuotationIds] = useState<Set<string>>(new Set());
   const [selectedQuotation, setSelectedQuotation] = useState<QuotationOption[]>(
     [],
   );
@@ -208,7 +209,51 @@ const modelLabel = useMemo(() => {
 
     fetchQuotations();
   }, [isOpen]);
+// Fetch sales orders to know which quotations are already used
+useEffect(() => {
+  if (!isOpen) return;
 
+  const fetchUsedQuotations = async () => {
+    try {
+      const financialYearId = localStorage.getItem("financialYearId");
+
+      const response = await Get(
+        "salesorder/list",
+        financialYearId ? { financialYearId } : {},
+        false,
+      );
+
+      if (response?.data?.success || response?.data?.status === 200) {
+        const orders = response.data.data || [];
+
+        setUsedQuotationIds(
+          new Set(
+            orders
+              // don't exclude the quotation belonging to the SO currently being edited
+              .filter(
+                (o: any) => String(o.id) !== String(salesOrder?.id || ""),
+              )
+              .map((o: any) => String(o.quotationId)),
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Sales order list error (quotation filter):", error);
+    }
+  };
+
+  fetchUsedQuotations();
+}, [isOpen, salesOrder?.id]);
+const availableQuotationOptions = useMemo(() => {
+  if (isEditing) {
+    // Lock to the quotation this sales order was created for
+    return selectedQuotation[0] ? [selectedQuotation[0]] : [];
+  }
+
+  return quotationOptions.filter(
+    (q) => !usedQuotationIds.has(String(q.id)),
+  );
+}, [quotationOptions, usedQuotationIds, selectedQuotation, isEditing]);
   // Auto-fill Lead ID / City / customer block whenever a quotation is picked.
   // TOP block always mirrors the quotation, regardless of mode.
   // BOTTOM (detail) block only mirrors it when mode === "asIs".
@@ -599,7 +644,7 @@ if (response?.data?.success || response?.data?.status === 200) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Combobox
-                    data={quotationOptions}
+                     data={availableQuotationOptions}
                     displayField="label"
                     value={selectedQuotation[0] ?? null}
                     onChange={(val: any) =>
@@ -610,7 +655,7 @@ if (response?.data?.success || response?.data?.status === 200) {
                     placeholder="Select Quotation"
                     label="Select Quotation"
                     searchFields={["qNo", "customerName"]}
-                    disabled={readOnly}
+                     disabled={readOnly || isEditing}
                   />
                   {errors.quotation && (
                     <p className="text-error mt-1 text-xs">

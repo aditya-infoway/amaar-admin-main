@@ -11,7 +11,7 @@ import { TextCell } from "../shared/tableCells";
 import { ExportColumn } from "../shared/export";
 import { Quotation } from "../shared/types";
 import { printQuotationHtml } from "./printQuotation";
-
+import { printQuotationHtml2 } from "./printQuotation2";
 const RowActions = createRowActions<Quotation>("quotation");
 
 export interface CreateMasterOption {
@@ -130,6 +130,22 @@ export function createColumns(
           isIcon
           className="size-7 rounded-full"
           onClick={() => printQuotationHtml(row.original)}
+          title="View / Print Quotation"
+        >
+          <PrinterIcon className="size-4.5" />
+        </Button>
+      ),
+    },
+     {
+      id: "print2",
+      header: "Print2",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <Button
+          variant="flat"
+          isIcon
+          className="size-7 rounded-full"
+          onClick={() => printQuotationHtml2(row.original)}
           title="View / Print Quotation"
         >
           <PrinterIcon className="size-4.5" />

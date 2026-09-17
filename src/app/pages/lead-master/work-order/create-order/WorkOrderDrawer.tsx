@@ -56,7 +56,7 @@ export default function WorkOrderDrawer({
   const [salesOrders, setSalesOrders] = useState<SalesOrderOption[]>([]);
   const [selectedSalesOrder, setSelectedSalesOrder] =
     useState<SalesOrderOption | null>(null);
-
+const [usedSalesOrderIds, setUsedSalesOrderIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   /*
@@ -109,7 +109,53 @@ export default function WorkOrderDrawer({
 
     fetchSalesOrders();
   }, [isOpen]);
+/*
+ * Fetch Work Orders to know which Sales Orders are already used
+ */
+useEffect(() => {
+  if (!isOpen) return;
 
+  const fetchUsedSalesOrders = async () => {
+    try {
+      const financialYearId = localStorage.getItem("financialYearId");
+
+      const response = await Get(
+        "workorder/list",
+        financialYearId ? { financialYearId } : {},
+        false,
+      );
+
+      if (response?.data?.success || response?.data?.status === 200) {
+        const list = response?.data?.data || [];
+
+        setUsedSalesOrderIds(
+          new Set(
+            list
+              // don't exclude the sales order belonging to the work order currently being edited
+              .filter(
+                (w: any) => String(w.id) !== String(workOrder?.id || ""),
+              )
+              .map((w: any) => String(w.salesOrderId)),
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Work Order list error (sales order filter):", error);
+    }
+  };
+
+  fetchUsedSalesOrders();
+}, [isOpen, workOrder?.id]);
+const availableSalesOrders = useMemo(() => {
+  if (isEditing) {
+    // Lock to the sales order this work order was created for
+    return selectedSalesOrder ? [selectedSalesOrder] : [];
+  }
+
+  return salesOrders.filter(
+    (so) => !usedSalesOrderIds.has(String(so.id)),
+  );
+}, [salesOrders, usedSalesOrderIds, selectedSalesOrder, isEditing]);
   /*
    * Generate Work Order Number
    */
@@ -346,20 +392,20 @@ placeholder="Generating..."
                 />
 
                 <div>
-                  <Combobox
-                    data={salesOrders}
-                    displayField="label"
-                    value={selectedSalesOrder}
-                    onChange={(value: any) => {
-                      setSelectedSalesOrder(
-                        Array.isArray(value) ? value[0] || null : value || null,
-                      );
-                    }}
-                    placeholder="Select Sales Order"
-                    label="Select Sales Order"
-                    searchFields={["soNo", "customerName"]}
-                    disabled={readOnly || isEditing}
-                  />
+                 <Combobox
+  data={availableSalesOrders}
+  displayField="label"
+  value={selectedSalesOrder}
+  onChange={(value: any) => {
+    setSelectedSalesOrder(
+      Array.isArray(value) ? value[0] || null : value || null,
+    );
+  }}
+  placeholder="Select Sales Order"
+  label="Select Sales Order"
+  searchFields={["soNo", "customerName"]}
+  disabled={readOnly || isEditing}
+/>
                 </div>
 
                 {/* <Input

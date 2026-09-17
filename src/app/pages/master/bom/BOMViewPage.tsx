@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Link, useParams } from "react-router";
 import clsx from "clsx";
-
+import * as XLSX from "xlsx";
 import { Page } from "@/components/shared/Page";
 import { Button, Card, GhostSpinner, Badge } from "@/components/ui";
 import { Get, toasterrormsg } from "@/ApiHelper";
@@ -19,6 +19,7 @@ interface BOMItem {
   itemName: string;
   quantity: string;
   unit: string;
+    weight?: string;
   serialNo?: string;
   asslyQty?: string;
   ldDay?: string;
@@ -45,7 +46,57 @@ interface BOMDetail {
   status: string;
   items: BOMItem[];
 }
+interface ExportRow {
+  level: number;
+  itemCode: string;
+  itemName: string;
+  childCode: string;
+  childName: string;
+  qty: string;
+  unit: string;
+  weight: string;
+}
 
+function flattenBOMForExport(items: BOMItem[], level = 0): ExportRow[] {
+  let rows: ExportRow[] = [];
+
+  items.forEach((item) => {
+    const indentedCode = "    ".repeat(level) + item.itemCode;
+
+    if (item.children.length > 0) {
+      // Har child ke liye alag row — parent ka code repeat, child name+code us row me
+      item.children.forEach((child) => {
+        rows.push({
+          level,
+          itemCode: indentedCode,
+          itemName: item.itemName,
+          childName: child.itemName,
+          childCode: child.itemCode,
+          qty: item.quantity || "-",
+          unit: item.unit || "-",
+          weight: item.weight || "-",
+        });
+      });
+
+      // Ab har child apne aage ke sub-tree ke saath recursively process hoga
+      rows = rows.concat(flattenBOMForExport(item.children, level + 1));
+    } else {
+      // Leaf node — koi child nahi, khud ki row bina child info ke
+      rows.push({
+        level,
+        itemCode: indentedCode,
+        itemName: item.itemName,
+        childName: "-",
+        childCode: "-",
+        qty: item.quantity || "-",
+        unit: item.unit || "-",
+        weight: item.weight || "-",
+      });
+    }
+  });
+
+  return rows;
+}
 // ---------------------------------------------------------------------------
 // Tree helpers — sirf collect/count chahiye yahan (read-only view)
 // ---------------------------------------------------------------------------
@@ -165,7 +216,40 @@ export default function BOMViewPage() {
   const [loading, setLoading] = useState(true);
   const [bom, setBom] = useState<BOMDetail | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+const handleExportExcel = () => {
+  if (!bom) return;
 
+  const rows = flattenBOMForExport(bom.items);
+
+  const worksheetData = rows.map((r) => ({
+    "Item Code": r.itemCode,
+    "Item Name": r.itemName,
+    "Child Code": r.childCode,
+    "Child Name": r.childName,
+    "Qty": r.qty,
+    "Unit/UOM": r.unit,
+    "Weight": r.weight,
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+  // column widths thoda better readability ke liye
+  worksheet["!cols"] = [
+    { wch: 25 }, // Item Code (indented)
+    { wch: 30 }, // Item Name
+    { wch: 25 }, // Child Code
+    { wch: 30 }, // Child Name
+    { wch: 8 },  // Qty
+    { wch: 10 }, // Unit
+    { wch: 10 }, // Weight
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "BOM Structure");
+
+  const fileName = `BOM_${bom.bomCode || bom.bomId}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+};
   useEffect(() => {
     const load = async () => {
       if (!id) return;
@@ -243,9 +327,20 @@ export default function BOMViewPage() {
 
         {/* BOM Details — read only */}
         <Card className="mb-6 p-3">
-          <div className="mb-4 border-b border-gray-200 pb-4 dark:border-dark-500">
-            <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">BOM Details</h3>
-          </div>
+         <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-4 dark:border-dark-500">
+           
+          
+ <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">BOM Details</h3>
+  <Button
+    color="success"
+    variant="outlined"
+    onClick={handleExportExcel}
+    disabled={!bom || bom.items.length === 0}
+  >
+    Export Excel
+  </Button>
+</div>
+          
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
