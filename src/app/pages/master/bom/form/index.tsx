@@ -1581,6 +1581,17 @@ export default function BOMFormPage() {
   const handleConfirmSaveBOM = async () => {
     setIsBomConfirmOpen(false);
 
+    // Root item of the tree = Finished Goods
+  const finishedGoodsItemId = bomItems[0]?.refItemId
+    ? Number(bomItems[0].refItemId)
+    : null;
+
+  // Frontend validation
+  if (!finishedGoodsItemId) {
+    toasterrormsg("Finished Goods Item is missing. Please add a root item first.");
+    return;
+  }
+
     try {
       if (isEditMode) {
         const payload = {
