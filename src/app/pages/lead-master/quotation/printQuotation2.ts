@@ -203,25 +203,36 @@ export async function printQuotationHtml2(quotation: Quotation): Promise<void> {
   const gstAmount = Number(quotation.gstAmount || 0);
   const finalPrice = Number(quotation.finalPrice || 0);
 
-  const specRows: Array<[string, string, boolean?]> = [
-    ["Trailer Detail", trailerLabel],
+  // Same "optionalForTipper" logic as QuotationDrawer.validatePrices()/the
+  // conditional rendering in the drawer: for a Tipper quotation these fields
+  // don't exist on the form at all, so they're skipped in the printed spec
+  // table too. For Trailer, every row still shows exactly as before.
+  const isTipper = (quotation as any).vehicleType === "tipper";
+
+  const allSpecRows: Array<[string, string, boolean?, boolean?]> = [
+    // [label, value, highlight, optionalForTipper]
+    [isTipper ? "Tipper Detail" : "Trailer Detail", trailerLabel],
     ["Main Chassis", chassisLabel],
     ["Body Details", bodyLabel],
     ["Hyd Kit", hydraulicLabel],
-    ["Axle", axleLabel],
-    ["Suspension", suspensionLabel],
-    ["Tyre", tyreLabel],
-    ["Rim", rimLabel],
+    ["Axle", axleLabel, false, true],
+    ["Suspension", suspensionLabel, false, true],
+    ["Tyre", tyreLabel, false, true],
+    ["Rim", rimLabel, false, true],
     ["King Pin", kingPinLabel],
-    ["Landing Leg", landingLegLabel],
-    ["Brake system", brakeSystemLabel],
+    ["Landing Leg", landingLegLabel, false, true],
+    ["Brake system", brakeSystemLabel, false, true],
     ["Mudgaurd", mudguardLabel],
     ["Paint", colorLabel],
-    ["Electrical & Reflective tapes", electricalTapesLabel],
+    ["Electrical & Reflective tapes", electricalTapesLabel, false, true],
     ["SUPD & RUPD", supdRupdLabel],
     ["Tool Box", boxLabel],
-    ["Spare Wheel Carrier", spareWheelCarrierLabel],
+    ["Spare Wheel Carrier", spareWheelCarrierLabel, false, true],
   ];
+
+  const specRows: Array<[string, string, boolean?]> = allSpecRows
+    .filter(([, , , optionalForTipper]) => !(isTipper && optionalForTipper))
+    .map(([label, value, highlight]) => [label, value, highlight]);
 
   const specRowsHtml = specRows
     .map(
@@ -748,7 +759,7 @@ export async function printQuotationHtml2(quotation: Quotation): Promise<void> {
                     <td class="price-label">Total Qty (No's)</td>
                     <td class="price-value">1</td>
                 </tr>
-                <tr class="price-highlight">
+                <tr >
                     <td class="price-label">Total Amount incl. GST</td>
                     <td class="price-value">${formatCurrency(finalPrice)}</td>
                 </tr>

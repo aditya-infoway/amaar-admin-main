@@ -107,7 +107,7 @@ export default function EmployeePage() {
   }));
 
   // ---- Save (create or update) via API ----
-  const handleSave = async (item: Employee) => {
+   const handleSave = async (item: Employee) => {
     const payload: any = {
       department: item.department,
       branch: item.branch,
@@ -135,6 +135,12 @@ export default function EmployeePage() {
         }
       } else {
         payload.password = item.password;
+
+        // ===== companyId localStorage se, createdType default "Super Admin" =====
+        const companyId = localStorage.getItem("companyId") || "";
+        payload.createdBy = Number(companyId);
+        payload.createdType = "Super Admin";
+
         const response = await Post("master/employee/create", payload, false);
         if (response.data?.success) {
           toastsuccessmsg(response.data?.message || "Employee created successfully.");
