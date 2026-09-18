@@ -11,28 +11,25 @@ import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
 
 export function AppLayout() {
   const { themeLayout } = useThemeContext();
-  const { close, open } = useSidebarContext();
-  const { lgAndDown, xlAndUp } = useBreakpointsContext();
+  const { close } = useSidebarContext();
+  const { lgAndDown } = useBreakpointsContext();
 
   useLayoutEffect(() => {
-    if (xlAndUp) open();
+    // Login/refresh par sidebar hamesha closed rahega
+    // Sirf hamburger icon click se open hoga
     return () => {
       if (lgAndDown) close();
     };
-  }, [close, lgAndDown, open, xlAndUp]);
+  }, [close, lgAndDown]);
 
   useLayoutEffect(() => {
     if (document?.body?.dataset) {
       let cancelled = false;
-
       document.body.dataset.layout = "main-layout";
-
-      // Fix flicker layout
       queueMicrotask(() => {
         if (cancelled) return;
         document.body.dataset.layout = "main-layout";
       });
-
       return () => {
         cancelled = true;
         document.body.dataset.layout = themeLayout;

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import invariant from "tiny-invariant";
 
 import { Badge } from "@/components/ui";
-import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
+// import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
 import { useSidebarContext } from "@/app/contexts/sidebar/context";
 import { useUnsavedChanges } from "@/app/contexts/unsavedChanges/context";
 import { type NavigationTree } from "@/@types/navigation";
@@ -19,7 +19,7 @@ export function MenuItem({
 }) {
   const { icon, path, id, transKey, title } = data;
 
-  const { lgAndDown } = useBreakpointsContext();
+  // const { lgAndDown } = useBreakpointsContext();
   const { close } = useSidebarContext();
   const { t } = useTranslation();
 
@@ -42,15 +42,11 @@ export function MenuItem({
   const label = transKey ? t(transKey) : title;
 
   const info = useRouteLoaderData("root")?.[id]?.info;
-
   const handleMenuItemClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
 
     requestNavigation(() => {
-      if (lgAndDown) {
-        close();
-      }
-
+      close();          // ✅ change 1 - yaha
       navigate(path);
     });
   };
@@ -59,11 +55,7 @@ export function MenuItem({
     <div className="relative flex px-3">
       <NavLink
         to={path}
-        onClick={() => {
-          if (lgAndDown) {
-            close();
-          }
-        }}
+       onClick={handleMenuItemClick}
         className={({ isActive }) =>
           clsx(
             "group min-w-0 flex-1 rounded-md px-3 py-2 font-medium outline-hidden transition-colors ease-in-out",

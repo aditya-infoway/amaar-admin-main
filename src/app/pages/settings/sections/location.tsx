@@ -37,6 +37,13 @@ export default function Location() {
   const latitude = watch("latitude");
   const longitude = watch("longitude");
 
+  const hasLocation = !!latitude && !!longitude;
+
+  // Fields (aur Use Current Location button) enabled rahenge jab:
+  // - user explicitly Edit pe click kare (isEditing = true), YA
+  // - abhi tak koi location saved hi nahi hai (hasLocation = false)
+  const isFormEditable = isEditing || !hasLocation;
+
   // -----------------------------------------
   // Fetch existing company location
   // -----------------------------------------
@@ -262,7 +269,8 @@ export default function Location() {
             "Company location updated successfully.",
         );
 
-        // Disable fields after successful save
+        // Save ke baad edit mode band, ab hasLocation true ho jayega
+        // to fields naturally disabled ho jayengi
         setIsEditing(false);
       } else {
         toasterrormsg(
@@ -292,8 +300,6 @@ export default function Location() {
     );
   }
 
-  const hasLocation = !!latitude && !!longitude;
-
   return (
     <div className="w-full max-w-3xl 2xl:max-w-5xl">
       {/* Header */}
@@ -309,9 +315,6 @@ export default function Location() {
             location.
           </p>
         </div>
-
-        {/* Edit Button */}
-       
       </div>
 
       <div className="dark:bg-dark-500 my-5 h-px bg-gray-200" />
@@ -332,7 +335,7 @@ export default function Location() {
               color="primary"
               variant="outlined"
               onClick={handleUseCurrentLocation}
-              disabled={!isEditing || locating}
+              disabled={!isFormEditable || locating}
               className="rounded-xl"
             >
               <MapPinIcon className="mr-1.5 size-4.5" />
@@ -353,7 +356,7 @@ export default function Location() {
               placeholder="e.g. 21.7645"
               className="rounded-xl"
               error={errors.latitude?.message}
-              disabled={!isEditing}
+              disabled={!isFormEditable}
             />
 
             <Input
@@ -364,7 +367,7 @@ export default function Location() {
               placeholder="e.g. 70.5231"
               className="rounded-xl"
               error={errors.longitude?.message}
-              disabled={!isEditing}
+              disabled={!isFormEditable}
             />
           </div>
 
@@ -382,31 +385,37 @@ export default function Location() {
             </div>
           )}
         </div>
+
+        {/* Edit button — sirf tab dikhega jab location already saved hai aur abhi edit mode me nahi hain */}
         <div className="flex justify-end">
- {!isEditing && hasLocation && (
-          <Button
-            type="button"
-            color="primary"
-            variant="outlined"
-            onClick={handleEdit}
-            className="rounded-xl"
-          >
-            <PencilIcon className="mr-1.5 size-4" />
-            Edit
-          </Button>
-        )}
-        </div>
-        {/* Buttons */}
-        {isEditing && (
-          <div className="mt-8 flex justify-end space-x-3">
+          {!isEditing && hasLocation && (
             <Button
               type="button"
-              className="min-w-28"
-              disabled={loading || locating}
-              onClick={handleCancel}
+              color="primary"
+              variant="outlined"
+              onClick={handleEdit}
+              className="rounded-xl"
             >
-              Cancel
+              <PencilIcon className="mr-1.5 size-4" />
+              Edit
             </Button>
+          )}
+        </div>
+
+        {/* Save / Cancel — jab edit mode ho YA abhi tak location set hi na ho */}
+        {isFormEditable && (
+          <div className="mt-8 flex justify-end space-x-3">
+            {/* Cancel sirf tab dikhaye jab pehle se koi saved location ho, warna cancel karne ko kuch nahi */}
+            {hasLocation && (
+              <Button
+                type="button"
+                className="min-w-28"
+                disabled={loading || locating}
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+            )}
 
             <Button
               type="submit"

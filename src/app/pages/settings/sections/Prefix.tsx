@@ -184,7 +184,7 @@ export default function Prefix() {
         </form>
       </div>
 
-      <div className="mt-6 max-h-125 overflow-auto rounded-lg border border-gray-700">
+      <div className="mt-6 max-h-125 overflow-auto  border border-gray-100 ">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 z-0 bg-white dark:bg-gray-900">
             <tr>
@@ -209,7 +209,7 @@ export default function Prefix() {
             ) : (
               prefixes.map((item) => (
                 <tr key={item.prefixId}>
-                  <td className="border border-gray-700 p-3">{item.prefixFor}</td>
+                  <td className="border border-gray-500 p-3">{item.prefixFor}</td>
                   <td className="border border-gray-700 p-3">{item.prefix}</td>
                   <td className="border border-gray-700 p-3 text-center">
                     <Button

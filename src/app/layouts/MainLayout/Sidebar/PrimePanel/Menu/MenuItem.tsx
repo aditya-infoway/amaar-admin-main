@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 
 // Local Imports
-import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
+// import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
 import { useSidebarContext } from "@/app/contexts/sidebar/context";
 import { Badge } from "@/components/ui";
 import { NavigationTree } from "@/@types/navigation";
@@ -16,7 +16,7 @@ export function MenuItem({ data }: { data: NavigationTree  }) {
   const { path, transKey, id, title: defaultTitle } = data;
 
   const { t } = useTranslation();
-  const { lgAndDown } = useBreakpointsContext();
+  // const { lgAndDown } = useBreakpointsContext();
   const { close } = useSidebarContext();
   const title = t(transKey ?? "") || defaultTitle;
 
@@ -24,9 +24,9 @@ export function MenuItem({ data }: { data: NavigationTree  }) {
     | { val?: string; color?: ColorType }
     | undefined;
 
-  const handleMenuItemClick = () => {
-    if (lgAndDown) close();
-  };
+ const handleMenuItemClick = () => {
+  close();   // 👈 yaha bhi lgAndDown check hata diya
+};
 
   return (
     <NavLink
