@@ -4,7 +4,7 @@ import { NavLink, useRouteLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 
 // Local Imports
-import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
+
 import { useSidebarContext } from "@/app/contexts/sidebar/context";
 import { Badge } from "@/components/ui";
 import { NavigationTree } from "@/@types/navigation";
@@ -13,7 +13,7 @@ import { NavigationTree } from "@/@types/navigation";
 
 export function MenuItem({ data }: { data: NavigationTree }) {
   const { transKey, path, id } = data;
-  const { lgAndDown } = useBreakpointsContext();
+
   const { close } = useSidebarContext();
   const { t } = useTranslation();
 
@@ -21,8 +21,8 @@ export function MenuItem({ data }: { data: NavigationTree }) {
   const info = useRouteLoaderData("root")?.[id]?.info;
 
   const handleMenuItemClick = () => {
-    if (lgAndDown) close();
-  };
+  close();   // 👈 lgAndDown check hata diya, ab har screen size pe close hoga
+};
 
   return (
     <NavLink

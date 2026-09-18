@@ -606,6 +606,30 @@ const protectedRoutes: RouteObject = {
                 },
               ],
             },
+            {
+  path: "purchase-grr",
+  children: [
+    {
+      index: true,
+      // LIST
+      lazy: async () => ({
+        Component: (
+          await import("@/app/pages/purchase-master/purchase-grr/index")
+        ).default,
+      }),
+    },
+    {
+      path: "create",
+      // CREATE form (GrrPage lives in grrindex.tsx)
+      lazy: async () => ({
+        Component: (
+          await import("@/app/pages/purchase-master/purchase-grr/grrindex")
+        ).default,
+      }),
+    },
+  ],
+},
+            
           ],
         },
         {
