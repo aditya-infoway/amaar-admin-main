@@ -20,13 +20,13 @@ export function Header() {
   const { cardSkin } = useThemeContext();
 
   return (
-    <header
+   <header
       className={clsx(
         "app-header transition-content sticky top-0 z-20 flex h-16.25 items-center justify-between gap-4 border-b border-gray-200 bg-white/80 px-(--margin-x) backdrop-blur-sm backdrop-saturate-150 dark:border-dark-600",
         cardSkin === "bordered" ? "dark:bg-dark-900/80" : "dark:bg-dark-700/80",
       )}
     >
-      <div className="flex  xl:hidden items-center gap-3">
+      <div className="flex items-center gap-3">
         <SidebarToggleBtn />
         <Link to="/" className="flex items-center gap-3">
           <img
