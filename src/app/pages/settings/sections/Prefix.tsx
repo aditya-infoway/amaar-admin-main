@@ -34,6 +34,7 @@ const prefixForOptions = [
   { id: "SALES ORDER", label: "SALES ORDER" },
   { id: "WORK ORDER", label: "WORK ORDER" },
   { id: "INDENT", label: "INDENT" },
+  { id: "GRR", label: "GRR" },
 ];
 
 const schema = yup.object({
