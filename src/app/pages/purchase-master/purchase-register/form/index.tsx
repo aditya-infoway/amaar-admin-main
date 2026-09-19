@@ -1168,7 +1168,7 @@ function CreateAccountDrawer({ open, onClose }: any) {
 ───────────────────────────────────────────── */
 export default function VehiclePurchaseBill() {
   const navigate = useNavigate();
-  const [billType, setBillType] = useState("manual");
+  const [billType, setBillType] = useState("po");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vehicleDrawerOpen, setVehicleDrawerOpen] = useState(false);
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
@@ -1207,7 +1207,7 @@ export default function VehiclePurchaseBill() {
         // Example: purchaseorder/list  OR  grr/purchase-orders  (whichever is ready)
         const res = await Get(
           "purchase-order/list",
-          { financialYearId },
+          { financialYearId, excludeBilled: true },
           false,
         );
         // OR if you prefer the GRR one:
@@ -1267,6 +1267,7 @@ export default function VehiclePurchaseBill() {
         orderDate: "",
       }));
       setItems([]);
+      setPoItemCatalog([]); // ✅ NEW — PO deselect hone par dropdown-catalog bhi clear
       return;
     }
 
@@ -1327,23 +1328,29 @@ export default function VehiclePurchaseBill() {
         setHdr((h) => ({ ...h, purchaseLocation: [loc] }));
       }
 
-      // ---- 3. Auto-fill items ----
-      const poItems = (po.items || []).map((d: any) =>
-        calcItem({
-          id: Date.now() + Math.random(),
-          itemId: d.itemId,
-          itemCode: d.itemCode,
-          itemName: d.itemName,
+      // ---- 3. PO ke items ko sirf "Select item" dropdown ke liye catalog banao ----
+      // ❌ pehle: seedha setItems(poItems) — items table me auto-fill ho jaate the
+      // ✅ ab: dropdown-catalog set karo, table khaali rakho — user manually
+      //        select + qty/rate/disc bharke ✓ dabayega tabhi item table me aayega
+      const poCatalog: VehicleCatalogItem[] = (po.items || []).map(
+        (d: any) => ({
+          id: String(d.itemId),
+          itemId: d.itemId ?? null,
+          itemCode: d.itemCode || "",
+          itemName: d.itemName || "",
+          categoryName: d.categoryName || "",
+          groupName: d.groupName || "",
+          unit: d.uom || d.unit || "",
+          taxSlab: String(d.gstPct ?? d.taxSlab ?? "0"),
+
+          barcode: d.barcode || "",
           hsnCode: d.hsnCode || "",
-          uom: d.uom || "NOS",
-          qty: Number(d.qty) || 0,
-          rate: Number(d.rate) || 0,
-          discount: Number(d.discount) || 0,
-          gstPct: Number(d.gstPct) || 0,
+          supplierId: d.supplierId ?? null,
         }),
       );
 
-      setItems(poItems);
+      setPoItemCatalog(poCatalog); // ✅ NEW
+      setItems([]); // ✅ NEW — table khaali, manual add ka wait
       clearError("items");
       clearError("partyName");
     } catch (err: any) {
@@ -1377,6 +1384,7 @@ export default function VehiclePurchaseBill() {
   interface LocationOption {
     id: number;
     name: string;
+      purchaseOrderId?: string | number;
   }
 
   interface HdrState {
@@ -1456,7 +1464,7 @@ export default function VehiclePurchaseBill() {
 
   // ---- Company state (GST same-state check ke liye) — UNCHANGED ----
   const [companyState, setCompanyState] = useState<string>("");
-
+  const [poItemCatalog, setPoItemCatalog] = useState<VehicleCatalogItem[]>([]);
   const [bankDetailsOpen, setBankDetailsOpen] = useState(false);
   const [bankDetails, setBankDetails] = useState({
     paymentMode: "UPI",
@@ -1674,7 +1682,9 @@ export default function VehiclePurchaseBill() {
     else if (items.some((i: any) => !i.itemId))
       errors.items =
         "One or more items are missing item reference. Please re-add them.";
-
+    //  if (isFromPo && availableItemCatalog.length > 0) {
+    //       errors.items = `Please add all items from the Purchase Order before saving. ${availableItemCatalog.length} item(s) still pending.`;
+    //     }
     if (termsValue === "Credit" && !hdr.dueDate)
       errors.dueDate = "Due Date is required for Credit terms.";
     if (termsValue === "Cash" && cashAccount.length === 0)
@@ -1711,6 +1721,9 @@ export default function VehiclePurchaseBill() {
       const payload = {
         financialYearId: financialYearId,
         terms: termsValue,
+        purchaseOrderId: isFromPo
+          ? hdr.poNo[0]?.purchaseOrderId || hdr.poNo[0]?.id || null
+          : null,
         accountId: selectedParty.id,
         billNo: hdr.billNo,
         purchaseBillNo: hdr.purchaseBillNo,
@@ -1775,7 +1788,13 @@ export default function VehiclePurchaseBill() {
       setSubmitting(false);
     }
   };
-
+  // ✅ NEW — jo items already table me add ho chuke hain, unhe dropdown se hata do
+  const availableItemCatalog = useMemo(() => {
+    const base = isFromPo ? poItemCatalog : itemCatalog;
+    return base.filter(
+      (cat) => !items.some((it: any) => it.itemId === cat.itemId),
+    );
+  }, [isFromPo, poItemCatalog, itemCatalog, items]);
   return (
     <div className="min-h-screen bg-gray-50 shadow-none dark:bg-gray-900">
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
@@ -1856,7 +1875,7 @@ export default function VehiclePurchaseBill() {
                   searchFields={["name", "poNumber", "supplierName"]}
                 />
               </div>
-              <div>
+              {/* <div>
                 <FieldLabel>Purchase Location</FieldLabel>
                 <Listbox
                   data={locationOptions}
@@ -1869,7 +1888,7 @@ export default function VehiclePurchaseBill() {
                   placeholder="Location"
                   disabled={isFromPo}
                 />
-              </div>
+              </div> */}
               <DatePicker
                 label="Order Date"
                 value={hdr.orderDate}
@@ -1882,7 +1901,7 @@ export default function VehiclePurchaseBill() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <DatePicker
               label="Date"
               value={hdr.date}
@@ -1908,7 +1927,15 @@ export default function VehiclePurchaseBill() {
 
             {/* Party Name — dynamic + fixed display (matched item from partyOptions) */}
             <div className="sm:col-span-2">
-              <FieldLabel required>Party Name</FieldLabel>
+              <div className="flex justify-between">
+                <FieldLabel required>Party Name</FieldLabel>
+                {selectedParty && (
+                  <span className="text-primary bg-primary/10 border-primary/20 flex-shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">
+                    Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"}{" "}
+                    {selectedParty.drOrCr}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <Combobox
@@ -1954,13 +1981,6 @@ export default function VehiclePurchaseBill() {
                   )}
                 </div>
 
-                {selectedParty && (
-                  <span className="text-primary bg-primary/10 border-primary/20 flex-shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">
-                    Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"}{" "}
-                    {selectedParty.drOrCr}
-                  </span>
-                )}
-
                 {/* Hide + button when locked from PO */}
                 {!isFromPo && (
                   <button
@@ -1974,7 +1994,61 @@ export default function VehiclePurchaseBill() {
                 )}
               </div>
             </div>
+            {termsValue === "Cash" && (
+              <div>
+                <FieldLabel required>Cash Account</FieldLabel>
+                <Combobox
+                  data={cashAccountOptions}
+                  displayField="name"
+                  value={cashComboValue}
+                  onChange={(selected: any) => {
+                    setCashAccount(selected ? [selected] : []);
+                    clearError("cashAccount");
+                  }}
+                  placeholder="Select Cash Account"
+                  searchFields={["name"]}
+                />
+                {formErrors.cashAccount && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formErrors.cashAccount}
+                  </p>
+                )}
+              </div>
+            )}
 
+            {termsValue === "Bank" && (
+              <div>
+                <FieldLabel required>Bank Account</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Combobox
+                      data={bankAccountOptions}
+                      displayField="name"
+                      value={bankComboValue}
+                      onChange={(selected: any) => {
+                        setBankAccount(selected ? [selected] : []);
+                        clearError("bankAccount");
+                      }}
+                      placeholder="Select Bank Account"
+                      searchFields={["name"]}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBankDetailsOpen(true)}
+                    className="text-primary flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+                    title="Add Bank Details"
+                  >
+                    <Icon.Bank />
+                  </button>
+                </div>
+                {(formErrors.bankAccount || formErrors.bankDetails) && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formErrors.bankAccount || formErrors.bankDetails}
+                  </p>
+                )}
+              </div>
+            )}
             <Input
               label="Bill No."
               value={hdr.billNo}
@@ -2039,7 +2113,7 @@ export default function VehiclePurchaseBill() {
                 />
               </div>
             </div>
-
+            {/* 
             <div>
               <FieldLabel>Purchase Location</FieldLabel>
               <Listbox
@@ -2049,7 +2123,7 @@ export default function VehiclePurchaseBill() {
                 displayField="name"
                 placeholder="Location"
               />
-            </div>
+            </div> */}
 
             {termsValue === "Credit" && (
               <div>
@@ -2072,62 +2146,6 @@ export default function VehiclePurchaseBill() {
               </div>
             )}
 
-            {termsValue === "Cash" && (
-              <div>
-                <FieldLabel required>Cash Account</FieldLabel>
-                <Combobox
-                  data={cashAccountOptions}
-                  displayField="name"
-                  value={cashComboValue}
-                  onChange={(selected: any) => {
-                    setCashAccount(selected ? [selected] : []);
-                    clearError("cashAccount");
-                  }}
-                  placeholder="Select Cash Account"
-                  searchFields={["name"]}
-                />
-                {formErrors.cashAccount && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {formErrors.cashAccount}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {termsValue === "Bank" && (
-              <div>
-                <FieldLabel required>Bank Account</FieldLabel>
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <Combobox
-                      data={bankAccountOptions}
-                      displayField="name"
-                      value={bankComboValue}
-                      onChange={(selected: any) => {
-                        setBankAccount(selected ? [selected] : []);
-                        clearError("bankAccount");
-                      }}
-                      placeholder="Select Bank Account"
-                      searchFields={["name"]}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setBankDetailsOpen(true)}
-                    className="text-primary flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-                    title="Add Bank Details"
-                  >
-                    <Icon.Bank />
-                  </button>
-                </div>
-                {(formErrors.bankAccount || formErrors.bankDetails) && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {formErrors.bankAccount || formErrors.bankDetails}
-                  </p>
-                )}
-              </div>
-            )}
-
             <div className="sm:col-span-2 xl:col-span-2">
               <Input
                 label="Narration"
@@ -2141,7 +2159,7 @@ export default function VehiclePurchaseBill() {
 
         <Card title="Add Item" className="mb-5">
           <AddItemSelector
-            itemCatalog={itemCatalog}
+            itemCatalog={availableItemCatalog}
             onAdd={addItemFromPreview}
           />
         </Card>
