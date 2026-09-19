@@ -71,11 +71,16 @@ export function EnquiryDrawer({
   const [otpValue, setOtpValue] = useState("");
   const [otpError, setOtpError] = useState("");
   const [generatedOtp, setGeneratedOtp] = useState("");
-  const [pendingValues, setPendingValues] = useState<EnquiryFormValues | null>(null);
+  const [pendingValues, setPendingValues] = useState<EnquiryFormValues | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
 
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [leadIdLoading, setLeadIdLoading] = useState(false);
+
+  const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   const {
     control,
@@ -89,53 +94,53 @@ export function EnquiryDrawer({
   });
 
   const cityOptions = useMemo(() => {
-  const rawList = City.getCitiesOfCountry("IN") || [];
-  const seen = new Set<string>();
-  const options: { value: string; label: string }[] = [];
+    const rawList = City.getCitiesOfCountry("IN") || [];
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
 
-  for (const c of rawList) {
-    if (!seen.has(c.name)) {
-      seen.add(c.name);
-      options.push({ value: c.name, label: c.name });
+    for (const c of rawList) {
+      if (!seen.has(c.name)) {
+        seen.add(c.name);
+        options.push({ value: c.name, label: c.name });
+      }
     }
-  }
 
-  return options.sort((a, b) => a.label.localeCompare(b.label));
-}, []);
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+  }, []);
 
   // ===== Model list ab dynamic API se aayegi =====
-useEffect(() => {
-  if (!isOpen) return;
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const loadFinishedGoods = async () => {
-    try {
-      const response = await Get(
-        "master/itemmaster/finished-goods/list",
-        {},
-        false,
-      );
-
-      if (response.data?.success) {
-        const options: ModelOption[] = (response.data.data || []).map(
-          (item: any) => ({
-            id: String(item.itemId),
-            label: item.itemName,
-          }),
+    const loadFinishedGoods = async () => {
+      try {
+        const response = await Get(
+          "master/itemmaster/finished-goods/list",
+          {},
+          false,
         );
 
-        setModelOptions(options);
-      } else {
-        setModelOptions([]);
-      }
-    } catch (error) {
-      console.error("Finished Goods load error:", error);
-      setModelOptions([]);
-      toasterrormsg("Unable to load Finished Goods items.");
-    }
-  };
+        if (response.data?.success) {
+          const options: ModelOption[] = (response.data.data || []).map(
+            (item: any) => ({
+              id: String(item.itemId),
+              label: item.itemName,
+            }),
+          );
 
-  loadFinishedGoods();
-}, [isOpen]);
+          setModelOptions(options);
+        } else {
+          setModelOptions([]);
+        }
+      } catch (error) {
+        console.error("Finished Goods load error:", error);
+        setModelOptions([]);
+        toasterrormsg("Unable to load Finished Goods items.");
+      }
+    };
+
+    loadFinishedGoods();
+  }, [isOpen]);
 
   // ===== Naye enquiry ka Lead Code purchase ke bill-no ki tarah generate hoga =====
   const fetchNextLeadId = async () => {
@@ -149,7 +154,9 @@ useEffect(() => {
       if (response.data?.success) {
         setValue("leadCode", response.data.data.leadCode);
       } else {
-        toasterrormsg(response.data?.message || "Lead Id generate nahi ho payi.");
+        toasterrormsg(
+          response.data?.message || "Lead Id generate nahi ho payi.",
+        );
       }
     } catch (error) {
       toasterrormsg("Lead Id generate karte waqt kuch galat ho gaya.");
@@ -179,6 +186,7 @@ useEffect(() => {
     setOtpValue("");
     setOtpError("");
     setPendingValues(null);
+    setVerifiedEmail("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enquiry, reset, isOpen]);
 
@@ -188,37 +196,42 @@ useEffect(() => {
     setOtpValue("");
     setOtpError("");
     setPendingValues(null);
+    setVerifiedEmail("");
     close();
   };
 
-  // Stage 1: form validate karo, static OTP generate karo, OTP step pe jao
-  const onSubmitForm = handleSubmit((values) => {
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(otp);
-    setPendingValues(values);
-    setOtpValue("");
-    setOtpError("");
-    setStep("otp");
-  });
-
-  // Stage 2: OTP verify karo, tabhi actual create/update API call ho
-  const handleVerifyOtp = async () => {
-    if (!otpValue || otpValue.length !== 4) {
-      setOtpError("Enter the 4 digit OTP");
-      return;
+  // Send a real OTP to the email entered in the form
+  const sendOtp = async (values: EnquiryFormValues) => {
+    try {
+      setSendingOtp(true);
+      const response = await Post(
+        "lead/send-otp",
+        { email: values.email.trim(), name: values.name },
+        false,
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(`OTP sent to ${values.email.trim()}`);
+        setOtpValue("");
+        setOtpError("");
+        setStep("otp");
+      } else {
+        toasterrormsg(response.data?.message || "Failed to send OTP.");
+      }
+    } catch (error: any) {
+      toasterrormsg(error?.response?.data?.message || "Failed to send OTP.");
+    } finally {
+      setSendingOtp(false);
     }
-    if (otpValue !== generatedOtp) {
-      setOtpError("Invalid OTP, please try again");
-      return;
-    }
-    if (!pendingValues) return;
+  };
 
+  // Actual create/update (runs only after the OTP is verified)
+  const saveEnquiry = async (values: EnquiryFormValues) => {
     setSaving(true);
     try {
       if (isEditing && enquiry?.id) {
         const response = await Put(
           "lead/update",
-          { leadId: Number(enquiry.id), ...pendingValues },
+          { leadId: Number(enquiry.id), ...values },
           false,
         );
         if (response.data?.success) {
@@ -226,17 +239,18 @@ useEffect(() => {
           handleClose();
           toastsuccessmsg(response.data?.message);
         } else {
-          toasterrormsg(response.data?.message || "Enquiry update nahi ho payi.");
+          toasterrormsg(
+            response.data?.message || "Enquiry update nahi ho payi.",
+          );
         }
       } else {
-        // ===== companyId localStorage se, createdType default "Super Admin" =====
         const companyId = localStorage.getItem("companyId") || "";
 
         const response = await Post(
           "lead/create",
           {
             financialYearId: Number(financialYearId),
-            ...pendingValues,
+            ...values,
             createdBy: Number(companyId),
             createdType: DEFAULT_CREATED_TYPE,
           },
@@ -247,7 +261,9 @@ useEffect(() => {
           handleClose();
           toastsuccessmsg(response.data?.message);
         } else {
-          toasterrormsg(response.data?.message || "Enquiry create nahi ho payi.");
+          toasterrormsg(
+            response.data?.message || "Enquiry create nahi ho payi.",
+          );
         }
       }
     } catch (error) {
@@ -257,11 +273,56 @@ useEffect(() => {
     }
   };
 
+  // Stage 1: validate the form, then send the OTP
+  const onSubmitForm = handleSubmit(async (values) => {
+    setPendingValues(values);
+    // already verified (e.g. an earlier save failed) → skip the OTP
+    if (verifiedEmail === values.email.trim()) {
+      await saveEnquiry(values);
+      return;
+    }
+    await sendOtp(values);
+  });
+
+  // Stage 2: verify the OTP on the backend, then save
+  const handleVerifyOtp = async () => {
+    if (!pendingValues) return;
+    const leadEmail = pendingValues.email.trim();
+
+    if (verifiedEmail !== leadEmail) {
+      if (!/^\d{6}$/.test(otpValue)) {
+        setOtpError("Enter the 6 digit OTP");
+        return;
+      }
+      try {
+        setSaving(true);
+        const response = await Post(
+          "lead/verify-otp",
+          { email: leadEmail, otp: otpValue },
+          false,
+        );
+        if (!response.data?.success) {
+          setOtpError(
+            response.data?.message || "Invalid OTP, please try again",
+          );
+          setSaving(false);
+          return;
+        }
+        setVerifiedEmail(leadEmail);
+      } catch (error: any) {
+        setOtpError(
+          error?.response?.data?.message || "Invalid OTP, please try again",
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
+    await saveEnquiry(pendingValues);
+  };
+
   const handleResendOtp = () => {
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(otp);
-    setOtpValue("");
-    setOtpError("");
+    if (pendingValues) sendOtp(pendingValues);
   };
 
   const handleBackToForm = () => {
@@ -294,17 +355,29 @@ useEffect(() => {
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-md transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
+          <div className="dark:border-dark-500 bg-primary flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
             <h3 className="text-lg font-semibold text-white">
-              {step === "form" ? (isEditing ? "Edit Enquiry" : "Add Enquiry") : "Verify OTP"}
+              {step === "form"
+                ? isEditing
+                  ? "Edit Enquiry"
+                  : "Add Enquiry"
+                : "Verify OTP"}
             </h3>
-            <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full text-white">
+            <Button
+              onClick={handleClose}
+              variant="flat"
+              isIcon
+              className="size-6 rounded-full text-white"
+            >
               <XMarkIcon className="size-4.5" />
             </Button>
           </div>
 
           {step === "form" ? (
-            <form onSubmit={onSubmitForm} className="flex grow flex-col overflow-hidden">
+            <form
+              onSubmit={onSubmitForm}
+              className="flex grow flex-col overflow-hidden"
+            >
               <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
                 <Input
                   label="Lead Id"
@@ -372,10 +445,14 @@ useEffect(() => {
                       data={cityOptions}
                       searchFields={["label"]}
                       highlight
-                      value={cityOptions.find((item) => item.value === field.value) || null}
-                      onChange={(item: { value: string; label: string } | null) =>
-                        field.onChange(item?.value ?? "")
+                      value={
+                        cityOptions.find(
+                          (item) => item.value === field.value,
+                        ) || null
                       }
+                      onChange={(
+                        item: { value: string; label: string } | null,
+                      ) => field.onChange(item?.value ?? "")}
                       placeholder="Select City"
                       displayField="label"
                     />
@@ -391,7 +468,10 @@ useEffect(() => {
                       label="Select Model"
                       error={errors.model?.message}
                       data={modelOptions}
-                      value={modelOptions.find((item) => item.id === field.value) || null}
+                      value={
+                        modelOptions.find((item) => item.id === field.value) ||
+                        null
+                      }
                       onChange={(item) => field.onChange(item.id)}
                       placeholder="Select Model"
                       displayField="label"
@@ -418,7 +498,9 @@ useEffect(() => {
                       value={field.value}
                       onChange={(date: Date[]) => {
                         const selected = date?.[0];
-                        field.onChange(selected ? selected.toISOString().slice(0, 10) : "");
+                        field.onChange(
+                          selected ? selected.toISOString().slice(0, 10) : "",
+                        );
                       }}
                       placeholder="Select Date"
                     />
@@ -426,47 +508,66 @@ useEffect(() => {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
-                <Button type="button" onClick={handleClose}>Cancel</Button>
-                <Button type="submit" color="primary">Submit</Button>
+              <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-5">
+                <Button type="button" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  color="primary"
+                  disabled={sendingOtp || saving}
+                >
+                  {sendingOtp ? "Sending OTP..." : "Submit"}
+                </Button>
               </div>
             </form>
           ) : (
             <div className="flex grow flex-col overflow-hidden">
               <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-                <p className="text-sm text-gray-600 dark:text-dark-200">
-                  Enter the 4 digit OTP sent to{" "}
-                  <span className="font-medium">{pendingValues?.number || "your registered number"}</span> to confirm this enquiry.
+                <p className="dark:text-dark-200 text-sm text-gray-600">
+                  Enter the 6 digit OTP sent to{" "}
+                  <span className="font-medium">{pendingValues?.email}</span> to
+                  confirm this enquiry.
                 </p>
-
-                {/* Static/demo OTP flow — isliye OTP yahi screen pe dikha diya */}
-                <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
-                  Demo OTP: {generatedOtp}
-                </p>
-
                 <Input
                   label="OTP"
                   required
                   placeholder="Enter OTP"
                   value={otpValue}
-                  maxLength={4}
+                  maxLength={6}
                   error={otpError}
-                  onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) =>
+                    setOtpValue(e.target.value.replace(/\D/g, ""))
+                  }
                 />
-
-                <Button type="button" variant="flat" onClick={handleResendOtp} className="text-primary">
-                  Resend OTP
-                </Button>
+                <Button
+                  type="button"
+                  variant="flat"
+                  onClick={handleResendOtp}
+                  disabled={sendingOtp}
+                  className="text-primary"
+                >
+                  {sendingOtp ? "Sending..." : "Resend OTP"}
+                              </Button>{" "}
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
-                <Button type="button" onClick={handleBackToForm}>Back</Button>
-                <Button type="button" color="primary" disabled={saving} onClick={handleVerifyOtp}>
+              <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-5">
+                <Button type="button" onClick={handleBackToForm}>
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  color="primary"
+                  disabled={saving}
+                  onClick={handleVerifyOtp}
+                >
                   {saving ? "Saving..." : "Verify & Save"}
                 </Button>
               </div>
             </div>
           )}
+
+          
         </TransitionChild>
       </Dialog>
     </Transition>

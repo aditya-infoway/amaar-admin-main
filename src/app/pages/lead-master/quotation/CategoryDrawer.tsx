@@ -151,6 +151,12 @@ export function QuotationDrawer({
   const [createPricingData, setCreatePricingData] = useState<
     { code: string; exShowroomPrice: number }[]
   >([]);
+
+
+
+
+
+  
   useEffect(() => {
     const fetchUsedLeads = async () => {
       if (!isOpen) return;
@@ -254,30 +260,19 @@ export function QuotationDrawer({
     fetchModels();
   }, [isOpen]);
 
+  const mastersReady =
+    createMasterData.length > 0 && createPricingData.length > 0;
+
   // Pre-fill on edit, or reset on add
   useEffect(() => {
     if (!isOpen) return;
 
+    // wait for master + pricing data before pre-filling an edit
+    if (quotation?.id && !mastersReady) return;
+
     if (quotation && quotation.id) {
       setQNo(quotation.qNo);
-      const lead = leadOptions.find(
-        (item) => String(item.leadId) === String(quotation.leadId),
-      );
 
-      setSelectedLead(
-        lead
-          ? [
-              {
-                id: Number(lead.leadId),
-                leadId: Number(lead.leadId),
-                leadCode: lead.leadCode,
-                name: lead.name,
-                number: lead.number,
-                label: `${lead.leadCode} - ${lead.name} - ${lead.number}`,
-              },
-            ]
-          : [],
-      );
       setCustomerName(quotation.customerName);
       setMobile(quotation.mobile);
       setEmail(quotation.email);
@@ -376,7 +371,6 @@ export function QuotationDrawer({
           savedWarranty ? new Delta(JSON.parse(savedWarranty).ops) : undefined,
         );
       }
-
       setDiscountType(quotation.discountType);
       setDiscountValue(quotation.discountValue);
       setPosition(quotation.position);
@@ -417,7 +411,33 @@ export function QuotationDrawer({
       setPosition("");
     }
     setErrors({});
-  }, [quotation, isOpen]);
+  }, [quotation, isOpen, mastersReady]);
+
+  // Edit mode: pick the lead, and re-run once leadOptions has loaded
+  useEffect(() => {
+    if (!isOpen || !isEditing || !quotation) return;
+
+    const lead = leadOptions.find(
+      (item) => String(item.leadId) === String(quotation.leadId),
+    );
+
+    if (lead) {
+      setSelectedLead([lead]);
+    } else if (quotation.leadId) {
+      // temporary value until leadOptions arrives
+      setSelectedLead([
+        {
+          id: Number(quotation.leadId),
+          leadId: Number(quotation.leadId),
+          leadCode: "",
+          name: quotation.customerName,
+          number: quotation.mobile,
+          label: `${quotation.customerName} - ${quotation.mobile}`,
+        },
+      ]);
+    }
+  }, [isOpen, isEditing, quotation?.id, quotation?.leadId, leadOptions]);
+
   const availableLeadOptions = useMemo(() => {
     if (isEditing) {
       // Lock to the lead this quotation was created for
@@ -462,7 +482,7 @@ export function QuotationDrawer({
     setCity(fullLead.city || "");
     setModel(String(fullLead.model ?? ""));
     setRemark(fullLead.remark || "");
- }, [selectedLead, leadOptions, isEditing]);
+  }, [selectedLead, leadOptions, isEditing]);
 
   // When switching to Tipper, clear the Main Chassis selection since it's hidden
   useEffect(() => {

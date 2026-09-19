@@ -5,6 +5,7 @@ import {
   PlusIcon,
   TrashIcon,
   CheckIcon,
+  EnvelopeIcon,
 } from "@heroicons/react/24/outline";
 import {
   getCoreRowModel,
@@ -18,12 +19,12 @@ import {
 import {
   Badge,
   Button,
+  Checkbox,
   Input,
   Radio,
   Table,
   TBody,
   Td,
-  Textarea,
   Th,
   THead,
   Tr,
@@ -52,15 +53,6 @@ type PoCatalogItem = {
   unit: string;
   taxSlab: string;
   purchasePrice: number;
-};
-
-type SupplierSuggestion = {
-  supplierId: number;
-  supplierName: string;
-  rate: number;
-  qty: number;
-  purchaseDate: string;
-  purchaseBillNo: string;
 };
 
 type LastPurchase = {
@@ -368,6 +360,7 @@ type PurchaseOrderRow = {
   deliveryLocation: string;
   totalAmount: string;
   status: string;
+  mailStatus: string | null;
 };
 
 const purchaseOrderColumns = [
@@ -400,14 +393,32 @@ const purchaseOrderColumns = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ getValue }: { getValue: () => string }) => {
+    cell: ({
+      getValue,
+      row,
+    }: {
+      getValue: () => string;
+      row: { original: PurchaseOrderRow };
+    }) => {
       const status = getValue();
-      const color = "success";
+      const mailStatus = row.original.mailStatus;
 
       return (
-        <Badge variant="outlined" color={color} className="rounded-full">
-          {status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outlined" color="success" className="rounded-full">
+            {status}
+          </Badge>
+          {mailStatus === "sent" && (
+            <span title="Mail sent to supplier">
+              <EnvelopeIcon className="text-success size-5" />
+            </span>
+          )}
+          {mailStatus === "failed" && (
+            <span title="Mail failed to send">
+              <EnvelopeIcon className="text-error size-5" />
+            </span>
+          )}
+        </div>
       );
     },
   },
@@ -614,6 +625,7 @@ export default function PurchaseOrderPage() {
 
   const [poSource, setPoSource] = useState<"indent" | "manual">("indent");
   const [selectedIndent, setSelectedIndent] = useState<any>(null);
+  const [mailSupplierIds, setMailSupplierIds] = useState<number[]>([]);
 
   const [stage, setStage] = useState<"indent" | "suppliers" | "supplierDetail">(
     "indent",
@@ -902,6 +914,23 @@ export default function PurchaseOrderPage() {
     return order.map((sid) => map.get(sid)!);
   }, [items, serialNo]);
 
+  const mailableIds = supplierGroups
+    .filter((g) => g.supplierEmail)
+    .map((g) => g.supplierId);
+  const allMailSelected =
+    mailableIds.length > 0 &&
+    mailableIds.every((id) => mailSupplierIds.includes(id));
+
+  const toggleMailSupplier = (supplierId: number) =>
+    setMailSupplierIds((prev) =>
+      prev.includes(supplierId)
+        ? prev.filter((id) => id !== supplierId)
+        : [...prev, supplierId],
+    );
+
+  const toggleAllMail = () =>
+    setMailSupplierIds(allMailSelected ? [] : mailableIds);
+
   const handleGenerate = async () => {
     if (!requiredDate) {
       setFormErrors({ requiredDate: "Required Date is mandatory." });
@@ -926,6 +955,10 @@ export default function PurchaseOrderPage() {
 
     const financialYearId = localStorage.getItem("financialYearId");
     const draftPayload = {
+      emailSupplierIds: mailSupplierIds.filter((id) =>
+        mailableIds.includes(id),
+      ),
+
       financialYearId: Number(financialYearId),
       poDate,
       requiredDate,
@@ -939,7 +972,6 @@ export default function PurchaseOrderPage() {
         itemId: Number(i.itemId),
         supplierId: i.supplierId ? Number(i.supplierId) : null,
         supplierName: i.supplierName,
-
         supplierNumber: i.supplierNumber || "",
         supplierEmail: i.supplierEmail || "",
         supplierCity: i.supplierCity || "",
@@ -958,6 +990,20 @@ export default function PurchaseOrderPage() {
       setSubmitting(true);
       const res = await Post("purchase-order/create", draftPayload, false);
       if (res.data?.success) {
+        const orders = res.data.data?.orders || [];
+        const sent = orders.filter((o: any) => o.mailStatus === "sent");
+        const failed = orders.filter((o: any) => o.mailStatus === "failed");
+
+        if (sent.length) {
+          toastsuccessmsg(
+            `PO saved. Mail sent to ${sent.map((o: any) => o.supplierName).join(", ")}`,
+          );
+        }
+        if (failed.length) {
+          toasterrormsg(
+            `PO saved, but mail failed for ${failed.map((o: any) => o.supplierName).join(", ")}`,
+          );
+        }
         navigate("/purchase-master/purchase-order");
       } else {
         toasterrormsg(res.data?.message || "Failed to generate PO.");
@@ -1393,6 +1439,12 @@ export default function PurchaseOrderPage() {
                   <Table hoverable className="w-full min-w-[900px] text-left">
                     <THead>
                       <Tr>
+                        <Th className="w-12 text-center">
+                          <Checkbox
+                            checked={allMailSelected}
+                            onChange={toggleAllMail}
+                          />
+                        </Th>
                         <Th>Vendor Name</Th>
                         <Th>Vendor Number</Th>
                         <Th>Email</Th>
@@ -1415,6 +1467,15 @@ export default function PurchaseOrderPage() {
                       ) : (
                         supplierGroups.map((g) => (
                           <Tr key={g.supplierId}>
+                            <Td className="text-center">
+                              <Checkbox
+                                checked={mailSupplierIds.includes(g.supplierId)}
+                                disabled={!g.supplierEmail}
+                                onChange={() =>
+                                  toggleMailSupplier(g.supplierId)
+                                }
+                              />
+                            </Td>
                             <Td className="font-medium">{g.supplierName}</Td>
                             <Td>{g.supplierNumber || "—"}</Td>
                             <Td>{g.supplierEmail || "—"}</Td>
