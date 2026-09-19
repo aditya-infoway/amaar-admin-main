@@ -382,52 +382,7 @@ const ITEM_NAME_OPTIONS = [
   { id: 4, name: "Hydraulic Cylinder 5 Ton" },
   { id: 5, name: "13T Axle" },
 ];
-const MODEL_OPTIONS = [
-  { id: 1, name: "ACCESS 125" },
-  { id: 2, name: "GIXXER" },
-  { id: 3, name: "BURGMAN" },
-  { id: 4, name: "AVENIS" },
-  { id: 5, name: "SWISH" },
-];
-const VARIANT_OPTIONS = [
-  { id: 1, name: "STD" },
-  { id: 2, name: "DRUM" },
-  { id: 3, name: "DRUM SE" },
-  { id: 4, name: "DISC SE" },
-  { id: 5, name: "DISC BC" },
-];
-const COLOUR_OPTIONS = [
-  { id: 1, name: "Pearl White" },
-  { id: 2, name: "Metallic Blue" },
-  { id: 3, name: "Solid Green" },
-  { id: 4, name: "Metallic Red" },
-  { id: 5, name: "Matte Black" },
-];
-const TAX_TYPE_OPTIONS = [
-  { id: 1, name: "GST 28%" },
-  { id: 2, name: "GST 18%" },
-  { id: 3, name: "GST 12%" },
-  { id: 4, name: "GST 5%" },
-  { id: 5, name: "Exempt" },
-];
-const MODEL_TYPE_OPTIONS = [
-  { id: 1, name: "Scooter" },
-  { id: 2, name: "Motorcycle" },
-  { id: 3, name: "Electric" },
-];
-const VEHICLE_TYPE_OPTIONS = [
-  { id: 1, name: "2W" },
-  { id: 2, name: "3W" },
-  { id: 3, name: "4W" },
-  { id: 4, name: "CV" },
-];
-const FUEL_TYPE_OPTIONS = [
-  { id: 1, name: "Petrol" },
-  { id: 2, name: "Diesel" },
-  { id: 3, name: "Electric" },
-  { id: 4, name: "CNG" },
-  { id: 5, name: "Hybrid" },
-];
+
 const GROUP_OPTIONS = [
   { id: 1, name: "Sundry Creditors" },
   { id: 2, name: "Sundry Debtors" },
@@ -452,72 +407,6 @@ const DISTRICT_OPTIONS = [
   { id: 5, name: "Amreli" },
   { id: 6, name: "Bhavnagar" },
   { id: 7, name: "Junagadh" },
-];
-
-const ITEM_MASTER = [
-  {
-    itemCode: "RM-PLT-001",
-    itemName: "MS Plate 10 MM",
-    hsnCode: "72085100",
-    uom: "KG",
-    rate: 65,
-    discount: 0,
-    gstPct: 18,
-  },
-  {
-    itemCode: "RM-CHN-001",
-    itemName: "MS Channel 100 MM",
-    hsnCode: "72166100",
-    uom: "KG",
-    rate: 62,
-    discount: 0,
-    gstPct: 18,
-  },
-  {
-    itemCode: "RM-BEM-001",
-    itemName: "MS Beam 200 MM",
-    hsnCode: "72166100",
-    uom: "KG",
-    rate: 61,
-    discount: 0,
-    gstPct: 18,
-  },
-  {
-    itemCode: "PI-HYD-001",
-    itemName: "Hydraulic Cylinder 5 Ton",
-    hsnCode: "84122100",
-    uom: "NOS",
-    rate: 18500,
-    discount: 0,
-    gstPct: 18,
-  },
-  {
-    itemCode: "PI-AXL-001",
-    itemName: "13T Axle",
-    hsnCode: "87169090",
-    uom: "NOS",
-    rate: 45000,
-    discount: 0,
-    gstPct: 18,
-  },
-  {
-    itemCode: "RM-ROD-001",
-    itemName: "MS Round Rod 20 MM",
-    hsnCode: "72141000",
-    uom: "KG",
-    rate: 58,
-    discount: 0,
-    gstPct: 18,
-  },
-  {
-    itemCode: "RM-SQR-001",
-    itemName: "MS Square Bar 25 MM",
-    hsnCode: "72142000",
-    uom: "KG",
-    rate: 60,
-    discount: 0,
-    gstPct: 18,
-  },
 ];
 
 const INIT_ITEMS: any[] = [];
@@ -699,17 +588,14 @@ const mapApiVehicleItem = (item: any): VehicleCatalogItem => ({
 
 function AddItemSelector({
   itemCatalog,
-  disabled,
   onAdd,
 }: {
   itemCatalog: VehicleCatalogItem[];
-  disabled?: boolean;
   onAdd: (item: any) => void;
 }) {
   const [row, setRow] = useState({ ...EMPTY_ROW });
   const [touched, setTouched] = useState(false);
 
-  // reset the row whenever the filtered catalog changes (i.e. party changed)
   useEffect(() => {
     setRow({ ...EMPTY_ROW });
     setTouched(false);
@@ -763,16 +649,17 @@ function AddItemSelector({
   const total = taxable + gstAmt;
 
   const qtyInvalid = touched && !row.qty;
+  const hasItem = !!row.itemId;
 
   const iCls =
-    "w-full px-2 py-[7px] text-xs border rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder-gray-300 dark:placeholder-gray-600 transition-all";
+    "w-full px-2.5 py-[8px] text-xs border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder-gray-300 dark:placeholder-gray-600 transition-all";
   const roCls =
-    "w-full px-2 py-[7px] text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed select-none";
+    "w-full px-2.5 py-[8px] text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 select-none";
 
   return (
-    <div className="space-y-3">
-      {/* 👇 NEW: Item dropdown */}
-      <div>
+    <div className="space-y-4">
+      {/* ─── ROW 1: Dropdown (half width) ─── */}
+      <div className="w-1/2 min-w-[260px]">
         <FieldLabel required>Item Details</FieldLabel>
         <Combobox
           data={itemCatalog}
@@ -785,182 +672,149 @@ function AddItemSelector({
           placeholder="Select item"
           searchFields={["itemCode", "itemName"]}
           renderItem={(item: any) => (
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 text-inherit">
               <div className="truncate">
-                <span className="text-primary text-xs font-bold">
-                  {item.itemCode}
-                </span>
-                <span className="ml-2 text-sm text-gray-700 dark:text-gray-200">
-                  {item.itemName}
-                </span>
+                <span className="text-xs font-bold">{item.itemCode}</span>
+                <span className="ml-2 text-sm">{item.itemName}</span>
               </div>
-              <span className="text-[10px] whitespace-nowrap text-gray-400">
-                {item.unit} · ₹{item.salesPrice?.toLocaleString()} · GST{" "}
-                {item.taxSlab}%
-              </span>
             </div>
           )}
         />
       </div>
 
-      {/* Existing editable row table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-        <table className="w-full min-w-[1100px]">
-          <thead>
-            <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
-              {[
-                "Item Code",
-                "Item Name",
-                "HSN Code",
-                "UOM",
-                "Qty",
-                "Rate (₹)",
-                "Disc (%)",
-                "Taxable (₹)",
-                "GST %",
-                "GST Amt (₹)",
-                "Total (₹)",
-                "Action",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="px-3 py-3 text-left text-xs font-bold tracking-wide whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-primary/30 border-b-2 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 dark:from-blue-900/20 dark:to-indigo-900/10">
-              <td className="px-2 py-2.5">
-                <div className={roCls + " text-center"}>
-                  {row.itemCode || "—"}
-                </div>
-              </td>
+      {/* ─── ROW 2: Read-only item info ─── */}
+      <div className="grid grid-cols-12 gap-3">
+        <div className="col-span-3">
+          <FieldLabel>Item Code</FieldLabel>
+          <div className={roCls + " text-center"}>{row.itemCode || "—"}</div>
+        </div>
 
-              <td className="px-2 py-2.5">
-                <div className={roCls + " min-w-[160px]"}>
-                  {row.itemName || "—"}
-                </div>
-              </td>
+        <div className="col-span-5">
+          <FieldLabel>Item Name</FieldLabel>
+          <div className={roCls}>{row.itemName || "—"}</div>
+        </div>
 
-              <td className="px-2 py-2.5">
-                <div className={roCls + " text-center"}>
-                  {row.hsnCode || "—"}
-                </div>
-              </td>
-              <td className="px-2 py-2.5">
-                <div className={roCls + " text-center"}>{row.uom || "—"}</div>
-              </td>
+        <div className="col-span-2">
+          <FieldLabel>HSN Code</FieldLabel>
+          <div className={roCls + " text-center"}>{row.hsnCode || "—"}</div>
+        </div>
 
-              <td className="w-20 px-2 py-2.5">
-                <input
-                  type="number"
-                  min={0}
-                  value={row.qty}
-                  onChange={(e) => {
-                    setRow((r) => ({ ...r, qty: e.target.value }));
-                    setTouched(false);
-                  }}
-                  placeholder="Qty"
-                  className={[
-                    iCls,
-                    "text-right",
-                    qtyInvalid
-                      ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-300 dark:border-red-500 dark:bg-red-900/20"
-                      : row.qty
-                        ? "border-green-400 focus:border-green-400 focus:ring-green-300 dark:border-green-600"
-                        : "border-orange-300 dark:border-orange-600",
-                  ].join(" ")}
-                />
-              </td>
+        <div className="col-span-1">
+          <FieldLabel>UOM</FieldLabel>
+          <div className={roCls + " text-center"}>{row.uom || "—"}</div>
+        </div>
 
-              <td className="px-2 py-2.5">
-                <input
-                  type="number"
-                  value={row.rate}
-                  onChange={(e) =>
-                    setRow((r) => ({ ...r, rate: e.target.value }))
-                  }
-                  placeholder="0.00"
-                  className={
-                    iCls + " border-gray-300 text-right dark:border-gray-600"
-                  }
-                />
-              </td>
+        <div className="col-span-1">
+          <FieldLabel>GST %</FieldLabel>
+          <div className={roCls + " text-center"}>
+            {row.gstPct ? (
+              <span className="bg-primary/10 text-primary inline-block rounded-full px-1.5 py-0.5 text-xs font-bold">
+                {row.gstPct}%
+              </span>
+            ) : (
+              "—"
+            )}
+          </div>
+        </div>
+      </div>
 
-              <td className="w-20 px-2 py-2.5">
-                <input
-                  type="number"
-                  value={row.discount}
-                  onChange={(e) =>
-                    setRow((r) => ({ ...r, discount: e.target.value }))
-                  }
-                  placeholder="0"
-                  className={
-                    iCls + " border-gray-300 text-right dark:border-gray-600"
-                  }
-                />
-              </td>
+      {/* ─── ROW 3: Editable + computed + action (all on one line) ─── */}
+      <div className="grid grid-cols-12 items-end gap-3">
+        <div className="col-span-1">
+          <FieldLabel required>Qty</FieldLabel>
+          <input
+            type="number"
+            min={0}
+            value={row.qty}
+            onChange={(e) => {
+              setRow((r) => ({ ...r, qty: e.target.value }));
+              setTouched(false);
+            }}
+            placeholder="Qty"
+            className={[
+              iCls,
+              "text-right",
+              qtyInvalid
+                ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-300 dark:border-red-500 dark:bg-red-900/20"
+                : row.qty
+                  ? "border-green-400 focus:border-green-400 focus:ring-green-300 dark:border-green-600"
+                  : "border-orange-300 dark:border-orange-600",
+            ].join(" ")}
+          />
+        </div>
 
-              <td className="px-2 py-2.5">
-                <div className={roCls + " text-right"}>
-                  {row._filled || row.qty ? FMT2(taxable) : "—"}
-                </div>
-              </td>
+        <div className="col-span-2">
+          <FieldLabel>Rate (₹)</FieldLabel>
+          <input
+            type="number"
+            value={row.rate}
+            onChange={(e) => setRow((r) => ({ ...r, rate: e.target.value }))}
+            placeholder="0.00"
+            className={iCls + " text-right"}
+          />
+        </div>
 
-              <td className="px-2 py-2.5 text-center">
-                {row.gstPct ? (
-                  <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
-                    {row.gstPct}%
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-300">—</span>
-                )}
-              </td>
+        <div className="col-span-2">
+          <FieldLabel>Disc (%)</FieldLabel>
+          <input
+            type="number"
+            value={row.discount}
+            onChange={(e) =>
+              setRow((r) => ({ ...r, discount: e.target.value }))
+            }
+            placeholder="0"
+            className={iCls + " text-right"}
+          />
+        </div>
 
-              <td className="px-2 py-2.5">
-                <div className={roCls + " text-right"}>
-                  {row._filled || row.qty ? FMT2(gstAmt) : "—"}
-                </div>
-              </td>
+        <div className="col-span-2">
+          <FieldLabel>Taxable (₹)</FieldLabel>
+          <div className={roCls + " text-right"}>
+            {row._filled || row.qty ? FMT2(taxable) : "—"}
+          </div>
+        </div>
 
-              <td className="px-2 py-2.5">
-                <div
-                  className={
-                    roCls +
-                    " text-right font-semibold text-gray-700 dark:text-gray-300"
-                  }
-                >
-                  {row._filled || row.qty ? FMT2(total) : "—"}
-                </div>
-              </td>
+        <div className="col-span-2">
+          <FieldLabel>GST Amt (₹)</FieldLabel>
+          <div className={roCls + " text-right"}>
+            {row._filled || row.qty ? FMT2(gstAmt) : "—"}
+          </div>
+        </div>
 
-              <td className="px-2 py-2.5 text-center">
-                <button
-                  type="button"
-                  onClick={handleAdd}
-                  title={
-                    !row.itemId
-                      ? "Select an item from the dropdown first"
-                      : !row.qty
-                        ? "Enter quantity"
-                        : "Add item"
-                  }
-                  className={[
-                    "mx-auto flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200",
-                    row.itemId && row.qty
-                      ? "bg-green-500 text-white shadow-lg hover:scale-110 hover:bg-green-600 hover:shadow-green-200 active:scale-95"
-                      : "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-600",
-                  ].join(" ")}
-                >
-                  <Icon.Check />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="col-span-2">
+          <FieldLabel>Total (₹)</FieldLabel>
+          <div
+            className={
+              roCls +
+              " text-right font-semibold text-gray-800 dark:text-gray-100"
+            }
+          >
+            {row._filled || row.qty ? FMT2(total) : "—"}
+          </div>
+        </div>
+
+        <div className="col-span-1 flex justify-start">
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!hasItem || !row.qty}
+            title={
+              !hasItem
+                ? "Select an item from the dropdown first"
+                : !row.qty
+                  ? "Enter quantity"
+                  : "Add item"
+            }
+            className={[
+              "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
+              hasItem && row.qty
+                ? "bg-green-500 text-white shadow-md hover:scale-105 hover:bg-green-600 active:scale-95"
+                : "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-600",
+            ].join(" ")}
+          >
+            <Icon.Check />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1314,7 +1168,7 @@ function CreateAccountDrawer({ open, onClose }: any) {
 ───────────────────────────────────────────── */
 export default function VehiclePurchaseBill() {
   const navigate = useNavigate();
-  const [billType, setBillType] = useState("manual");
+  const [billType, setBillType] = useState("po");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vehicleDrawerOpen, setVehicleDrawerOpen] = useState(false);
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
@@ -1353,7 +1207,7 @@ export default function VehiclePurchaseBill() {
         // Example: purchaseorder/list  OR  grr/purchase-orders  (whichever is ready)
         const res = await Get(
           "purchase-order/list",
-          { financialYearId },
+          { financialYearId, excludeBilled: true },
           false,
         );
         // OR if you prefer the GRR one:
@@ -1413,6 +1267,7 @@ export default function VehiclePurchaseBill() {
         orderDate: "",
       }));
       setItems([]);
+      setPoItemCatalog([]); // ✅ NEW — PO deselect hone par dropdown-catalog bhi clear
       return;
     }
 
@@ -1473,23 +1328,29 @@ export default function VehiclePurchaseBill() {
         setHdr((h) => ({ ...h, purchaseLocation: [loc] }));
       }
 
-      // ---- 3. Auto-fill items ----
-      const poItems = (po.items || []).map((d: any) =>
-        calcItem({
-          id: Date.now() + Math.random(),
-          itemId: d.itemId,
-          itemCode: d.itemCode,
-          itemName: d.itemName,
+      // ---- 3. PO ke items ko sirf "Select item" dropdown ke liye catalog banao ----
+      // ❌ pehle: seedha setItems(poItems) — items table me auto-fill ho jaate the
+      // ✅ ab: dropdown-catalog set karo, table khaali rakho — user manually
+      //        select + qty/rate/disc bharke ✓ dabayega tabhi item table me aayega
+      const poCatalog: VehicleCatalogItem[] = (po.items || []).map(
+        (d: any) => ({
+          id: String(d.itemId),
+          itemId: d.itemId ?? null,
+          itemCode: d.itemCode || "",
+          itemName: d.itemName || "",
+          categoryName: d.categoryName || "",
+          groupName: d.groupName || "",
+          unit: d.uom || d.unit || "",
+          taxSlab: String(d.gstPct ?? d.taxSlab ?? "0"),
+
+          barcode: d.barcode || "",
           hsnCode: d.hsnCode || "",
-          uom: d.uom || "NOS",
-          qty: Number(d.qty) || 0,
-          rate: Number(d.rate) || 0,
-          discount: Number(d.discount) || 0,
-          gstPct: Number(d.gstPct) || 0,
+          supplierId: d.supplierId ?? null,
         }),
       );
 
-      setItems(poItems);
+      setPoItemCatalog(poCatalog); // ✅ NEW
+      setItems([]); // ✅ NEW — table khaali, manual add ka wait
       clearError("items");
       clearError("partyName");
     } catch (err: any) {
@@ -1523,6 +1384,7 @@ export default function VehiclePurchaseBill() {
   interface LocationOption {
     id: number;
     name: string;
+      purchaseOrderId?: string | number;
   }
 
   interface HdrState {
@@ -1602,7 +1464,7 @@ export default function VehiclePurchaseBill() {
 
   // ---- Company state (GST same-state check ke liye) — UNCHANGED ----
   const [companyState, setCompanyState] = useState<string>("");
-
+  const [poItemCatalog, setPoItemCatalog] = useState<VehicleCatalogItem[]>([]);
   const [bankDetailsOpen, setBankDetailsOpen] = useState(false);
   const [bankDetails, setBankDetails] = useState({
     paymentMode: "UPI",
@@ -1820,7 +1682,9 @@ export default function VehiclePurchaseBill() {
     else if (items.some((i: any) => !i.itemId))
       errors.items =
         "One or more items are missing item reference. Please re-add them.";
-
+    //  if (isFromPo && availableItemCatalog.length > 0) {
+    //       errors.items = `Please add all items from the Purchase Order before saving. ${availableItemCatalog.length} item(s) still pending.`;
+    //     }
     if (termsValue === "Credit" && !hdr.dueDate)
       errors.dueDate = "Due Date is required for Credit terms.";
     if (termsValue === "Cash" && cashAccount.length === 0)
@@ -1857,6 +1721,9 @@ export default function VehiclePurchaseBill() {
       const payload = {
         financialYearId: financialYearId,
         terms: termsValue,
+        purchaseOrderId: isFromPo
+          ? hdr.poNo[0]?.purchaseOrderId || hdr.poNo[0]?.id || null
+          : null,
         accountId: selectedParty.id,
         billNo: hdr.billNo,
         purchaseBillNo: hdr.purchaseBillNo,
@@ -1921,7 +1788,13 @@ export default function VehiclePurchaseBill() {
       setSubmitting(false);
     }
   };
-
+  // ✅ NEW — jo items already table me add ho chuke hain, unhe dropdown se hata do
+  const availableItemCatalog = useMemo(() => {
+    const base = isFromPo ? poItemCatalog : itemCatalog;
+    return base.filter(
+      (cat) => !items.some((it: any) => it.itemId === cat.itemId),
+    );
+  }, [isFromPo, poItemCatalog, itemCatalog, items]);
   return (
     <div className="min-h-screen bg-gray-50 shadow-none dark:bg-gray-900">
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
@@ -2002,7 +1875,7 @@ export default function VehiclePurchaseBill() {
                   searchFields={["name", "poNumber", "supplierName"]}
                 />
               </div>
-              <div>
+              {/* <div>
                 <FieldLabel>Purchase Location</FieldLabel>
                 <Listbox
                   data={locationOptions}
@@ -2015,7 +1888,7 @@ export default function VehiclePurchaseBill() {
                   placeholder="Location"
                   disabled={isFromPo}
                 />
-              </div>
+              </div> */}
               <DatePicker
                 label="Order Date"
                 value={hdr.orderDate}
@@ -2028,7 +1901,7 @@ export default function VehiclePurchaseBill() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <DatePicker
               label="Date"
               value={hdr.date}
@@ -2054,7 +1927,15 @@ export default function VehiclePurchaseBill() {
 
             {/* Party Name — dynamic + fixed display (matched item from partyOptions) */}
             <div className="sm:col-span-2">
-              <FieldLabel required>Party Name</FieldLabel>
+              <div className="flex justify-between">
+                <FieldLabel required>Party Name</FieldLabel>
+                {selectedParty && (
+                  <span className="text-primary bg-primary/10 border-primary/20 flex-shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">
+                    Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"}{" "}
+                    {selectedParty.drOrCr}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <Combobox
@@ -2100,13 +1981,6 @@ export default function VehiclePurchaseBill() {
                   )}
                 </div>
 
-                {selectedParty && (
-                  <span className="text-primary bg-primary/10 border-primary/20 flex-shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">
-                    Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"}{" "}
-                    {selectedParty.drOrCr}
-                  </span>
-                )}
-
                 {/* Hide + button when locked from PO */}
                 {!isFromPo && (
                   <button
@@ -2120,7 +1994,61 @@ export default function VehiclePurchaseBill() {
                 )}
               </div>
             </div>
+            {termsValue === "Cash" && (
+              <div>
+                <FieldLabel required>Cash Account</FieldLabel>
+                <Combobox
+                  data={cashAccountOptions}
+                  displayField="name"
+                  value={cashComboValue}
+                  onChange={(selected: any) => {
+                    setCashAccount(selected ? [selected] : []);
+                    clearError("cashAccount");
+                  }}
+                  placeholder="Select Cash Account"
+                  searchFields={["name"]}
+                />
+                {formErrors.cashAccount && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formErrors.cashAccount}
+                  </p>
+                )}
+              </div>
+            )}
 
+            {termsValue === "Bank" && (
+              <div>
+                <FieldLabel required>Bank Account</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Combobox
+                      data={bankAccountOptions}
+                      displayField="name"
+                      value={bankComboValue}
+                      onChange={(selected: any) => {
+                        setBankAccount(selected ? [selected] : []);
+                        clearError("bankAccount");
+                      }}
+                      placeholder="Select Bank Account"
+                      searchFields={["name"]}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBankDetailsOpen(true)}
+                    className="text-primary flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+                    title="Add Bank Details"
+                  >
+                    <Icon.Bank />
+                  </button>
+                </div>
+                {(formErrors.bankAccount || formErrors.bankDetails) && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formErrors.bankAccount || formErrors.bankDetails}
+                  </p>
+                )}
+              </div>
+            )}
             <Input
               label="Bill No."
               value={hdr.billNo}
@@ -2185,7 +2113,7 @@ export default function VehiclePurchaseBill() {
                 />
               </div>
             </div>
-
+            {/* 
             <div>
               <FieldLabel>Purchase Location</FieldLabel>
               <Listbox
@@ -2195,7 +2123,7 @@ export default function VehiclePurchaseBill() {
                 displayField="name"
                 placeholder="Location"
               />
-            </div>
+            </div> */}
 
             {termsValue === "Credit" && (
               <div>
@@ -2218,62 +2146,6 @@ export default function VehiclePurchaseBill() {
               </div>
             )}
 
-            {termsValue === "Cash" && (
-              <div>
-                <FieldLabel required>Cash Account</FieldLabel>
-                <Combobox
-                  data={cashAccountOptions}
-                  displayField="name"
-                  value={cashComboValue}
-                  onChange={(selected: any) => {
-                    setCashAccount(selected ? [selected] : []);
-                    clearError("cashAccount");
-                  }}
-                  placeholder="Select Cash Account"
-                  searchFields={["name"]}
-                />
-                {formErrors.cashAccount && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {formErrors.cashAccount}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {termsValue === "Bank" && (
-              <div>
-                <FieldLabel required>Bank Account</FieldLabel>
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <Combobox
-                      data={bankAccountOptions}
-                      displayField="name"
-                      value={bankComboValue}
-                      onChange={(selected: any) => {
-                        setBankAccount(selected ? [selected] : []);
-                        clearError("bankAccount");
-                      }}
-                      placeholder="Select Bank Account"
-                      searchFields={["name"]}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setBankDetailsOpen(true)}
-                    className="text-primary flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-                    title="Add Bank Details"
-                  >
-                    <Icon.Bank />
-                  </button>
-                </div>
-                {(formErrors.bankAccount || formErrors.bankDetails) && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {formErrors.bankAccount || formErrors.bankDetails}
-                  </p>
-                )}
-              </div>
-            )}
-
             <div className="sm:col-span-2 xl:col-span-2">
               <Input
                 label="Narration"
@@ -2287,7 +2159,7 @@ export default function VehiclePurchaseBill() {
 
         <Card title="Add Item" className="mb-5">
           <AddItemSelector
-            itemCatalog={partyFilteredCatalog}
+            itemCatalog={availableItemCatalog}
             onAdd={addItemFromPreview}
           />
         </Card>

@@ -37,12 +37,19 @@ export default function Location() {
   const latitude = watch("latitude");
   const longitude = watch("longitude");
 
-  const hasLocation = !!latitude && !!longitude;
+  // Ye sirf "map link dikhana hai ya nahi" ke liye hai (live form values)
+  const hasValues = !!latitude && !!longitude;
+
+  // Ye asli source of truth hai: backend pe location SAVE hui hai ya nahi.
+  // Form ke watched values (typing/geolocation se aaye) ise NAHI badalte —
+  // sirf successful save (ya initial fetch) ke baad companyDetails update hota hai.
+  const hasSavedLocation =
+    companyDetails?.latitude != null && companyDetails?.longitude != null;
 
   // Fields (aur Use Current Location button) enabled rahenge jab:
   // - user explicitly Edit pe click kare (isEditing = true), YA
-  // - abhi tak koi location saved hi nahi hai (hasLocation = false)
-  const isFormEditable = isEditing || !hasLocation;
+  // - abhi tak backend pe koi location saved hi nahi hai (hasSavedLocation = false)
+  const isFormEditable = isEditing || !hasSavedLocation;
 
   // -----------------------------------------
   // Fetch existing company location
@@ -120,6 +127,9 @@ export default function Location() {
             ? String(companyDetails.longitude)
             : "",
       });
+    } else {
+      // Kabhi save hi nahi hua tha, to blank kar do
+      reset({ latitude: "", longitude: "" });
     }
 
     setIsEditing(false);
@@ -190,13 +200,6 @@ export default function Location() {
       return;
     }
 
-    if (!companyDetails) {
-      toasterrormsg(
-        "Company details not loaded yet. Please try again.",
-      );
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -243,7 +246,7 @@ export default function Location() {
       fieldsToResend.forEach((key) => {
         formPayload.append(
           key,
-          companyDetails[key] ?? "",
+          companyDetails?.[key] ?? "",
         );
       });
 
@@ -257,9 +260,10 @@ export default function Location() {
       );
 
       if (response.data?.success) {
-        // Update local company details also
+        // companyDetails ko update karo — yehi "saved" state ka source hai,
+        // isi se hasSavedLocation true banega
         setCompanyDetails((prev) => ({
-          ...prev,
+          ...(prev || {}),
           latitude: data.latitude,
           longitude: data.longitude,
         }));
@@ -269,7 +273,7 @@ export default function Location() {
             "Company location updated successfully.",
         );
 
-        // Save ke baad edit mode band, ab hasLocation true ho jayega
+        // Save ke baad edit mode band, ab hasSavedLocation true ho jayega
         // to fields naturally disabled ho jayengi
         setIsEditing(false);
       } else {
@@ -371,8 +375,8 @@ export default function Location() {
             />
           </div>
 
-          {/* Google Maps */}
-          {hasLocation && (
+          {/* Google Maps — live form values ke basis par, save hone ka wait nahi karta */}
+          {hasValues && (
             <div className="mt-4">
               <a
                 href={`https://www.google.com/maps?q=${latitude},${longitude}`}
@@ -386,9 +390,9 @@ export default function Location() {
           )}
         </div>
 
-        {/* Edit button — sirf tab dikhega jab location already saved hai aur abhi edit mode me nahi hain */}
+        {/* Edit button — sirf tab dikhega jab location backend pe already SAVED hai aur abhi edit mode me nahi hain */}
         <div className="flex justify-end">
-          {!isEditing && hasLocation && (
+          {!isEditing && hasSavedLocation && (
             <Button
               type="button"
               color="primary"
@@ -402,11 +406,11 @@ export default function Location() {
           )}
         </div>
 
-        {/* Save / Cancel — jab edit mode ho YA abhi tak location set hi na ho */}
+        {/* Save / Cancel — jab edit mode ho YA abhi tak location backend pe save hi na ho */}
         {isFormEditable && (
           <div className="mt-8 flex justify-end space-x-3">
-            {/* Cancel sirf tab dikhaye jab pehle se koi saved location ho, warna cancel karne ko kuch nahi */}
-            {hasLocation && (
+            {/* Cancel sirf tab dikhaye jab pehle se backend pe koi saved location ho, warna cancel karne ko kuch nahi */}
+            {hasSavedLocation && (
               <Button
                 type="button"
                 className="min-w-28"
