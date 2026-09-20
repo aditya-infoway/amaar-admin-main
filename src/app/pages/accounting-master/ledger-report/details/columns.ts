@@ -52,6 +52,7 @@ export const ledgerDetailColumns: ColumnDef<LedgerDetailRow>[] = [
     cell: (info) => formatDateDDMMYYYY(info.getValue<string>()),
   },
   { id: "voucherNo", accessorKey: "voucherNo", header: "Voucher", cell: TextCell },
+  { id: "billNo", accessorKey: "billNo", header: "Bill No", cell: TextCell },
   { id: "type", accessorKey: "type", header: "Type", cell: TypeCell, enableSorting: false },
   { id: "particulars", accessorKey: "particulars", header: "Particulars", cell: TextCell },
   { id: "debit", accessorKey: "debit", header: "Debit", cell: DebitCell },
@@ -62,6 +63,7 @@ export const ledgerDetailColumns: ColumnDef<LedgerDetailRow>[] = [
 export const ledgerDetailExportColumns: ExportColumn<LedgerDetailRow>[] = [
   { key: "date", header: "Date", format: (v) => formatDateDDMMYYYY(v as string) },
   { key: "voucherNo", header: "Voucher" },
+  { key: "billNo", header: "Bill No" },
   { key: "type", header: "Type" },
   { key: "particulars", header: "Particulars" },
   { key: "debit", header: "Debit" },

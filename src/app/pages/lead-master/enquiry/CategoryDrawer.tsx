@@ -459,25 +459,43 @@ export function EnquiryDrawer({
                   )}
                 />
 
-                <Controller
-                  name="model"
-                  control={control}
-                  rules={{ required: "Model is required" }}
-                  render={({ field }) => (
-                    <Listbox
+                {isEditing && enquiry?.modelLocked ? (
+                  <div>
+                    <Input
                       label="Select Model"
-                      error={errors.model?.message}
-                      data={modelOptions}
+                      readOnly
                       value={
-                        modelOptions.find((item) => item.id === field.value) ||
-                        null
+                        modelOptions.find((item) => item.id === enquiry.model)
+                          ?.label || ""
                       }
-                      onChange={(item) => field.onChange(item.id)}
-                      placeholder="Select Model"
-                      displayField="label"
                     />
-                  )}
-                />
+                    <p className="dark:text-dark-300 mt-1 text-xs text-gray-500">
+                      Model can't be changed because the Indent is already
+                      generated.
+                    </p>
+                  </div>
+                ) : (
+                  <Controller
+                    name="model"
+                    control={control}
+                    rules={{ required: "Model is required" }}
+                    render={({ field }) => (
+                      <Listbox
+                        label="Select Model"
+                        error={errors.model?.message}
+                        data={modelOptions}
+                        value={
+                          modelOptions.find(
+                            (item) => item.id === field.value,
+                          ) || null
+                        }
+                        onChange={(item) => field.onChange(item.id)}
+                        placeholder="Select Model"
+                        displayField="label"
+                      />
+                    )}
+                  />
+                )}
 
                 <Textarea
                   label="Remark"
@@ -548,7 +566,7 @@ export function EnquiryDrawer({
                   className="text-primary"
                 >
                   {sendingOtp ? "Sending..." : "Resend OTP"}
-                              </Button>{" "}
+                </Button>{" "}
               </div>
 
               <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-5">
@@ -566,8 +584,6 @@ export function EnquiryDrawer({
               </div>
             </div>
           )}
-
-          
         </TransitionChild>
       </Dialog>
     </Transition>
