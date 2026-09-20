@@ -8,6 +8,7 @@ export interface Enquiry {
   city: string;
   model: string;
   modelName?: string;
+    modelLocked?: boolean;
   remark: string;
   nextFollowupDate: string;
   createdBy: string;
@@ -43,6 +44,7 @@ export function mapApiLeadToEnquiry(api: any): Enquiry {
     city: api.city ?? "",
     model: api.model != null ? String(api.model) : "",
     modelName: api.modelName ?? "",
+        modelLocked: Boolean(api.modelLocked),
     remark: api.remark ?? "",
     nextFollowupDate: api.nextFollowupDate ?? "",
     createdBy: api.createdBy != null ? String(api.createdBy) : "",

@@ -8,6 +8,7 @@ export const departmentOptions: OptionItem[] = [
   { id: "production", label: "Production" },
   { id: "security", label: "Security" },
    { id: "hrms", label: "HRMS" },
+   { id: "canteen", label: "Canteen" }
 ];
 
 // Abhi sirf ek hi branch hai — hamesha default select rahega
