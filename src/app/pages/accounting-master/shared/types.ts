@@ -227,6 +227,7 @@ export interface LedgerDetailRow {
   sr: number;
   date: string;
   voucherNo: string;
+    billNo: string;
   type: string;
   particulars: string;
   debit: string;
