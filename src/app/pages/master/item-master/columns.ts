@@ -17,6 +17,8 @@ export const columns: ColumnDef<ItemMaster>[] = [
   // { id: "salesPrice", accessorKey: "salesPrice", header: "Sales Price", cell: TextCell },
   // { id: "mrp", accessorKey: "mrp", header: "MRP", cell: TextCell },
   { id: "barcode", accessorKey: "barcode", header: "Barcode", cell: TextCell },
+  { id: "createdBy", accessorKey: "createdBy", header: "Created By", cell: TextCell },
+  { id: "createdType", accessorKey: "createdType", header: "Created Type", cell: TextCell },  // 👈 add
   { id: "actions", header: "Actions", cell: RowActions, enableSorting: false },
 ];
 
@@ -29,4 +31,6 @@ export const exportColumns: ExportColumn<ItemMaster>[] = [
   // { key: "salesPrice", header: "Sales Price" },
   // { key: "mrp", header: "MRP" },
   { key: "barcode", header: "Barcode" },
+  { key: "createdBy", header: "Created By" },
+    { key: "createdType", header: "Created Type" }, // 👈 add
 ];

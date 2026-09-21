@@ -81,7 +81,7 @@ export function JournalEntryDrawer({
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full lg:max-w-[50%] transform-gpu flex-col bg-white transition-transform duration-200"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary-600">
             <h3 className="text-lg font-semibold text-white">
               {isEdit ? "Edit Journal Entry" : "Add Journal Entry"}
             </h3>
@@ -251,7 +251,7 @@ export function JournalEntryDrawer({
               </Button>
               <Button
                 type="submit"
-                className="bg-red-600 text-white hover:bg-red-700"
+                color="primary"
               >
                 {isEdit ? "Update Journal Entry" : "Add Journal Entry"}
               </Button>

@@ -30,6 +30,18 @@ export const columns: ColumnDef<ItemGroup>[] = [
     header: "Item Group Name",
     cell: TextCell,
   },
+   {
+    id: "createdBy",
+    accessorKey: "createdBy",
+    header: "Created By",
+    cell: TextCell,
+  },
+   {
+    id: "createdType",
+    accessorKey: "createdType",
+    header: "Created Type",
+    cell: TextCell,
+  },
   {
     id: "createdAt",
     accessorKey: "createdAt",
@@ -58,6 +70,8 @@ export const columns: ColumnDef<ItemGroup>[] = [
 export const exportColumns: ExportColumn<ItemGroup>[] = [
   { key: "categoryName", header: "Item Category" },
   { key: "groupName", header: "Item Group Name" },
+   { key: "createdBy", header: "Created By" },
+  { key: "createdType", header: "Created Type" },
   {
     key: "createdAt",
     header: "Created On",

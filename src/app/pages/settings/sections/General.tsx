@@ -21,6 +21,7 @@ import {
   CompanyProfileType,
 } from "@/app/pages/Auth/CreateCompany/schema";
 
+
 // ----------------------------------------------------------------------
 
 export default function General() {

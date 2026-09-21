@@ -32,7 +32,7 @@ interface QuotationOption {
   id: number;
   qNo: string;
   leadId: number;
-    leadCode?: string; 
+  leadCode?: string;
   customerName: string;
   mobile: string;
   email?: string;
@@ -77,7 +77,9 @@ export function SalesOrderDrawer({
   const [quotationOptions, setQuotationOptions] = useState<QuotationOption[]>(
     [],
   );
-  const [usedQuotationIds, setUsedQuotationIds] = useState<Set<string>>(new Set());
+  const [usedQuotationIds, setUsedQuotationIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [selectedQuotation, setSelectedQuotation] = useState<QuotationOption[]>(
     [],
   );
@@ -88,7 +90,7 @@ export function SalesOrderDrawer({
   // ---- TOP BLOCK: read-only snapshot of the selected quotation ----
   // Set ONLY when a quotation is selected (or on edit-prefill).
   // Never touched by the As Its / Manual toggle.
-  const [leadCode, setLeadCode] = useState("");   // renamed from leadId
+  const [leadCode, setLeadCode] = useState(""); // renamed from leadId
   const [city, setCity] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -105,7 +107,7 @@ export function SalesOrderDrawer({
   const [detailEmail, setDetailEmail] = useState("");
   const [detailAddress, setDetailAddress] = useState("");
   const [detailCity, setDetailCity] = useState("");
-const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [qty, setQty] = useState("1");
 
   // KYC — each doc independent, upload only appears once its number is typed
@@ -128,44 +130,43 @@ const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
     return quotationAmount * quantity;
   }, [qty, quotationAmount]);
 
-
   interface ModelOption {
-  id: string;
-  label: string;
-}
+    id: string;
+    label: string;
+  }
 
-
-
-useEffect(() => {
-  const fetchModels = async () => {
-    try {
-      const response = await Get(
-        "master/itemmaster/finished-goods/list",
-        {},
-        false,
-      );
-
-      if (response?.data?.success || response?.data?.status === 200) {
-        const models = response.data.data || [];
-
-        setModelOptions(
-          models.map((item: any) => ({
-            id: String(item.itemId),
-            label: item.itemName,
-          })),
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const response = await Get(
+          "master/itemmaster/finished-goods/list",
+          {},
+          false,
         );
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          const models = response.data.data || [];
+
+          setModelOptions(
+            models.map((item: any) => ({
+              id: String(item.itemId),
+              label: item.itemName,
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("Model list error:", error);
       }
-    } catch (error) {
-      console.error("Model list error:", error);
-    }
-  };
+    };
 
-  fetchModels();
-}, []);
+    fetchModels();
+  }, []);
 
-const modelLabel = useMemo(() => {
-  return modelOptions.find((item) => item.id === model)?.label || model || "-";
-}, [modelOptions, model]);
+  const modelLabel = useMemo(() => {
+    return (
+      modelOptions.find((item) => item.id === model)?.label || model || "-"
+    );
+  }, [modelOptions, model]);
 
   // Fetch quotations to populate "Select Quotation"
   useEffect(() => {
@@ -188,7 +189,7 @@ const modelLabel = useMemo(() => {
               id: Number(q.id ?? q.quotationId),
               qNo: q.qNo,
               leadId: Number(q.leadId),
-              leadCode: q.leadCode || "",   
+              leadCode: q.leadCode || "",
               customerName: q.customerName,
               mobile: q.mobile,
               email: q.email || "",
@@ -209,51 +210,49 @@ const modelLabel = useMemo(() => {
 
     fetchQuotations();
   }, [isOpen]);
-// Fetch sales orders to know which quotations are already used
-useEffect(() => {
-  if (!isOpen) return;
+  // Fetch sales orders to know which quotations are already used
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const fetchUsedQuotations = async () => {
-    try {
-      const financialYearId = localStorage.getItem("financialYearId");
+    const fetchUsedQuotations = async () => {
+      try {
+        const financialYearId = localStorage.getItem("financialYearId");
 
-      const response = await Get(
-        "salesorder/list",
-        financialYearId ? { financialYearId } : {},
-        false,
-      );
-
-      if (response?.data?.success || response?.data?.status === 200) {
-        const orders = response.data.data || [];
-
-        setUsedQuotationIds(
-          new Set(
-            orders
-              // don't exclude the quotation belonging to the SO currently being edited
-              .filter(
-                (o: any) => String(o.id) !== String(salesOrder?.id || ""),
-              )
-              .map((o: any) => String(o.quotationId)),
-          ),
+        const response = await Get(
+          "salesorder/list",
+          financialYearId ? { financialYearId } : {},
+          false,
         );
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          const orders = response.data.data || [];
+
+          setUsedQuotationIds(
+            new Set(
+              orders
+                // don't exclude the quotation belonging to the SO currently being edited
+                .filter(
+                  (o: any) => String(o.id) !== String(salesOrder?.id || ""),
+                )
+                .map((o: any) => String(o.quotationId)),
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("Sales order list error (quotation filter):", error);
       }
-    } catch (error) {
-      console.error("Sales order list error (quotation filter):", error);
+    };
+
+    fetchUsedQuotations();
+  }, [isOpen, salesOrder?.id]);
+  const availableQuotationOptions = useMemo(() => {
+    if (isEditing) {
+      // Lock to the quotation this sales order was created for
+      return selectedQuotation[0] ? [selectedQuotation[0]] : [];
     }
-  };
 
-  fetchUsedQuotations();
-}, [isOpen, salesOrder?.id]);
-const availableQuotationOptions = useMemo(() => {
-  if (isEditing) {
-    // Lock to the quotation this sales order was created for
-    return selectedQuotation[0] ? [selectedQuotation[0]] : [];
-  }
-
-  return quotationOptions.filter(
-    (q) => !usedQuotationIds.has(String(q.id)),
-  );
-}, [quotationOptions, usedQuotationIds, selectedQuotation, isEditing]);
+    return quotationOptions.filter((q) => !usedQuotationIds.has(String(q.id)));
+  }, [quotationOptions, usedQuotationIds, selectedQuotation, isEditing]);
   // Auto-fill Lead ID / City / customer block whenever a quotation is picked.
   // TOP block always mirrors the quotation, regardless of mode.
   // BOTTOM (detail) block only mirrors it when mode === "asIs".
@@ -261,108 +260,122 @@ const availableQuotationOptions = useMemo(() => {
     const q = selectedQuotation?.[0];
 
     queueMicrotask(() => {
-    if (!q) {
-      // Nothing selected — clear everything.
-      setLeadCode("");
-      setCity("");
-      setCustomerName("");
-      setMobile("");
-      setEmail("");
-      setAddress("");
-      setModel("");
-      setRemark("");
+      if (!q) {
+        // Nothing selected — clear everything.
+        setLeadCode("");
+        setCity("");
+        setCustomerName("");
+        setMobile("");
+        setEmail("");
+        setAddress("");
+        setModel("");
+        setRemark("");
 
-      setDetailCustomerName("");
-      setDetailMobile("");
-      setDetailEmail("");
-      setDetailAddress("");
-      setDetailCity("");
+        setDetailCustomerName("");
+        setDetailMobile("");
+        setDetailEmail("");
+        setDetailAddress("");
+        setDetailCity("");
 
-      setQty("1");
-      setQuotationAmount(0);
-      return;
-    }
+        setQty("1");
+        setQuotationAmount(0);
+        return;
+      }
 
-    // TOP — always set from the quotation, read-only.
-    setLeadCode(q.leadCode || "");
-    setCity(q.city || "");
-    setCustomerName(q.customerName || "");
-    setMobile(q.mobile || "");
-    setEmail(q.email || "");
-    setAddress(q.address || "");
-    setModel(q.model || "");
-    setRemark(q.remark || "");
+      // TOP — always set from the quotation, read-only.
+      setLeadCode(q.leadCode || "");
+      setCity(q.city || "");
+      setCustomerName(q.customerName || "");
+      setMobile(q.mobile || "");
+      setEmail(q.email || "");
+      setAddress(q.address || "");
+      setModel(q.model || "");
+      setRemark(q.remark || "");
 
-    // BOTTOM — only auto-fill in "As Its" mode.
-    if (mode === "asIs") {
-      setDetailCustomerName(q.customerName || "");
-      setDetailMobile(q.mobile || "");
-      setDetailEmail(q.email || "");
-      setDetailAddress(q.address || "");
-      setDetailCity(q.city || "");
-      setQty("1");
-      setQuotationAmount(Number(q.finalPrice) || 0);
-    }
+      // BOTTOM — only auto-fill in "As Its" mode.
+      if (mode === "asIs") {
+        setDetailCustomerName(q.customerName || "");
+        setDetailMobile(q.mobile || "");
+        setDetailEmail(q.email || "");
+        setDetailAddress(q.address || "");
+        setDetailCity(q.city || "");
+        setQty("1");
+        setQuotationAmount(Number(q.finalPrice) || 0);
+      }
     });
   }, [selectedQuotation]);
 
   // Prefill on edit / reset on add
- // Prefill on edit / reset on add
-useEffect(() => {
-  if (!isOpen) return;
+  // Prefill on edit / reset on add
+  useEffect(() => {
+    if (!isOpen) return;
 
-  queueMicrotask(() => {
-  if (salesOrder && salesOrder.id) {
-    setSoNo((salesOrder as any).soNo || "");
-    const q = quotationOptions.find(
-      (item) => String(item.id) === String((salesOrder as any).quotationId),
-    );
-    setSelectedQuotation(q ? [q] : []);
-    setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
+    queueMicrotask(() => {
+      if (salesOrder && salesOrder.id) {
+        setSoNo((salesOrder as any).soNo || "");
+        const q = quotationOptions.find(
+          (item) => String(item.id) === String((salesOrder as any).quotationId),
+        );
+        setSelectedQuotation(q ? [q] : []);
+        setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
 
-   setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
-    setCity(q?.city || (salesOrder as any).city || "");
-    setCustomerName(q?.customerName || (salesOrder as any).customerName || "");
-    setMobile(q?.mobile || (salesOrder as any).mobile || "");
-    setEmail(q?.email || (salesOrder as any).email || "");
-    setAddress(q?.address || (salesOrder as any).address || "");
-    setModel(q?.model || (salesOrder as any).model || "");
-    setRemark(q?.remark || (salesOrder as any).remark || "");
+        setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
+        setCity(q?.city || (salesOrder as any).city || "");
+        setCustomerName(
+          q?.customerName || (salesOrder as any).customerName || "",
+        );
+        setMobile(q?.mobile || (salesOrder as any).mobile || "");
+        setEmail(q?.email || (salesOrder as any).email || "");
+        setAddress(q?.address || (salesOrder as any).address || "");
+        setModel(q?.model || (salesOrder as any).model || "");
+        setRemark(q?.remark || (salesOrder as any).remark || "");
 
-    setDetailCustomerName((salesOrder as any).customerName || "");
-    setDetailMobile((salesOrder as any).mobile || "");
-    setDetailEmail((salesOrder as any).email || "");
-    setDetailAddress((salesOrder as any).address || "");
-    setDetailCity((salesOrder as any).city || "");
+        setDetailCustomerName((salesOrder as any).customerName || "");
+        setDetailMobile((salesOrder as any).mobile || "");
+        setDetailEmail((salesOrder as any).email || "");
+        setDetailAddress((salesOrder as any).address || "");
+        setDetailCity((salesOrder as any).city || "");
 
-    setQty(String((salesOrder as any).qty ?? "1"));
-    setKyc({
-      aadhar: { number: (salesOrder as any).aadharNumber || "", file: null, existingUrl: (salesOrder as any).aadharImage || "" },
-      pan: { number: (salesOrder as any).panNumber || "", file: null, existingUrl: (salesOrder as any).panImage || "" },
-      gst: { number: (salesOrder as any).gstNumber || "", file: null, existingUrl: (salesOrder as any).gstImage || "" },
+        setQty(String((salesOrder as any).qty ?? "1"));
+        setKyc({
+          aadhar: {
+            number: (salesOrder as any).aadharNumber || "",
+            file: null,
+            existingUrl: (salesOrder as any).aadharImage || "",
+          },
+          pan: {
+            number: (salesOrder as any).panNumber || "",
+            file: null,
+            existingUrl: (salesOrder as any).panImage || "",
+          },
+          gst: {
+            number: (salesOrder as any).gstNumber || "",
+            file: null,
+            existingUrl: (salesOrder as any).gstImage || "",
+          },
+        });
+      }
+      // NOTE: no "else" branch here anymore — the reset-for-add-mode
+      // now happens only once per drawer open, in the effect below.
+
+      setErrors({});
     });
-  }
-  // NOTE: no "else" branch here anymore — the reset-for-add-mode
-  // now happens only once per drawer open, in the effect below.
+  }, [salesOrder, quotationOptions]); // isOpen removed from here on purpose, see below
 
-  setErrors({});
-  });
-}, [salesOrder, quotationOptions]); // isOpen removed from here on purpose, see below
+  // Reset form for "Add" mode — runs once per drawer open, not on every quotationOptions change
+  useEffect(() => {
+    if (!isOpen) return;
+    if (salesOrder && salesOrder.id) return; // editing — handled by the effect above
 
-// Reset form for "Add" mode — runs once per drawer open, not on every quotationOptions change
-useEffect(() => {
-  if (!isOpen) return;
-  if (salesOrder && salesOrder.id) return; // editing — handled by the effect above
-
-  queueMicrotask(() => {
-    setSoNo("");
-    setSelectedQuotation([]);
-    setMode("asIs");
-    setQty("1");
-    setKyc({ aadhar: emptyKyc(), pan: emptyKyc(), gst: emptyKyc() });
-    setErrors({});
-  });
-}, [isOpen]); // ← only isOpen, nothing else
+    queueMicrotask(() => {
+      setSoNo("");
+      setSelectedQuotation([]);
+      setMode("asIs");
+      setQty("1");
+      setKyc({ aadhar: emptyKyc(), pan: emptyKyc(), gst: emptyKyc() });
+      setErrors({});
+    });
+  }, [isOpen]); // ← only isOpen, nothing else
 
   // Generate next SO number, same pattern as quotation/next-number
   useEffect(() => {
@@ -378,16 +391,19 @@ useEffect(() => {
           { financialYearId },
           false,
         );
-if (response?.data?.success || response?.data?.status === 200) {
-  setSoNo(response.data.data.soNo);
-} else {
-  console.error("Unexpected next-number response:", response?.data);
-  toasterrormsg(response?.data?.message || "Failed to generate SO number. Please retry.");
-}
-    } catch (error) {
-  console.error("SO number generation error:", error);
-  toasterrormsg("Failed to generate SO number. Please retry.");
-}
+        if (response?.data?.success || response?.data?.status === 200) {
+          setSoNo(response.data.data.soNo);
+        } else {
+          console.error("Unexpected next-number response:", response?.data);
+          toasterrormsg(
+            response?.data?.message ||
+              "Failed to generate SO number. Please retry.",
+          );
+        }
+      } catch (error) {
+        console.error("SO number generation error:", error);
+        toasterrormsg("Failed to generate SO number. Please retry.");
+      }
     };
 
     fetchNextSoNo();
@@ -439,7 +455,7 @@ if (response?.data?.success || response?.data?.status === 200) {
     const formData = new FormData();
     formData.append("financialYearId", financialYearId);
     formData.append("quotationId", String(q?.id ?? ""));
-   formData.append("leadId", String(q?.leadId ?? ""));
+    formData.append("leadId", String(q?.leadId ?? ""));
     formData.append("mode", mode);
 
     // Actual saved contact info comes from the editable (bottom) fields
@@ -620,7 +636,7 @@ if (response?.data?.success || response?.data?.status === 200) {
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-4xl transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          <div className="dark:border-dark-500 bg-primary flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
+          <div className="dark:border-dark-500 bg-primary-600 flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
             <h3 className="text-lg font-semibold text-white">
               {readOnly
                 ? "View Sales Order"
@@ -644,7 +660,7 @@ if (response?.data?.success || response?.data?.status === 200) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Combobox
-                     data={availableQuotationOptions}
+                    data={availableQuotationOptions}
                     displayField="label"
                     value={selectedQuotation[0] ?? null}
                     onChange={(val: any) =>
@@ -655,7 +671,7 @@ if (response?.data?.success || response?.data?.status === 200) {
                     placeholder="Select Quotation"
                     label="Select Quotation"
                     searchFields={["qNo", "customerName"]}
-                     disabled={readOnly || isEditing}
+                    disabled={readOnly || isEditing}
                   />
                   {errors.quotation && (
                     <p className="text-error mt-1 text-xs">
@@ -682,8 +698,8 @@ if (response?.data?.success || response?.data?.status === 200) {
                       Lead ID
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-  {leadCode || "-"}
-</span>
+                      {leadCode || "-"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
                     <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
@@ -722,7 +738,7 @@ if (response?.data?.success || response?.data?.status === 200) {
                       Model
                     </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                       {modelLabel}
+                      {modelLabel}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-2.5">
@@ -889,12 +905,12 @@ if (response?.data?.success || response?.data?.status === 200) {
               {/* Model / Qty / Amount + GST note */}
               <div className="dark:border-dark-500 border-t border-dashed border-gray-300 pt-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                 <Input
-  label="Model"
-  value={modelLabel === "-" ? "" : modelLabel}
-  disabled
-  onChange={() => {}}
-/>
+                  <Input
+                    label="Model"
+                    value={modelLabel === "-" ? "" : modelLabel}
+                    disabled
+                    onChange={() => {}}
+                  />
 
                   <Input
                     type="number"

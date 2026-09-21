@@ -60,7 +60,7 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-dark-600">
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-dark-600 bg-primary-600">
           <h2 className="text-lg font-semibold">
             Indent Details – {indent.indentNo || "-"}
           </h2>

@@ -3,6 +3,8 @@ export interface Location {
   locationCode: string;
   locationName: string;
   status: string;
+  createdBy?: string; 
+ createdType?: string;   
   createdAt?: string;
 }
 
@@ -11,6 +13,8 @@ export const emptyLocation = (): Location => ({
   locationCode: "",
   locationName: "",
   status: "active",
+  createdBy: "",   
+  createdType :""
 });
 
 // API se aane wale raw row ko frontend Type me map karta hai
@@ -19,5 +23,7 @@ export const mapApiLocationToLocation = (item: any): Location => ({
   locationCode: item.locationCode || "",
   locationName: item.locationName || "",
   status: item.status || "active",
+  createdBy: item.createdBy || "", 
+   createdType: item.createdType || "",  
   createdAt: item.created,
 });

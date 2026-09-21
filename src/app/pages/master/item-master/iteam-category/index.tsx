@@ -102,50 +102,55 @@ export default function ItemCategoryPage() {
   }, [data, filterName, filterStatus, filterType]);
 
   // ---- Save (create or update) via API ----
-  const handleSave = async (item: ItemCategory) => {
-    const payload = {
-      categoryName: item.categoryName,
-      status: item.status,
-    };
-
-    try {
-      if (item.id) {
-        const response = await Put(
-          "master/itemcategory/update",
-          { itemCategoryId: Number(item.id), ...payload },
-          false,
-        );
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Item category updated successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(
-            response.data?.message || "Failed to update item category.",
-          );
-        }
-      } else {
-        const response = await Post(
-          "master/itemcategory/create",
-          payload,
-          false,
-        );
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Item category created successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(
-            response.data?.message || "Failed to create item category.",
-          );
-        }
-      }
-    } catch (error) {
-      toasterrormsg("Something went wrong while saving the item category.");
-    }
+ const handleSave = async (item: ItemCategory) => {
+  const payload: any = {
+    categoryName: item.categoryName,
+    status: item.status,
   };
+
+  try {
+    if (item.id) {
+      const response = await Put(
+        "master/itemcategory/update",
+        { itemCategoryId: Number(item.id), ...payload },
+        false,
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Item category updated successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(
+          response.data?.message || "Failed to update item category.",
+        );
+      }
+    } else {
+      // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+      const companyId = localStorage.getItem("companyId") || "";
+      payload.createdBy = Number(companyId);
+      payload.createdType = "Super Admin";
+
+      const response = await Post(
+        "master/itemcategory/create",
+        payload,
+        false,
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Item category created successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(
+          response.data?.message || "Failed to create item category.",
+        );
+      }
+    }
+  } catch (error) {
+    toasterrormsg("Something went wrong while saving the item category.");
+  }
+};
 
   const handleDeleteOne = async (row: ItemCategory) => {
     try {
@@ -239,7 +244,6 @@ export default function ItemCategoryPage() {
               "item-categories",
             )
           }
-       
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
@@ -264,71 +268,69 @@ export default function ItemCategoryPage() {
             </div>
           }
         />
-         
-    
-            <TabGroup
-              selectedIndex={
-                filterType === "all" ? 0 : filterType === "manual" ? 1 : 2
-              }
-              onChange={(index) => {
-                if (index === 0) {
-                  setFilterType("all");
-                } else if (index === 1) {
-                  setFilterType("manual");
-                } else {
-                  setFilterType("default");
-                }
-              }}
-            >
-              <div className="hide-scrollbar overflow-x-auto mt-4 pl-6">
-                <div className="border-gray-150 dark:border-dark-500 w-max min-w-full border-b-2">
-                  <TabList className="-mb-0.5 flex">
-                    <Tab
-                      className={({ selected }) =>
-                        clsx(
-                          "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
-                          selected
-                            ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
-                            : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
-                        )
-                      }
-                    >
-                      <HomeIcon className="inline-block size-4.5" />
-                      <span>All</span>
-                    </Tab>
 
-                    <Tab
-                      className={({ selected }) =>
-                        clsx(
-                          "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
-                          selected
-                            ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
-                            : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
-                        )
-                      }
-                    >
-                      <Cog6ToothIcon className="inline-block size-4.5" />
-                      <span>Manual</span>
-                    </Tab>
+        <TabGroup
+          selectedIndex={
+            filterType === "all" ? 0 : filterType === "manual" ? 1 : 2
+          }
+          onChange={(index) => {
+            if (index === 0) {
+              setFilterType("all");
+            } else if (index === 1) {
+              setFilterType("manual");
+            } else {
+              setFilterType("default");
+            }
+          }}
+        >
+          <div className="hide-scrollbar mt-4 overflow-x-auto px-(--margin-x)">
+            <div className="border-gray-150 dark:border-dark-500 w-max min-w-full border-b-2">
+              <TabList className="-mb-0.5 flex">
+                <Tab
+                  className={({ selected }) =>
+                    clsx(
+                      "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                      selected
+                        ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
+                        : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
+                    )
+                  }
+                >
+                  <HomeIcon className="inline-block size-4.5" />
+                  <span>All</span>
+                </Tab>
 
-                    <Tab
-                      className={({ selected }) =>
-                        clsx(
-                          "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
-                          selected
-                            ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
-                            : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
-                        )
-                      }
-                    >
-                      <CheckCircleIcon className="inline-block size-4.5" />
-                      <span>Default</span>
-                    </Tab>
-                  </TabList>
-                </div>
-              </div>
-            </TabGroup>
-       
+                <Tab
+                  className={({ selected }) =>
+                    clsx(
+                      "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                      selected
+                        ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
+                        : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
+                    )
+                  }
+                >
+                  <Cog6ToothIcon className="inline-block size-4.5" />
+                  <span>Manual</span>
+                </Tab>
+
+                <Tab
+                  className={({ selected }) =>
+                    clsx(
+                      "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                      selected
+                        ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
+                        : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
+                    )
+                  }
+                >
+                  <CheckCircleIcon className="inline-block size-4.5" />
+                  <span>Default</span>
+                </Tab>
+              </TabList>
+            </div>
+          </div>
+        </TabGroup>
 
         <MasterTable
           table={table}

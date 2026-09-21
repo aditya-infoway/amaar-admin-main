@@ -359,7 +359,7 @@ useEffect(() => {
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-4xl flex-col bg-white"
         >
           {/* Header */}
-          <div className="bg-primary flex items-center justify-between border-b px-5 py-4">
+          <div className="bg-primary-600 flex items-center justify-between border-b px-5 py-4">
             <h3 className="text-lg font-semibold text-white">
               {readOnly
                 ? "View Work Order"
