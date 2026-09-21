@@ -7,7 +7,7 @@ import {
 import { createRowActions } from "../shared/createRowActions";
 import { TextCell } from "../shared/tableCells";
 import { PurchaseRegister } from "./data";
-
+import { ExportColumn } from "../shared/export";
 const RowActions = createRowActions<PurchaseRegister>("purchase register");
 
 export const columns: ColumnDef<PurchaseRegister>[] = [
@@ -111,21 +111,24 @@ export const columns: ColumnDef<PurchaseRegister>[] = [
   },
 ];
 
-export const exportColumns = [
-  { key: "purchaseDate" as const, header: "Purchase Date" },
-  { key: "terms" as const, header: "Terms" },
-  { key: "supplierName" as const, header: "Supplier Name" },
-  { key: "billNo" as const, header: "Bill No." },
-  { key: "purchaseBillNo" as const, header: "Purchase Bill No." },
-  { key: "location" as const, header: "Location" },
-  { key: "totalQuantity" as const, header: "Total Quantity" },
-  { key: "totalAmount" as const, header: "Total Amount" },
-  { key: "transportLoadingOtherCharge" as const, header: "Transport + Loading + Other Charges" },
-  { key: "cgstAmount" as const, header: "CGST Amount" },
-  { key: "sgstAmount" as const, header: "SGST Amount" },
-  { key: "igstAmount" as const, header: "IGST Amount" },
-  { key: "grandTotal" as const, header: "Grand Total" },
-   { key: "createdBy", header: "Created By" },
-    { key: "createdType", header: "Created Type" },
-  { key: "status" as const, header: "Status" },
+export const exportColumns: ExportColumn<PurchaseRegister>[] = [
+  { key: "purchaseDate", header: "Purchase Date" },
+  { key: "terms", header: "Terms" },
+  { key: "supplierName", header: "Supplier Name" },
+  { key: "billNo", header: "Bill No." },
+  { key: "purchaseBillNo", header: "Purchase Bill No." },
+  { key: "location", header: "Location" },
+  { key: "totalQuantity", header: "Total Quantity" },
+  { key: "totalAmount", header: "Total Amount" },
+  {
+    key: "transportLoadingOtherCharge",
+    header: "Transport + Loading + Other Charges",
+  },
+  { key: "cgstAmount", header: "CGST Amount" },
+  { key: "sgstAmount", header: "SGST Amount" },
+  { key: "igstAmount", header: "IGST Amount" },
+  { key: "grandTotal", header: "Grand Total" },
+  { key: "createdBy", header: "Created By" },
+  { key: "createdType", header: "Created Type" },
+  { key: "status", header: "Status" },
 ];

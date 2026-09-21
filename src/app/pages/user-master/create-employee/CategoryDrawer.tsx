@@ -284,7 +284,7 @@ export function EmployeeDrawer({
                     <Combobox
                       data={accountGroupOptions}
                       value={accountGroupOptions.find((item) => item.id === value) || null}
-                      onChange={(item) => onChange(item.id)}
+                     onChange={(item: AccountGroupOption) => onChange(item.id)}
                       label="Select Party"
                       placeholder={loadingAccountGroups ? "Loading..." : "Select account group"}
                       displayField="label"
