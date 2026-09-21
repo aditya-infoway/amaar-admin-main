@@ -116,6 +116,7 @@ export default function EmployeePage() {
       mobileNumber: item.mobileNumber,
       alternateNumber: item.alternateNumber,
       email: item.email,
+      accountId: item.accountId ? Number(item.accountId) : null,
     };
 
     try {

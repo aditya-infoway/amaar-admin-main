@@ -90,44 +90,48 @@ export default function LocationPage() {
   }, [data, filterCode, filterName, filterStatus]);
 
   // ---- Save (create or update) ----
-  const handleSave = async (item: Location) => {
-    const payload = {
-      locationCode: item.locationCode,
-      locationName: item.locationName,
-      status: item.status,
-    };
-
-    try {
-      if (item.id) {
-        const response = await Put(
-          "master/location/update",
-          { locationId: Number(item.id), ...payload },
-          false,
-        );
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Location updated successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(response.data?.message || "Failed to update location.");
-        }
-      } else {
-        const response = await Post("master/location/create", payload, false);
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Location created successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(response.data?.message || "Failed to create location.");
-        }
-      }
-    } catch (error) {
-      toasterrormsg("Something went wrong while saving the location.");
-    }
+ const handleSave = async (item: Location) => {
+  const payload: any = {
+    locationCode: item.locationCode,
+    locationName: item.locationName,
+    status: item.status,
   };
 
+  try {
+    if (item.id) {
+      const response = await Put(
+        "master/location/update",
+        { locationId: Number(item.id), ...payload },
+        false,
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Location updated successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(response.data?.message || "Failed to update location.");
+      }
+    } else {
+   
+      const companyId = localStorage.getItem("companyId") || "";
+      payload.createdBy = Number(companyId);
+      payload.createdType = "Super Admin";
+
+      const response = await Post("master/location/create", payload, false);
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Location created successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(response.data?.message || "Failed to create location.");
+      }
+    }
+  } catch (error) {
+    toasterrormsg("Something went wrong while saving the location.");
+  }
+};
   const handleDeleteOne = async (row: Location) => {
     try {
       const response = await Delete(

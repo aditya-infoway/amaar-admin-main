@@ -101,6 +101,8 @@ export const columns: ColumnDef<PurchaseRegister>[] = [
     header: "Status",
     cell: TextCell,
   },
+   { id: "createdBy", accessorKey: "createdBy", header: "Created By", cell: TextCell },
+  { id: "createdType", accessorKey: "createdType", header: "Created Type", cell: TextCell }, 
   {
     id: "actions",
     header: "Actions",
@@ -123,5 +125,7 @@ export const exportColumns = [
   { key: "sgstAmount" as const, header: "SGST Amount" },
   { key: "igstAmount" as const, header: "IGST Amount" },
   { key: "grandTotal" as const, header: "Grand Total" },
+   { key: "createdBy", header: "Created By" },
+    { key: "createdType", header: "Created Type" },
   { key: "status" as const, header: "Status" },
 ];

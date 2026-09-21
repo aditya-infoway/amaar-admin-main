@@ -13,6 +13,8 @@ export interface PurchaseRegister {
   sgstAmount: string;
   igstAmount: string;
   grandTotal: string;
+   createdBy?: string; 
+  createdType?:string;
   status: string;
 }
 
@@ -31,5 +33,7 @@ export const emptyPurchaseRegister = (): PurchaseRegister => ({
   sgstAmount: "",
   igstAmount: "",
   grandTotal: "",
+   createdBy: "",
+  createdType:"",
   status: "",
 });

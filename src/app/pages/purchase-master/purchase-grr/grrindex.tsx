@@ -432,6 +432,9 @@ export default function GrrPage() {
 
     setSubmitting(true);
     try {
+      const companyId = localStorage.getItem("companyId");
+      const roleName = localStorage.getItem("roleName");
+
       const res = await Post(
         "purchase-grr/create",
         {
@@ -439,6 +442,8 @@ export default function GrrPage() {
           purchaseOrderId: selectedPo.id,
           grrDate,
           remarks,
+          createdBy: companyId ? Number(companyId) : undefined,
+          createdType: roleName || "Super Admin",
           items: items.map((i) => ({
             purchaseOrderDetailsId: i.purchaseOrderDetailsId,
             itemName: i.itemName,
@@ -462,7 +467,6 @@ export default function GrrPage() {
       setSubmitting(false);
     }
   };
-
   const activeColumns = useMemo(
     () => (stage === "difference" ? differenceColumns : columns),
     [stage],

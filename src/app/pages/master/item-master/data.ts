@@ -21,6 +21,8 @@ export interface ItemMaster {
   barcodeType: "manual" | "generate";
   barcode: string;
   status: string;
+  createdBy?: string; 
+  createdType?:string;  // 👈 add
   createdAt?: string;
 }
 
@@ -45,6 +47,8 @@ export const emptyItem = (): ItemMaster => ({
   barcodeType: "manual",
   barcode: "",
   status: "active",
+  createdBy: "", 
+  createdType :""  
 });
 
 export const mapApiItemMasterToItemMaster = (item: any): ItemMaster => ({
@@ -70,5 +74,7 @@ export const mapApiItemMasterToItemMaster = (item: any): ItemMaster => ({
   barcodeType: item.barcodeType || "manual",
   barcode: item.barcode || "",
   status: item.status || "active",
+  createdBy: item.createdBy || "", 
+  createdType: item.createdType || "",     // 👈 add
   createdAt: item.created,
 });

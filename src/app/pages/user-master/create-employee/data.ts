@@ -8,6 +8,7 @@ export interface Employee {
   alternateNumber: string;
   email: string;
   password: string;
+   accountId?: number | string | null; 
   createdBy: string;
   createdType: string;
   createdAt: string;
@@ -23,8 +24,9 @@ export const emptyEmployee = (): Employee => ({
   alternateNumber: "",
   email: "",
   password: "",
+  accountId :"",
   createdBy: "",
-  createdType: "Manual",
+  createdType: "",
   createdAt: new Date().toISOString(),
 });
 
@@ -40,6 +42,7 @@ export function mapApiEmployeeToEmployee(apiEmployee: any): Employee {
     alternateNumber: apiEmployee.alternateNumber ?? "",
     email: apiEmployee.email ?? "",
     password: "",
+    accountId:apiEmployee.accountId ??"",
     createdBy: apiEmployee.createdBy ?? "",
     createdType: apiEmployee.createdType ?? "",
     createdAt: apiEmployee.created ?? "",

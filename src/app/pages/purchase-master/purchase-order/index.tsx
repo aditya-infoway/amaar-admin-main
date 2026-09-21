@@ -361,6 +361,8 @@ type PurchaseOrderRow = {
   totalAmount: string;
   status: string;
   mailStatus: string | null;
+     createdBy?: string;   
+  createdType?: string;  
 };
 
 const purchaseOrderColumns = [
@@ -390,6 +392,8 @@ const purchaseOrderColumns = [
     cell: TextCell,
   },
   { accessorKey: "totalAmount", header: "Total Amount", cell: TextCell },
+  { accessorKey: "createdBy", header: "Created By", cell: TextCell },    
+  { accessorKey: "createdType", header: "Created Type", cell: TextCell },
   {
     accessorKey: "status",
     header: "Status",
@@ -431,6 +435,8 @@ const purchaseOrderExportColumns = [
   { key: "supplierName" as const, header: "Supplier Name" },
   { key: "deliveryLocation" as const, header: "Delivery Location" },
   { key: "totalAmount" as const, header: "Total Amount" },
+    { key: "createdBy" as const, header: "Created By" },      
+  { key: "createdType" as const, header: "Created Type" }, 
   { key: "status" as const, header: "Status" },
 ];
 
@@ -931,89 +937,95 @@ export default function PurchaseOrderPage() {
   const toggleAllMail = () =>
     setMailSupplierIds(allMailSelected ? [] : mailableIds);
 
-  const handleGenerate = async () => {
-    if (!requiredDate) {
-      setFormErrors({ requiredDate: "Required Date is mandatory." });
-      toasterrormsg("Required Date is mandatory.");
-      return;
-    }
-    setFormErrors({});
-    if (indentItems.length > 0) {
-      toasterrormsg(
-        "Please confirm (✓) a supplier for every item before saving.",
-      );
-      return;
-    }
-    if (items.length === 0) {
-      toasterrormsg("Please add at least one item.");
-      return;
-    }
-    if (items.some((i) => !i.supplierId)) {
-      toasterrormsg("Please select a supplier for all items.");
-      return;
-    }
+const handleGenerate = async () => {
+  if (!requiredDate) {
+    setFormErrors({ requiredDate: "Required Date is mandatory." });
+    toasterrormsg("Required Date is mandatory.");
+    return;
+  }
+  setFormErrors({});
+  if (indentItems.length > 0) {
+    toasterrormsg(
+      "Please confirm (✓) a supplier for every item before saving.",
+    );
+    return;
+  }
+  if (items.length === 0) {
+    toasterrormsg("Please add at least one item.");
+    return;
+  }
+  if (items.some((i) => !i.supplierId)) {
+    toasterrormsg("Please select a supplier for all items.");
+    return;
+  }
 
-    const financialYearId = localStorage.getItem("financialYearId");
-    const draftPayload = {
-      emailSupplierIds: mailSupplierIds.filter((id) =>
-        mailableIds.includes(id),
-      ),
+  const financialYearId = localStorage.getItem("financialYearId");
 
-      financialYearId: Number(financialYearId),
-      poDate,
-      requiredDate,
-      branchId: selectedLocation?.id ? Number(selectedLocation.id) : null,
-      narration: remarks,
-      discountAmount: 0,
-      roundAmount: 0,
-      status: "Generated",
-      indentId: selectedIndent?.indentId || selectedIndent?.id || null,
-      items: items.map((i) => ({
-        itemId: Number(i.itemId),
-        supplierId: i.supplierId ? Number(i.supplierId) : null,
-        supplierName: i.supplierName,
-        supplierNumber: i.supplierNumber || "",
-        supplierEmail: i.supplierEmail || "",
-        supplierCity: i.supplierCity || "",
-        itemCode: i.itemCode || "",
-        itemName: i.item,
-        hsnCode: i.hsn || "",
-        uom: i.unit || "",
-        qty: Number(i.qty),
-        rate: Number(i.rate),
-        discount: Number(i.discount) || 0,
-        gstPct: Number(i.gstPct) || 0,
-      })),
-    };
+  // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+  const companyId = localStorage.getItem("companyId") || "";
 
-    try {
-      setSubmitting(true);
-      const res = await Post("purchase-order/create", draftPayload, false);
-      if (res.data?.success) {
-        const orders = res.data.data?.orders || [];
-        const sent = orders.filter((o: any) => o.mailStatus === "sent");
-        const failed = orders.filter((o: any) => o.mailStatus === "failed");
+  const draftPayload = {
+    emailSupplierIds: mailSupplierIds.filter((id) =>
+      mailableIds.includes(id),
+    ),
 
-        if (sent.length) {
-          toastsuccessmsg(
-            `PO saved. Mail sent to ${sent.map((o: any) => o.supplierName).join(", ")}`,
-          );
-        }
-        if (failed.length) {
-          toasterrormsg(
-            `PO saved, but mail failed for ${failed.map((o: any) => o.supplierName).join(", ")}`,
-          );
-        }
-        navigate("/purchase-master/purchase-order");
-      } else {
-        toasterrormsg(res.data?.message || "Failed to generate PO.");
-      }
-    } catch (err: any) {
-      toasterrormsg(err?.response?.data?.message || "Something went wrong.");
-    } finally {
-      setSubmitting(false);
-    }
+    financialYearId: Number(financialYearId),
+    poDate,
+    requiredDate,
+    branchId: selectedLocation?.id ? Number(selectedLocation.id) : null,
+    narration: remarks,
+    discountAmount: 0,
+    roundAmount: 0,
+    status: "Generated",
+    indentId: selectedIndent?.indentId || selectedIndent?.id || null,
+    createdBy: Number(companyId),   // 👈 add
+    createdType: "Super Admin",     // 👈 add
+    items: items.map((i) => ({
+      itemId: Number(i.itemId),
+      supplierId: i.supplierId ? Number(i.supplierId) : null,
+      supplierName: i.supplierName,
+      supplierNumber: i.supplierNumber || "",
+      supplierEmail: i.supplierEmail || "",
+      supplierCity: i.supplierCity || "",
+      itemCode: i.itemCode || "",
+      itemName: i.item,
+      hsnCode: i.hsn || "",
+      uom: i.unit || "",
+      qty: Number(i.qty),
+      rate: Number(i.rate),
+      discount: Number(i.discount) || 0,
+      gstPct: Number(i.gstPct) || 0,
+    })),
   };
+
+  try {
+    setSubmitting(true);
+    const res = await Post("purchase-order/create", draftPayload, false);
+    if (res.data?.success) {
+      const orders = res.data.data?.orders || [];
+      const sent = orders.filter((o: any) => o.mailStatus === "sent");
+      const failed = orders.filter((o: any) => o.mailStatus === "failed");
+
+      if (sent.length) {
+        toastsuccessmsg(
+          `PO saved. Mail sent to ${sent.map((o: any) => o.supplierName).join(", ")}`,
+        );
+      }
+      if (failed.length) {
+        toasterrormsg(
+          `PO saved, but mail failed for ${failed.map((o: any) => o.supplierName).join(", ")}`,
+        );
+      }
+      navigate("/purchase-master/purchase-order");
+    } else {
+      toasterrormsg(res.data?.message || "Failed to generate PO.");
+    }
+  } catch (err: any) {
+    toasterrormsg(err?.response?.data?.message || "Something went wrong.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   // NEW: Stage 1 -> Stage 2 (build supplier summary from confirmed items)
   const handleNext = () => {

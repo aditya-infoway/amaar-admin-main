@@ -102,50 +102,55 @@ export default function ItemCategoryPage() {
   }, [data, filterName, filterStatus, filterType]);
 
   // ---- Save (create or update) via API ----
-  const handleSave = async (item: ItemCategory) => {
-    const payload = {
-      categoryName: item.categoryName,
-      status: item.status,
-    };
-
-    try {
-      if (item.id) {
-        const response = await Put(
-          "master/itemcategory/update",
-          { itemCategoryId: Number(item.id), ...payload },
-          false,
-        );
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Item category updated successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(
-            response.data?.message || "Failed to update item category.",
-          );
-        }
-      } else {
-        const response = await Post(
-          "master/itemcategory/create",
-          payload,
-          false,
-        );
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Item category created successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(
-            response.data?.message || "Failed to create item category.",
-          );
-        }
-      }
-    } catch (error) {
-      toasterrormsg("Something went wrong while saving the item category.");
-    }
+ const handleSave = async (item: ItemCategory) => {
+  const payload: any = {
+    categoryName: item.categoryName,
+    status: item.status,
   };
+
+  try {
+    if (item.id) {
+      const response = await Put(
+        "master/itemcategory/update",
+        { itemCategoryId: Number(item.id), ...payload },
+        false,
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Item category updated successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(
+          response.data?.message || "Failed to update item category.",
+        );
+      }
+    } else {
+      // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+      const companyId = localStorage.getItem("companyId") || "";
+      payload.createdBy = Number(companyId);
+      payload.createdType = "Super Admin";
+
+      const response = await Post(
+        "master/itemcategory/create",
+        payload,
+        false,
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Item category created successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(
+          response.data?.message || "Failed to create item category.",
+        );
+      }
+    }
+  } catch (error) {
+    toasterrormsg("Something went wrong while saving the item category.");
+  }
+};
 
   const handleDeleteOne = async (row: ItemCategory) => {
     try {
