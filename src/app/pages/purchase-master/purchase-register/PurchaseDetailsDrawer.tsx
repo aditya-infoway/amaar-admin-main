@@ -130,7 +130,7 @@ export function PurchaseDetailsDrawer({ open, purchaseId, onClose }: PurchaseDet
         }
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-primary text-white flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 bg-primary-600 text-white flex-shrink-0">
           <h3 className="font-bold text-base">
             Purchase Bill Details{data?.purchaseBillNo ? ` — ${data.purchaseBillNo}` : ""}
           </h3>

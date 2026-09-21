@@ -95,39 +95,45 @@ export default function ItemGroupPage() {
   }, [data, categoryOptions, filterName, filterStatus]);
 
   // ---- Save (create or update) via API ----
-  const handleSave = async (item: ItemGroup) => {
-    const payload = {
-      groupName: item.groupName,
-      itemCategoryId: Number(item.itemCategoryId),
-      status: item.status,
-    };
-
-    try {
-      if (item.id) {
-        const response = await Put(
-          "master/itemgroup/update",
-          { itemGroupId: Number(item.id), ...payload },
-          false
-        );
-        if (response.data?.success) {
-          toastsuccessmsg(response.data?.message || "Item group updated successfully.");
-          fetchAll();
-        } else {
-          toasterrormsg(response.data?.message || "Failed to update item group.");
-        }
-      } else {
-        const response = await Post("master/itemgroup/create", payload, false);
-        if (response.data?.success) {
-          toastsuccessmsg(response.data?.message || "Item group created successfully.");
-          fetchAll();
-        } else {
-          toasterrormsg(response.data?.message || "Failed to create item group.");
-        }
-      }
-    } catch (error) {
-      toasterrormsg("Something went wrong while saving the item group.");
-    }
+ // ---- Save (create or update) via API ----
+const handleSave = async (item: ItemGroup) => {
+  const payload: any = {
+    groupName: item.groupName,
+    itemCategoryId: Number(item.itemCategoryId),
+    status: item.status,
   };
+
+  try {
+    if (item.id) {
+      const response = await Put(
+        "master/itemgroup/update",
+        { itemGroupId: Number(item.id), ...payload },
+        false
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Item group updated successfully.");
+        fetchAll();
+      } else {
+        toasterrormsg(response.data?.message || "Failed to update item group.");
+      }
+    } else {
+      // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+      const companyId = localStorage.getItem("companyId") || "";
+      payload.createdBy = Number(companyId);
+      payload.createdType = "Super Admin";
+
+      const response = await Post("master/itemgroup/create", payload, false);
+      if (response.data?.success) {
+        toastsuccessmsg(response.data?.message || "Item group created successfully.");
+        fetchAll();
+      } else {
+        toasterrormsg(response.data?.message || "Failed to create item group.");
+      }
+    }
+  } catch (error) {
+    toasterrormsg("Something went wrong while saving the item group.");
+  }
+};
 
   const handleDeleteOne = async (row: ItemGroup) => {
     try {

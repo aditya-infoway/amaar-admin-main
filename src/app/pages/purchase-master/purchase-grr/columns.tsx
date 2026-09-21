@@ -38,6 +38,8 @@ export const columns: ColumnDef<GrrItem>[] = [
     accessorKey: "hsnCode",
     header: "HSN Code",
   },
+ 
+ 
   {
     id: "action",
     header: "Action",

@@ -36,6 +36,8 @@ type GrrRow = {
   poNumber: string;
   supplierName: string;
   supplierNumber: string;
+  createdBy:string;
+  createdType:string;
   status: string;
 };
 
@@ -78,6 +80,8 @@ export default function GrrList() {
     { accessorKey: "poNumber", header: "PO No", cell: TextCell },
     { accessorKey: "supplierName", header: "Supplier Name", cell: TextCell },
     { accessorKey: "supplierNumber", header: "Number", cell: TextCell },
+     {  accessorKey: "createdBy", header: "Created By", cell: TextCell },
+  {  accessorKey: "createdType", header: "Created Type", cell: TextCell }, 
     {
       id: "action",
       header: "Action",
@@ -85,7 +89,9 @@ export default function GrrList() {
         <Button
           isIcon
           variant="flat"
-          onClick={() => navigate("/purchase-master/purchase-grr/create")}
+          onClick={() =>
+            navigate(`/purchase-master/purchase-grr/view/${row.original.id}`)
+          }
         >
           <EyeIcon className="size-4.5" />
         </Button>
@@ -99,6 +105,8 @@ export default function GrrList() {
     { key: "poNumber" as const, header: "PO No" },
     { key: "supplierName" as const, header: "Supplier Name" },
     { key: "supplierNumber" as const, header: "Number" },
+      { key: "createdBy" as const, header: "createdBy" },
+        { key: "createdType" as const, header: "createdType" },
   ];
 
   const table = useReactTable({

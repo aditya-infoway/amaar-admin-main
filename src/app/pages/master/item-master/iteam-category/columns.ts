@@ -25,6 +25,18 @@ export const columns: ColumnDef<ItemCategory>[] = [
     cell: TextCell,
   },
   {
+    id: "createdBy",
+    accessorKey: "createdBy",
+    header: "Created By",
+    cell: TextCell,
+  },
+   {
+    id: "createdType",
+    accessorKey: "createdType",
+    header: "Created Type",
+    cell: TextCell,
+  },
+  {
     id: "createdAt",
     accessorKey: "createdAt",
     header: "Created On",
@@ -51,6 +63,8 @@ export const columns: ColumnDef<ItemCategory>[] = [
 
 export const exportColumns: ExportColumn<ItemCategory>[] = [
   { key: "categoryName", header: "Item Category Name" },
+  { key: "createdBy", header: "Created By" },
+  { key: "createdType", header: "Created Type" },
   {
     key: "createdAt",
     header: "Created On",

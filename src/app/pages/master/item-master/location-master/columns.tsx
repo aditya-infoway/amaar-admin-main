@@ -30,22 +30,34 @@ export const columns: ColumnDef<Location>[] = [
     header: "Location Name",
     cell: TextCell,
   },
- {
-  id: "createdAt",
-  accessorKey: "createdAt",
-  header: "Created On",
-  cell: (info) => {
-    const value = info.getValue<string>();
-
-    if (!value) return "—";
-
-    const date = new Date(value);
-
-    return `${String(date.getDate()).padStart(2, "0")}-${String(
-      date.getMonth() + 1,
-    ).padStart(2, "0")}-${date.getFullYear()}`;
+  {
+    id: "createdBy",
+    accessorKey: "createdBy",
+    header: "Created By",
+    cell: TextCell,
   },
-},
+   {
+    id: "createdType",
+    accessorKey: "createdType",
+    header: "Created Type",
+    cell: TextCell,
+  },
+  {
+    id: "createdAt",
+    accessorKey: "createdAt",
+    header: "Created On",
+    cell: (info) => {
+      const value = info.getValue<string>();
+
+      if (!value) return "—";
+
+      const date = new Date(value);
+
+      return `${String(date.getDate()).padStart(2, "0")}-${String(
+        date.getMonth() + 1,
+      ).padStart(2, "0")}-${date.getFullYear()}`;
+    },
+  },
   {
     id: "status",
     accessorKey: "status",
@@ -63,6 +75,8 @@ export const columns: ColumnDef<Location>[] = [
 export const exportColumns: ExportColumn<Location>[] = [
   { key: "locationCode", header: "Location Code" },
   { key: "locationName", header: "Location Name" },
+  { key: "createdBy", header: "Created By" },
+   { key: "createdType", header: "Created Type" },
   {
     key: "createdAt",
     header: "Created On",

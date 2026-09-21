@@ -7,13 +7,14 @@ import {
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { useForm } from "react-hook-form";
 import { Controller } from "react-hook-form";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
 import { Get } from "@/ApiHelper";
 import { departmentOptions, branchOptions } from "./options";
 import { Employee } from "./data";
+import { Combobox } from "@/components/shared/form/StyledCombobox";
 
 interface RoleOption {
   id: string;
@@ -21,8 +22,14 @@ interface RoleOption {
   department: string;
 }
 
+interface AccountGroupOption {
+  id: string;
+  label: string;
+}
+
 interface EmployeeFormValues extends Employee {
   confirmPassword: string;
+  accountGroup?: string;
 }
 
 interface EmployeeDrawerProps {
@@ -43,6 +50,10 @@ export function EmployeeDrawer({
   const [checking, setChecking] = useState(false);
   const isEditing = Boolean(employee?.id);
 
+  // Sundry Creditor account list - ab static nahi, API se dynamically aayegi
+  const [accountGroupOptions, setAccountGroupOptions] = useState<AccountGroupOption[]>([]);
+  const [loadingAccountGroups, setLoadingAccountGroups] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -58,9 +69,51 @@ export function EmployeeDrawer({
   });
 
   const selectedDepartment = watch("department");
+  const selectedRoleId = watch("roleId");
+
   const roleOptions = roles
     .filter((item) => item.department === selectedDepartment)
     .map((item) => ({ id: item.id, label: item.label }));
+
+  // Selected role ka poora object nikal ke uska label check karna hai
+  const selectedRole = roles.find((item) => item.id === selectedRoleId);
+  const isContractorManager = selectedRole?.label === "Contractor Manager";
+
+  // Jab role "Contractor Manager" ho tabhi Sundry Creditor accounts API se fetch karo
+  useEffect(() => {
+    if (!isContractorManager) {
+      setAccountGroupOptions([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchSundryCreditorAccounts = async () => {
+      setLoadingAccountGroups(true);
+      try {
+       const response = await Get("master/account/sundry-creditor/list", {}, false);
+        if (isMounted && response.data?.success) {
+          const list: any[] = response.data.data || [];
+          setAccountGroupOptions(
+            list.map((item) => ({
+              id: String(item.id),
+              label: item.accountName,
+            }))
+          );
+        }
+      } catch (error) {
+        if (isMounted) setAccountGroupOptions([]);
+      } finally {
+        if (isMounted) setLoadingAccountGroups(false);
+      }
+    };
+
+    fetchSundryCreditorAccounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isContractorManager]);
 
   const handleClose = () => {
     reset();
@@ -148,7 +201,7 @@ export function EmployeeDrawer({
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-md transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary-600">
             <h3 className="text-lg font-semibold text-white">
               {isEditing ? "Edit Employee" : "Add Employee"}
             </h3>
@@ -206,7 +259,12 @@ export function EmployeeDrawer({
                   <Listbox
                     data={roleOptions}
                     value={roleOptions.find((item) => item.id === value) || null}
-                    onChange={(item) => onChange(item.id)}
+                    onChange={(item) => {
+                      onChange(item.id);
+                      // Role badalne par account group reset karo,
+                      // taaki purana selection carry na ho
+                      setValue("accountGroup", "");
+                    }}
                     label="Role"
                     placeholder="Select role"
                     displayField="label"
@@ -216,6 +274,26 @@ export function EmployeeDrawer({
                   />
                 )}
               />
+
+                         {isContractorManager && (
+                <Controller
+                  control={control}
+                  name="accountId"              // 👈 accountGroup se accountId
+                  rules={{ required: "Account group is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <Combobox
+                      data={accountGroupOptions}
+                      value={accountGroupOptions.find((item) => item.id === value) || null}
+                     onChange={(item: AccountGroupOption) => onChange(item.id)}
+                      label="Select Party"
+                      placeholder={loadingAccountGroups ? "Loading..." : "Select account group"}
+                      displayField="label"
+                      error={errors.accountId?.message}   // 👈
+                      inputProps={{ disabled: loadingAccountGroups }}
+                    />
+                  )}
+                />
+              )}
 
               <Input
                 {...register("employeeName", { required: "Employee name is required" })}
@@ -296,3 +374,5 @@ export function EmployeeDrawer({
     </Transition>
   );
 }
+
+

@@ -2,7 +2,10 @@ export interface ItemCategory {
   id: string;
   categoryName: string;
   status: string;
+  createdBy?: string;  
+  createdType?: string; 
   createdAt?: string;
+   
   type: "manual" | "default";
 }
 
@@ -10,6 +13,8 @@ export const emptyItemCategory = (): ItemCategory => ({
   id: "",
   categoryName: "",
   status: "active",
+  createdBy: "", 
+    createdType :"",
   type: "manual",
 });
 
@@ -20,6 +25,8 @@ export const mapApiItemCategoryToItemCategory = (
   id: String(item.itemCategoryId),
   categoryName: item.categoryName,
   status: item.status,
+  createdBy: item.createdBy || "",  
+     createdType: item.createdType || "",  
   createdAt: item.created,
-   type: item.categoryType, 
+  type: item.categoryType,
 });
