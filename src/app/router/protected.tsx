@@ -160,7 +160,7 @@ const protectedRoutes: RouteObject = {
                   }),
                 },
 
-                 {
+                {
                   path: "item-location",
                   lazy: async () => ({
                     Component: (
@@ -596,7 +596,7 @@ const protectedRoutes: RouteObject = {
                     ).default,
                   }),
                 },
-                 {
+                {
                   path: "summary",
                   lazy: async () => ({
                     Component: (
@@ -607,29 +607,36 @@ const protectedRoutes: RouteObject = {
               ],
             },
             {
-  path: "purchase-grr",
-  children: [
-    {
-      index: true,
-      // LIST
-      lazy: async () => ({
-        Component: (
-          await import("@/app/pages/purchase-master/purchase-grr/index")
-        ).default,
-      }),
-    },
-    {
-      path: "create",
-      // CREATE form (GrrPage lives in grrindex.tsx)
-      lazy: async () => ({
-        Component: (
-          await import("@/app/pages/purchase-master/purchase-grr/grrindex")
-        ).default,
-      }),
-    },
-  ],
-},
-            
+              path: "purchase-grr",
+              children: [
+                {
+                  index: true,
+                  // LIST
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/purchase-grr/index")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "create",
+                  // CREATE form (GrrPage lives in grrindex.tsx)
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/purchase-grr/grrindex")
+                    ).default,
+                  }),
+                },
+                 {
+                  path: "view/:id",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/purchase-grr/grrindex")
+                    ).default,
+                  }),
+                },
+              ],
+            },
           ],
         },
         {
@@ -688,6 +695,14 @@ const protectedRoutes: RouteObject = {
               lazy: async () => ({
                 Component: (
                   await import("@/app/pages/user-master/create-employee")
+                ).default,
+              }),
+            },
+            {
+              path: "contractor-employee",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/user-master/contractor-employee")
                 ).default,
               }),
             },
@@ -764,7 +779,7 @@ const protectedRoutes: RouteObject = {
                     ).default,
                   }),
                 },
-                  {
+                {
                   path: "indent",
                   lazy: async () => ({
                     Component: (
@@ -853,7 +868,7 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
-              {
+            {
               path: "location",
               lazy: async () => ({
                 Component: (

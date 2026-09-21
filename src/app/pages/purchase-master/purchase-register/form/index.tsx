@@ -463,7 +463,7 @@ function BankDetailsDrawer({
           (open ? "translate-x-0" : "translate-x-full")
         }
       >
-        <div className="bg-primary flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
+        <div className="bg-primary-600 flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
           <h3 className="text-base font-bold">Bank Details</h3>
           <Button
             variant="flat"
@@ -1027,7 +1027,7 @@ function CreateAccountDrawer({ open, onClose }: any) {
           (open ? "translate-x-0" : "translate-x-full")
         }
       >
-        <div className="bg-primary flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
+        <div className="bg-primary-600 flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
           <h3 className="text-base font-bold">Create Account</h3>
           <button
             type="button"

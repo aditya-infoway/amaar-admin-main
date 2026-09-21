@@ -191,7 +191,7 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full lg:max-w-[50%] transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary-600">
             <h3 className="text-lg font-semibold text-white">Add Bank Payment</h3>
             <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full text-white">
               <XMarkIcon className="size-4.5" />
@@ -375,7 +375,7 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
               <Button
                 type="submit"
                 disabled={submitting || paymentMode === "bom"}
-                className="bg-red-600 text-white hover:bg-red-700"
+                color="primary"
               >
                 {submitting ? "Saving..." : "Add Bank Payment"}
               </Button>

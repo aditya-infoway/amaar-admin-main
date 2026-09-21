@@ -85,7 +85,9 @@ export default function GrrList() {
         <Button
           isIcon
           variant="flat"
-          onClick={() => navigate("/purchase-master/purchase-grr/create")}
+          onClick={() =>
+            navigate(`/purchase-master/purchase-grr/view/${row.original.id}`)
+          }
         >
           <EyeIcon className="size-4.5" />
         </Button>

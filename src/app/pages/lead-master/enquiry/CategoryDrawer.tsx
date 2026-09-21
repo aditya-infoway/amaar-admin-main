@@ -274,15 +274,27 @@ export function EnquiryDrawer({
   };
 
   // Stage 1: validate the form, then send the OTP
-  const onSubmitForm = handleSubmit(async (values) => {
-    setPendingValues(values);
-    // already verified (e.g. an earlier save failed) → skip the OTP
-    if (verifiedEmail === values.email.trim()) {
-      await saveEnquiry(values);
-      return;
-    }
-    await sendOtp(values);
-  });
+ const onSubmitForm = handleSubmit(async (values) => {
+  setPendingValues(values);
+
+  const newEmail = values.email.trim().toLowerCase();
+  const oldEmail = (enquiry?.email || "").trim().toLowerCase();
+  const needsOtp = !isEditing || newEmail !== oldEmail;
+
+  // editing with the same email → save directly, no OTP
+  if (!needsOtp) {
+    await saveEnquiry(values);
+    return;
+  }
+
+  // already verified (e.g. an earlier save failed) → skip the OTP
+  if (verifiedEmail === values.email.trim()) {
+    await saveEnquiry(values);
+    return;
+  }
+
+  await sendOtp(values);
+});
 
   // Stage 2: verify the OTP on the backend, then save
   const handleVerifyOtp = async () => {
@@ -355,7 +367,7 @@ export function EnquiryDrawer({
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-md transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          <div className="dark:border-dark-500 bg-primary flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
+          <div className="dark:border-dark-500 bg-primary-600 flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
             <h3 className="text-lg font-semibold text-white">
               {step === "form"
                 ? isEditing
@@ -535,7 +547,7 @@ export function EnquiryDrawer({
                   color="primary"
                   disabled={sendingOtp || saving}
                 >
-                  {sendingOtp ? "Sending OTP..." : "Submit"}
+                 {saving ? "Saving..." : isEditing ? "Verify & Update" : "Verify & Save"}
                 </Button>
               </div>
             </form>

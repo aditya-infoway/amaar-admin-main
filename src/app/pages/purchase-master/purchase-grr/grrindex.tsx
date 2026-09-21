@@ -2,7 +2,7 @@
 
 // Import Dependencies
 import { useEffect, useMemo, useState, useRef } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import {
@@ -148,7 +148,9 @@ function DetailField({
 
 /* ───────────────────────── MAIN PAGE ───────────────────────── */
 export default function GrrPage() {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const isViewMode = Boolean(id);
   const { cardSkin } = useThemeContext();
   const [stage, setStage] = useState<Stage>("verify");
   const [selectedPo, setSelectedPo] = useState<PoOption | null>(null);
@@ -159,10 +161,12 @@ export default function GrrPage() {
   const [supplierNumber, setSupplierNumber] = useState("");
   const [orderDate, setOrderDate] = useState("");
   const [requestedDate, setRequestedDate] = useState("");
+  
   const [remarks, setRemarks] = useState("");
   const [items, setItems] = useState<GrrItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  const [loadingGrr, setLoadingGrr] = useState(false);
   // TanStack Table State
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper();
   const [globalFilter, setGlobalFilter] = useState("");
@@ -188,6 +192,104 @@ export default function GrrPage() {
   const [poOptions, setPoOptions] = useState<PoOption[]>([]);
   const [loadingPoList, setLoadingPoList] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
+
+  useEffect(() => {
+    if (!id || !financialYearId) return;
+
+    const fetchGrr = async () => {
+      setLoadingGrr(true);
+      try {
+        const res = await Get(`purchase-grr/${id}`, { financialYearId }, false);
+
+        if (!res.data?.success) {
+          toasterrormsg(res.data?.message || "Failed to load GRR");
+          return;
+        }
+
+        const d = res.data.data;
+
+        setGrrNo(d.grrNo || "");
+        setGrrDate(d.grrDate?.slice(0, 10) || "");
+        setRemarks(d.remarks || "");
+        setSerialNo(d.serialNo ?? null);
+
+        setItems(
+          (d.items || []).map((row: any) => ({
+            id: row.grrItemId ?? row.id,
+            purchaseOrderDetailsId: row.purchaseOrderDetailsId ?? row.grrItemId,
+            itemId: row.itemId,
+            itemCode: row.itemCode,
+            itemName: row.itemName,
+            hsnCode: row.hsnCode,
+            orderQty: Number(row.orderQty) || 0,
+            inQty: Number(row.inQty) || 0,
+            verified: true,
+          })),
+        );
+
+        setStage("difference");
+
+        // PO / supplier header: use the GRR response if it has it,
+        // otherwise load it from the PO itself
+        let po = {
+          poNumber: d.poNumber || "",
+          supplierName: d.supplierName || "",
+          supplierNumber: d.supplierNumber || "",
+          orderDate: d.orderDate || "",
+          requestedDate: d.requestedDate || "",
+        };
+
+        if (!po.supplierName && d.purchaseOrderId) {
+          try {
+            const poRes = await Get(
+              `purchase-grr/po-items/${d.purchaseOrderId}`,
+              {},
+              false,
+            );
+
+            if (poRes.data?.success) {
+              const p = poRes.data.data;
+              po = {
+                poNumber: po.poNumber || p.poNumber || "",
+                supplierName: p.supplierName || "",
+                supplierNumber: p.supplierNumber || "",
+                orderDate: p.orderDate || "",
+                requestedDate: p.requestedDate || "",
+              };
+            }
+          } catch {
+            // header just stays blank
+          }
+        }
+
+        setSupplierName(po.supplierName);
+        setSupplierNumber(po.supplierNumber);
+        setOrderDate(po.orderDate);
+        setRequestedDate(po.requestedDate);
+
+        setSelectedPo({
+          id: d.purchaseOrderId,
+          poNumber: po.poNumber,
+          supplierName: po.supplierName,
+          supplierNumber: po.supplierNumber,
+          orderDate: po.orderDate,
+          requestedDate: po.requestedDate,
+          serialNo: d.serialNo ?? null,
+          label: po.poNumber
+            ? `${po.poNumber} - ${po.supplierName}`
+            : po.supplierName,
+        });
+      } catch (e) {
+        toasterrormsg("Failed to load GRR");
+      } finally {
+        setLoadingGrr(false);
+      }
+    };
+
+    fetchGrr();
+  }, [id, financialYearId]);
+
+
 
   useEffect(() => {
     if (!financialYearId) return;
@@ -226,14 +328,17 @@ export default function GrrPage() {
     };
 
     fetchPoList();
-    fetchNextGrrNo();
-  }, [financialYearId]);
+    if (!isViewMode) fetchNextGrrNo();
+  }, [financialYearId, isViewMode]);
 
   const cardRef = useRef<HTMLDivElement>(null);
   useBoxSize({ ref: cardRef });
 
   // When PO is selected → fill header + load items
+  // SKIP this entirely in view mode
   useEffect(() => {
+    if (isViewMode) return; // ← critical guard
+
     if (!selectedPo) {
       setSupplierName("");
       setSupplierNumber("");
@@ -294,7 +399,7 @@ export default function GrrPage() {
     };
 
     fetchItems();
-  }, [selectedPo]);
+  }, [selectedPo, isViewMode]); // ← add isViewMode to deps
 
   const allVerified = useMemo(
     () => items.length > 0 && items.every((i) => i.verified),
@@ -315,6 +420,7 @@ export default function GrrPage() {
   };
 
   const handleVerifyGrr = async () => {
+    if (isViewMode) return;
     if (!selectedPo) return toasterrormsg("Please select a Purchase Order.");
     if (!financialYearId)
       return toasterrormsg("Financial Year not found in session.");
@@ -346,7 +452,7 @@ export default function GrrPage() {
         toastsuccessmsg(
           res.data.message || "GRR verified and saved successfully",
         );
-       navigate("/purchase-master/purchase-grr");
+        navigate("/purchase-master/purchase-grr");
       } else {
         toasterrormsg(res.data?.message || "Failed to save GRR");
       }
@@ -420,6 +526,8 @@ export default function GrrPage() {
   useDidUpdate(() => table.resetRowSelection(), [items]);
   useLockScrollbar(tableSettings.enableFullScreen);
 
+  const showActions = stage === "difference" && !isViewMode;
+
   return (
     <Page title="Goods Received Report">
       <div className="transition-content grid grid-cols-1 grid-rows-[auto_auto_1fr] px-(--margin-x) py-4">
@@ -436,7 +544,8 @@ export default function GrrPage() {
           <div className="flex flex-wrap gap-2">
             <Link to="/purchase-master/purchase-grr">
               <Button variant="outlined" className="gap-2">
-                <ChevronLeftIcon className="size-4" /> Cancel
+                <ChevronLeftIcon className="size-4" />{" "}
+                {isViewMode ? "Close" : "Cancel"}
               </Button>
             </Link>
 
@@ -450,7 +559,7 @@ export default function GrrPage() {
               </Button>
             )}
 
-            {stage === "difference" && (
+            {showActions && (
               <>
                 <Button variant="outlined" onClick={handleBack}>
                   Back
@@ -480,6 +589,7 @@ export default function GrrPage() {
                   onChange={(val: any) => setSelectedPo(val)}
                   placeholder="Search PO Number..."
                   searchFields={["poNumber", "supplierName"]}
+                  disabled={isViewMode}
                 />
               </div>
 
@@ -493,7 +603,9 @@ export default function GrrPage() {
                 }}
               />
 
-              <div>
+              <div
+                className={isViewMode ? "pointer-events-none opacity-60" : ""}
+              >
                 <FieldLabel required>GRR Date</FieldLabel>
                 <DatePicker
                   value={grrDate}
@@ -540,7 +652,7 @@ export default function GrrPage() {
             <h2 className="dark:text-dark-100 truncate text-base font-medium tracking-wide text-gray-800">
               Item Details
             </h2>
-            {items.length > 0 && (
+           {items.length > 0 && !isViewMode && (
               <div className="flex items-center gap-2">
                 <Badge
                   variant="soft"
@@ -819,7 +931,9 @@ export default function GrrPage() {
         {/* ───── Bottom Actions ───── */}
         <div className="dark:border-dark-500 mt-5 flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
           <Link to="/purchase-master/purchase-grr">
-            <Button variant="outlined">Cancel</Button>
+            <Button variant="outlined">
+              {isViewMode ? "Close" : "Cancel"}
+            </Button>
           </Link>
 
           {stage === "verify" && (
@@ -832,7 +946,7 @@ export default function GrrPage() {
             </Button>
           )}
 
-          {stage === "difference" && (
+          {showActions && (
             <>
               <Button variant="outlined" onClick={handleBack}>
                 Back

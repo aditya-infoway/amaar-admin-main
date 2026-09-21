@@ -18,5 +18,12 @@ export const userMaster: NavigationTree = {
             title: "Create Employee",
             icon: "user_master.createEmployee",
         },
+         {
+            id: "user_master.contractorEmployee",
+            type: "item",
+            path: "/user-master/contractor-employee",
+            title: "Contractor Employee",
+            icon: "user_master.createEmployee",
+        },
     ],
 };

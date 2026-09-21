@@ -152,11 +152,6 @@ export function QuotationDrawer({
     { code: string; exShowroomPrice: number }[]
   >([]);
 
-
-
-
-
-  
   useEffect(() => {
     const fetchUsedLeads = async () => {
       if (!isOpen) return;
@@ -1040,7 +1035,7 @@ export function QuotationDrawer({
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-4xl transform-gpu flex-col bg-white transition-transform duration-200"
         >
           {/* Header */}
-          <div className="dark:border-dark-500 bg-primary flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
+          <div className="dark:border-dark-500 bg-primary-600 flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
             <h3 className="text-lg font-semibold text-white">
               {isEditing ? "Edit Quotation" : "Add Quotation"}
             </h3>

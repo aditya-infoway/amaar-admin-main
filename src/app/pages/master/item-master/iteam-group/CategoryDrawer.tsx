@@ -141,7 +141,7 @@ export function ItemGroupDrawer({
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-md transform-gpu flex-col bg-white transition-transform duration-200"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary-600">
             <h3 className="dark:text-dark-50 text-lg font-semibold text-white">
               {isEdit ? "Edit Item Group" : "Create Item Group"}
             </h3>
