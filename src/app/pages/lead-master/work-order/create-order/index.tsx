@@ -26,6 +26,7 @@ import { Input } from "@/components/ui";
 import {
   Get,
   Post,
+  Delete,
   toasterrormsg,
   toastsuccessmsg,
 } from "@/ApiHelper";
@@ -131,56 +132,54 @@ export default function CreateOrderPage() {
     }
   };
 
-const handleAssign = async () => {
-  if (!selectedContractorManager) {
-    toasterrormsg("Please select Contractor Manager");
-    return;
-  }
+  const handleAssign = async () => {
+    if (!selectedContractorManager) {
+      toasterrormsg("Please select Contractor Manager");
+      return;
+    }
 
-  if (!assigningWorkOrder) {
-    toasterrormsg("Work Order not selected");
-    return;
-  }
+    if (!assigningWorkOrder) {
+      toasterrormsg("Work Order not selected");
+      return;
+    }
 
-  try {
-    const response = await Post(
-      "workorder/assign",
-      {
-        workOrderId: assigningWorkOrder.id,
-        contractorManagerId: selectedContractorManager.employeeId,
-      },
-      false,
-    );
-
-    console.log("Assign Work Order response:", response);
-
-    if (response?.data?.success || response?.data?.status === 200) {
-      toastsuccessmsg(
-        response?.data?.message ||
-          "Work Order assigned successfully.",
+    try {
+      const response = await Post(
+        "workorder/assign",
+        {
+          workOrderId: assigningWorkOrder.id,
+          contractorManagerId: selectedContractorManager.employeeId,
+        },
+        false,
       );
 
-      setAssignModalOpen(false);
-      setSelectedContractorManager(null);
+      console.log("Assign Work Order response:", response);
 
-      // Refresh work order list
-      await fetchWorkOrders();
-    } else {
+      if (response?.data?.success || response?.data?.status === 200) {
+        toastsuccessmsg(
+          response?.data?.message || "Work Order assigned successfully.",
+        );
+
+        setAssignModalOpen(false);
+        setSelectedContractorManager(null);
+
+        // Refresh work order list
+        await fetchWorkOrders();
+      } else {
+        toasterrormsg(
+          response?.data?.message || "Failed to assign Work Order.",
+        );
+      }
+    } catch (error: any) {
+      console.error("Assign Work Order error:", error);
+
       toasterrormsg(
-        response?.data?.message ||
-          "Failed to assign Work Order.",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong while assigning Work Order.",
       );
     }
-  } catch (error: any) {
-    console.error("Assign Work Order error:", error);
-
-    toasterrormsg(
-      error?.response?.data?.message ||
-        error?.message ||
-        "Something went wrong while assigning Work Order.",
-    );
-  }
-};
+  };
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -206,7 +205,17 @@ const handleAssign = async () => {
     });
   }, [data, filterWorkOrderNo, filterSalesOrderId]);
 
-  const columns = useMemo(() => createColumns(), []);
+  const columns = useMemo(
+    () =>
+      createColumns((row: WorkOrder) => {
+        console.log("ASSIGN CLICKED:", row);
+
+        setAssigningWorkOrder(row);
+        setSelectedContractorManager(null);
+        fetchContractorManagers().then(() => setAssignModalOpen(true));
+      }),
+    [],
+  );
 
   const exportColumns = useMemo(() => createExportColumns(), []);
 
@@ -235,15 +244,6 @@ const handleAssign = async () => {
         setEditing(row);
         setViewOnly(false);
         setDrawerOpen(true);
-      },
-
-      assignRow: async (row: WorkOrder) => {
-        setAssigningWorkOrder(row);
-        setSelectedContractorManager(null);
-
-        await fetchContractorManagers();
-
-        setAssignModalOpen(true);
       },
 
       deleteRow: async (row: any) => {
@@ -299,7 +299,7 @@ const handleAssign = async () => {
           );
         }
       },
-    },
+    } as any,
 
     onGlobalFilterChange: setGlobalFilter,
 
