@@ -14,11 +14,13 @@ export interface WorkOrder {
 
   model: string;
   qty: number;
-salesOrderNo?: string;
-modelName?: string;
+  salesOrderNo?: string;
+  modelName?: string;
   totalPrice: number;
   gst: number;
   grandTotal: number;
+
+  assignedEmployeeId?: string | null;
 }
 
 export interface Category {

@@ -3,7 +3,7 @@ import {
   MenuButton,
   MenuItem,
   MenuItems,
-  Transition,
+ 
 } from "@headlessui/react";
 import {
   EllipsisHorizontalIcon,
@@ -13,7 +13,7 @@ import {
   ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
-import { Fragment, useCallback, useState } from "react";
+import {  useCallback, useState } from "react";
 import { Row, Table } from "@tanstack/react-table";
 
 import {
@@ -31,19 +31,30 @@ interface RowActionExtraItem {
   show?: boolean;
 }
 
-interface RowActionsOptions<T> {
-  // When true, adds a "View" item above Edit/Delete that calls
-  // table.options.meta?.viewRow?.(row.original)
+interface RowActionsOptions<
+  T extends {
+    id: string;
+    assignedEmployeeId?: number | string | null;
+  },
+> {
   withView?: boolean;
-  // Extra menu items appended after View/Edit — e.g. "Aadhar Card", "PAN Card"
+
+  withAssign?: boolean;
+
+  onAssign?: (row: T) => void;
+
   extraItems?: (row: T) => RowActionExtraItem[];
 }
 
-export function createRowActions<T extends { id: string }>(
-  entityName: string,
-   options?: RowActionsOptions<T>,
-) {
+export function createRowActions<
+  T extends {
+    id: string;
+    assignedEmployeeId?: number | string | null;
+  },
+>(entityName: string, options?: RowActionsOptions<T>) {
   const withView = options?.withView ?? false;
+  const withAssign = options?.withAssign ?? false;
+  const onAssign = options?.onAssign;
   const confirmMessages: ConfirmMessages = {
     pending: {
       description: `Are you sure you want to delete this ${entityName}? Once deleted, it cannot be restored.`,
@@ -68,11 +79,12 @@ export function createRowActions<T extends { id: string }>(
       }, 300);
     }, [row, table.options.meta]);
 
-      const state = deleteError ? "error" : deleteSuccess ? "success" : "pending";
+    const state = deleteError ? "error" : deleteSuccess ? "success" : "pending";
 
     const extraItems =
-      options?.extraItems?.(row.original)?.filter((item) => item.show !== false) ??
-      [];
+      options
+        ?.extraItems?.(row.original)
+        ?.filter((item) => item.show !== false) ?? [];
 
     return (
       <>
@@ -84,7 +96,7 @@ export function createRowActions<T extends { id: string }>(
           <MenuItems
             transition
             anchor={{ to: "bottom end", gap: 8 }}
-           className="dark:border-dark-500 dark:bg-dark-750 absolute z-100 w-44 rounded-lg border border-gray-300 bg-white py-1 shadow-lg shadow-gray-200/50 outline-hidden transition duration-200 ease-out data-closed:translate-y-2 data-closed:opacity-0 dark:shadow-none"
+            className="dark:border-dark-500 dark:bg-dark-750 absolute z-100 w-44 rounded-lg border border-gray-300 bg-white py-1 shadow-lg shadow-gray-200/50 outline-hidden transition duration-200 ease-out data-closed:translate-y-2 data-closed:opacity-0 dark:shadow-none"
           >
             {withView && (
               <MenuItem>
@@ -102,37 +114,38 @@ export function createRowActions<T extends { id: string }>(
                     <span>View</span>
                   </button>
                 )}
-               </MenuItem>
-  )}
-  {extraItems.map((item) => {
-    const Icon = item.icon ?? ArrowDownTrayIcon;
-
-    return (
-      <MenuItem key={item.key}>
-        {({ focus }) => (
-          <button
-            type="button"
-            onClick={item.onClick}
-            className={clsx(
-              "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
-              focus &&
-                "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
+              </MenuItem>
             )}
-          >
-            <Icon className="size-4.5 stroke-1" />
-            <span>{item.label}</span>
-          </button>
-        )}
-      </MenuItem>
-    );
-  })}
-  <MenuItem>
-    {({ focus }) => (
-      <button
-        type="button"
-        onClick={() =>
-          table.options.meta?.openEditDrawer?.(row.original)
-        }
+            {extraItems.map((item) => {
+              const Icon = item.icon ?? ArrowDownTrayIcon;
+
+              return (
+                <MenuItem key={item.key}>
+                  {({ focus }) => (
+                    <button
+                      type="button"
+                      onClick={item.onClick}
+                      className={clsx(
+                        "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
+                        focus &&
+                          "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
+                      )}
+                    >
+                      <Icon className="size-4.5 stroke-1" />
+                      <span>{item.label}</span>
+                    </button>
+                  )}
+                </MenuItem>
+              );
+            })}
+
+            <MenuItem>
+              {({ focus }) => (
+                <button
+                  type="button"
+                  onClick={() =>
+                    table.options.meta?.openEditDrawer?.(row.original)
+                  }
                   className={clsx(
                     "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
                     focus &&
@@ -163,6 +176,24 @@ export function createRowActions<T extends { id: string }>(
                 </button>
               )}
             </MenuItem>
+            {withAssign && !row.original.assignedEmployeeId && (
+              <MenuItem>
+                {({ focus }) => (
+                  <button
+                    type="button"
+                    onClick={() => onAssign?.(row.original)}
+                    className={clsx(
+                      "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
+                      focus &&
+                        "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
+                    )}
+                  >
+                    <ArrowDownTrayIcon className="size-4.5 stroke-1" />
+                    <span>Assign</span>
+                  </button>
+                )}
+              </MenuItem>
+            )}
           </MenuItems>
         </Menu>
 
