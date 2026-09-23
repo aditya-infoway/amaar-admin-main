@@ -672,12 +672,10 @@ function AddItemSelector({
           placeholder="Select item"
           searchFields={["itemCode", "itemName"]}
           renderItem={(item: any) => (
-            <div className="flex items-center justify-between gap-3 text-inherit">
-              <div className="truncate">
-                <span className="text-xs font-bold">{item.itemCode}</span>
-                <span className="ml-2 text-sm">{item.itemName}</span>
-              </div>
-            </div>
+          <div className="flex w-full items-center text-inherit">
+    <span className="w-16 shrink-0 text-xs font-bold">{item.itemCode}</span>
+    <span className="truncate text-sm">{item.itemName}</span>
+  </div>
           )}
         />
       </div>
