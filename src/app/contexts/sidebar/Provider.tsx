@@ -11,12 +11,33 @@ const initialState: SidebarContextValue = {
   close: () => {},
 };
 
+const SIDEBAR_STORAGE_KEY = "sidebarExpanded";
+
+function getStoredExpanded(defaultVal: boolean): boolean {
+  try {
+    const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    if (saved === null) return defaultVal;
+    return JSON.parse(saved);
+  } catch {
+    return defaultVal;
+  }
+}
+
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const { xlAndUp, lgAndDown, name } = useBreakpointsContext();
 
   const [isExpanded, { open, close, toggle }] = useDisclosure(
-    initialState.isExpanded && xlAndUp,
+    getStoredExpanded(initialState.isExpanded && xlAndUp),
   );
+
+  // ✅ jab bhi isExpanded change ho, localStorage me save karo
+  useLayoutEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(isExpanded));
+    } catch {
+      // ignore storage errors
+    }
+  }, [isExpanded]);
 
   useDidUpdate(() => {
     if (lgAndDown) {
