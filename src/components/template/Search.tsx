@@ -170,8 +170,14 @@ export function SearchDialog({ close }: SearchDialogProps) {
   const { result, query, setQuery } = useFuse(data, {
     keys: ["title"],
     threshold: 0.2,
-    matchAllOnEmptyQuery: false,
+    matchAllOnEmptyQuery: true,
   });
+
+  // Force show ALL items when query is empty
+  const displayResults =
+    query.trim() === ""
+      ? data.map((item, index) => ({ item, refIndex: index }))
+      : result;
 
   useEffect(() => {
     const inputElement = document.getElementById(
@@ -183,8 +189,9 @@ export function SearchDialog({ close }: SearchDialogProps) {
   }, [searchInputId]);
 
   return (
-    <div data-search-wrapper className="flex flex-col overflow-hidden">
-      <div className="dark:bg-dark-800 rounded-t-lg bg-gray-200 py-2 lg:py-3">
+    <div data-search-wrapper className="flex h-full flex-col overflow-hidden">
+      {/* Search Header */}
+      <div className="dark:bg-dark-800 shrink-0 rounded-t-lg bg-gray-200 py-2 lg:py-3">
         <div className="flex items-center justify-between pr-4 pl-2 rtl:pr-2 rtl:pl-4">
           <Input
             id={searchInputId}
@@ -214,77 +221,45 @@ export function SearchDialog({ close }: SearchDialogProps) {
         </div>
       </div>
 
-      {result.length === 0 && query === "" && (
-        <div className="mt-4">
-          <h3 className="dark:text-dark-50 px-4 text-gray-800 sm:px-5">
-            Popular search
-          </h3>
-          <div className="mt-3 flex flex-wrap gap-3.5 px-4">
-            {popular.map(({ id, to, Icon, title, color }) => (
-              <Link
-                key={id}
-                to={to}
-                onClick={close}
-                className="w-14 shrink-0 text-center"
-              >
-                <Avatar
-                  size={12}
-                  initialColor={color}
-                  classNames={{ display: "rounded-2xl" }}
-                >
-                  <Icon className="size-5 stroke-2" />
-                </Avatar>
-
-                <p className="dark:text-dark-100 mt-1.5 truncate text-xs whitespace-nowrap text-gray-800">
-                  {title}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {result.length === 0 && query !== "" && (
-        <div className="flex flex-col overflow-y-auto py-4">
+      {/* Results – always scrollable */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-4">
+        {displayResults.length === 0 ? (
           <h3 className="dark:text-dark-50 px-4 text-gray-800 sm:px-5">
             No Result Found
           </h3>
-        </div>
-      )}
-
-      {result.length > 0 && (
-        <div className="flex flex-col overflow-y-auto py-4">
-          <h3 className="dark:text-dark-50 px-4 text-gray-800 sm:px-5">
-            Search Result
-          </h3>
-          <div className="space-y-3 px-4 pt-3">
-            {result.map(({ item, refIndex }: SearchResult) => (
-              <Link
-                key={refIndex}
-                onKeyDown={createScopedKeydownHandler({
-                  siblingSelector: "[data-search-item]",
-                  parentSelector: "[data-search-wrapper]",
-                  activateOnFocus: false,
-                  loop: true,
-                  orientation: "vertical",
-                })}
-                data-search-item
-                to={item.path || "#"}
-                className="group focus:ring-primary-500/50 dark:bg-dark-600 dark:text-dark-100 flex items-center justify-between space-x-2 rounded-lg bg-gray-100 px-2.5 py-2 tracking-wide text-gray-800 outline-hidden transition-all focus:ring-3 rtl:space-x-reverse"
-                onClick={close}
-              >
-                <div className="min-w-0">
-                  <span className="truncate">
-                    <Highlight query={query}>{item.title || ""}</Highlight>
-                  </span>
-                </div>
-
-                <ChevronRightIcon className="size-4.5 rtl:rotate-180" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+        ) : (
+          <>
+            <h3 className="dark:text-dark-50 px-4 text-gray-800 sm:px-5">
+              {query.trim() === "" ? "All Menu" : "Search Result"}
+            </h3>
+            <div className="space-y-3 px-4 pt-3">
+              {displayResults.map(({ item, refIndex }: SearchResult) => (
+                <Link
+                  key={refIndex}
+                  onKeyDown={createScopedKeydownHandler({
+                    siblingSelector: "[data-search-item]",
+                    parentSelector: "[data-search-wrapper]",
+                    activateOnFocus: false,
+                    loop: true,
+                    orientation: "vertical",
+                  })}
+                  data-search-item
+                  to={item.path || "#"}
+                  className="group focus:ring-primary-500/50 dark:bg-dark-600 dark:text-dark-100 flex items-center justify-between space-x-2 rounded-lg bg-gray-100 px-2.5 py-2 tracking-wide text-gray-800 outline-hidden transition-all focus:ring-3 rtl:space-x-reverse"
+                  onClick={close}
+                >
+                  <div className="min-w-0">
+                    <span className="truncate">
+                      <Highlight query={query}>{item.title || ""}</Highlight>
+                    </span>
+                  </div>
+                  <ChevronRightIcon className="size-4.5 rtl:rotate-180" />
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
