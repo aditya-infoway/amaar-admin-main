@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   Dialog,
   DialogPanel,
@@ -10,25 +10,38 @@ import { Controller, useForm } from "react-hook-form";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input, Radio, Textarea } from "@/components/ui";
-import { accountOptions, oppAccountOptions } from "./data";
 import { Contra } from "../shared/types";
 import { DatePicker } from "@/components/shared/form/Datepicker";
 import { AccountListbox, AccountOption } from "@/components/shared/form/AccountListbox";
+import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 
 interface ContraDrawerProps {
   isOpen: boolean;
   close: () => void;
   contra: Contra | null;
-  onSave: (contra: Contra) => void;
+  onSaved: () => void; // ✅ CHANGED — ab list refresh trigger karega, object return nahi
 }
+
+interface AccountListItem {
+  id: string;
+  label: string;
+}
+
+// ✅ NEW — payment API helpers
+const paymentApi = {
+  nextVoucherNo: (financialYearId: string) =>
+    Get("payment/next-voucher-no", { financialYearId, voucherType: "CONTRA" }, false),
+  create: (payload: Record<string, any>) => Post("payment/contra/create", payload, false),
+};
 
 export function ContraDrawer({
   isOpen,
   close,
   contra,
-  onSave,
+  onSaved,
 }: ContraDrawerProps) {
   const isEdit = Boolean(contra?.id);
+  const [submitting, setSubmitting] = useState(false);
 
   const {
     register,
@@ -36,6 +49,7 @@ export function ContraDrawer({
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<Contra>({
     defaultValues: {
@@ -45,8 +59,16 @@ export function ContraDrawer({
   });
 
   const currentType = watch("type");
+  const selectedAccount = watch("account");
 
-  // Determine label dynamically based on opposite requirements
+  const [accountOptions, setAccountOptions] = useState<AccountListItem[]>([]);
+  const [accountLoading, setAccountLoading] = useState(false);
+
+  const [oppAccountOptions, setOppAccountOptions] = useState<AccountOption[]>([]);
+  const [oppLoading, setOppLoading] = useState(false);
+
+  const [voucherLoading, setVoucherLoading] = useState(false);
+
   const getAccountLabel = () => {
     switch (currentType) {
       case "deposit":
@@ -60,18 +82,177 @@ export function ContraDrawer({
     }
   };
 
+  const getOppAccountLabel = () => {
+    switch (currentType) {
+      case "deposit":
+        return "Opp. Bank Account";
+      case "withdrawal":
+        return "Opp. Cash Account";
+      case "transfer":
+        return "Bank Account (To)";
+      default:
+        return "Opp. Account";
+    }
+  };
+
+  // Drawer open hote hi current date + voucher no set (naya add karte waqt)
+  useEffect(() => {
+    if (!isOpen) return;
+    if (isEdit) return;
+
+    setValue("date", new Date().toISOString().slice(0, 10));
+
+    const fetchVoucherNo = async () => {
+      setVoucherLoading(true);
+      try {
+        const financialYearId = localStorage.getItem("financialYearId") || "";
+        const res = await paymentApi.nextVoucherNo(financialYearId);
+        const voucherNo = res?.data?.data?.voucherNo || "";
+        setValue("voucherNo", voucherNo);
+      } catch (err: any) {
+        toasterrormsg(
+          err?.response?.data?.message || "Failed to fetch voucher number.",
+        );
+      } finally {
+        setVoucherLoading(false);
+      }
+    };
+
+    fetchVoucherNo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchAccounts = async () => {
+      setAccountLoading(true);
+      try {
+        const endpoint =
+          currentType === "deposit"
+            ? "master/account/cash/list"
+            : "master/account/bank/list";
+
+        const res = await Get(endpoint, {}, false);
+        if (res.data?.success) {
+          const mapped: AccountListItem[] = (res.data.data || []).map(
+            (item: any) => ({
+              id: String(item.id),
+              label: item.accountName || item.name || item.label || "",
+            }),
+          );
+          setAccountOptions(mapped);
+        } else {
+          setAccountOptions([]);
+          toasterrormsg(res.data?.message || "Failed to load accounts.");
+        }
+      } catch (err: any) {
+        setAccountOptions([]);
+        toasterrormsg(
+          err?.response?.data?.message ||
+            "Something went wrong while loading accounts.",
+        );
+      } finally {
+        setAccountLoading(false);
+      }
+    };
+
+    fetchAccounts();
+    if (!isEdit) {
+      setValue("account", "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentType, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchOppAccounts = async () => {
+      setOppLoading(true);
+      try {
+        const endpoint =
+          currentType === "withdrawal"
+            ? "master/account/cash/list"
+            : "master/account/bank/list";
+
+        const res = await Get(endpoint, {}, false);
+        if (res.data?.success) {
+          const mapped: AccountOption[] = (res.data.data || []).map(
+            (item: any) => ({
+              id: String(item.id),
+              name: item.accountName || item.name || "",
+              number: item.mobileNo || item.mobile || "",
+              balance: Number(item.openingBalance ?? item.currentBalance ?? 0),
+            }),
+          );
+          setOppAccountOptions(mapped);
+        } else {
+          setOppAccountOptions([]);
+          toasterrormsg(res.data?.message || "Failed to load opposite accounts.");
+        }
+      } catch (err: any) {
+        setOppAccountOptions([]);
+        toasterrormsg(
+          err?.response?.data?.message ||
+            "Something went wrong while loading opposite accounts.",
+        );
+      } finally {
+        setOppLoading(false);
+      }
+    };
+
+    fetchOppAccounts();
+    if (!isEdit) {
+      setValue("oppAccount", "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentType, isOpen]);
+
+  const filteredOppAccountOptions =
+    currentType === "transfer" && selectedAccount
+      ? oppAccountOptions.filter((item) => item.id !== selectedAccount)
+      : oppAccountOptions;
+
   const handleClose = () => {
     reset();
     close();
   };
 
-  const onSubmit = (data: Contra) => {
-    onSave({
-      ...data,
-      id: contra?.id || crypto.randomUUID(),
-      createdAt: contra?.createdAt || new Date().toISOString(),
-    });
-    handleClose();
+  // ✅ CHANGED — ab real API call hoga, local state manage nahi
+  const onSubmit = async (data: Contra) => {
+    try {
+      setSubmitting(true);
+      const financialYearId = localStorage.getItem("financialYearId");
+      const companyId = localStorage.getItem("companyId");
+
+      const res = await paymentApi.create({
+        type: data.type,
+        accountId: Number(data.account),
+        voucherNo: data.voucherNo,
+        date: data.date,
+        oppAccountId: Number(data.oppAccount),
+        amount: Number(data.amount),
+        narration: data.narration || "",
+        financialYearId: financialYearId ? Number(financialYearId) : undefined,
+        createdBy: companyId ? Number(companyId) : undefined,
+        createdType: "Super Admin",
+      });
+
+      if (res?.data?.status === 400 || res?.data?.success === false) {
+        toasterrormsg(res?.data?.message || "Something went wrong.");
+        return;
+      }
+
+      toastsuccessmsg(res?.data?.message || "Contra saved successfully");
+      onSaved();
+      handleClose();
+    } catch (err: any) {
+      toasterrormsg(
+        err?.response?.data?.message || "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -98,7 +279,6 @@ export function ContraDrawer({
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-[50%] transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary-600">
             <h3 className="text-lg font-semibold text-white">
               {isEdit ? "Edit Contra" : "Add Contra"}
@@ -119,7 +299,6 @@ export function ContraDrawer({
           >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
 
-              {/* Type Radio */}
               <Controller
                 control={control}
                 name="type"
@@ -158,7 +337,6 @@ export function ContraDrawer({
                 )}
               />
 
-              {/* Account / Voucher No / Date */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Controller
                   control={control}
@@ -172,9 +350,10 @@ export function ContraDrawer({
                       }
                       onChange={(item) => onChange(item.id)}
                       label={getAccountLabel()}
-                      placeholder="Select"
+                      placeholder={accountLoading ? "Loading..." : "Select"}
                       displayField="label"
                       error={errors.account?.message}
+                      disabled={accountLoading}
                       {...rest}
                     />
                   )}
@@ -185,30 +364,46 @@ export function ContraDrawer({
                     required: "Voucher no is required",
                   })}
                   label="Voucher No."
-                  placeholder="Voucher No."
+                  placeholder={voucherLoading ? "Loading..." : "Auto generated"}
+                  readOnly
                   error={errors.voucherNo?.message}
                 />
 
-                <DatePicker
-                  options={{
-                    disable: [
-                      function (date) {
-                        return date.getDay() === 0 || date.getDay() === 6;
-                      },
-                    ],
-                    locale: {
-                      firstDayOfWeek: 1,
-                    },
-                  }}
-                  placeholder="Choose date..."
-                  label="Date"
+                <Controller
+                  control={control}
+                  name="date"
+                  rules={{ required: "Date is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <DatePicker
+                      label="Date"
+                      value={value}
+                      onChange={(dates: Date[]) => {
+                        const picked = dates?.[0];
+                        if (!picked) return onChange("");
+                        const yyyy = picked.getFullYear();
+                        const mm = String(picked.getMonth() + 1).padStart(2, "0");
+                        const dd = String(picked.getDate()).padStart(2, "0");
+                        onChange(`${yyyy}-${mm}-${dd}`);
+                      }}
+                      options={{
+                        disable: [
+                          function (date) {
+                            return date.getDay() === 0 || date.getDay() === 6;
+                          },
+                        ],
+                        locale: {
+                          firstDayOfWeek: 1,
+                        },
+                      }}
+                      placeholder="Choose date..."
+                      error={errors.date?.message}
+                    />
+                  )}
                 />
               </div>
 
-              {/* Divider */}
               <div className="border-t-3 border-dotted border-primary my-8" />
 
-              {/* Opp Account / Amount */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="sm:col-span-2">
                   <Controller
@@ -217,11 +412,11 @@ export function ContraDrawer({
                     rules={{ required: "Opp account is required" }}
                     render={({ field: { value, onChange } }) => (
                       <AccountListbox
-                        data={oppAccountOptions}
-                        value={oppAccountOptions.find((item) => item.id === value)}
+                        data={filteredOppAccountOptions}
+                        value={filteredOppAccountOptions.find((item) => item.id === value)}
                         onChange={(item: AccountOption) => onChange(item.id)}
-                        label="Opp. Account"
-                        placeholder="Select Opp. Account"
+                        label={getOppAccountLabel()}
+                        placeholder={oppLoading ? "Loading..." : "Select Account"}
                         error={errors.oppAccount?.message}
                       />
                     )}
@@ -239,7 +434,6 @@ export function ContraDrawer({
                 />
               </div>
 
-              {/* Narration */}
               <Textarea
                 {...register("narration")}
                 rows={5}
@@ -249,16 +443,16 @@ export function ContraDrawer({
               />
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
-              <Button onClick={handleClose}>
+              <Button type="button" onClick={handleClose}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 color="primary"
+                disabled={submitting}
               >
-                {isEdit ? "Update Contra" : "Add Contra"}
+                {submitting ? "Saving..." : isEdit ? "Update Contra" : "Add Contra"}
               </Button>
             </div>
           </form>

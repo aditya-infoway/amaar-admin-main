@@ -14,12 +14,14 @@ interface MasterTableProps<T> {
   table: TanstackTable<T>;
   columnCount: number;
   emptyMessage: string;
+  bordered?: boolean; // ← new optional prop
 }
 
 export function MasterTable<T>({
   table,
   columnCount,
   emptyMessage,
+  bordered = false, // default = false (no change for other pages)
 }: MasterTableProps<T>) {
   const { cardSkin } = useThemeContext();
 
@@ -28,14 +30,25 @@ export function MasterTable<T>({
       <Card className="relative overflow-hidden">
         <SelectedRowsActions table={table} />
         <div className="table-wrapper min-w-full overflow-x-auto">
-          <Table hoverable className="w-full text-left rtl:text-right">
+          <Table
+            hoverable
+            className={clsx(
+              "w-full text-left rtl:text-right",
+              bordered && "border-collapse",
+            )}
+          >
             <THead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <Tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <Th
                       key={header.id}
-                      className="dark:bg-dark-800 dark:text-dark-100 bg-gray-200 font-semibold text-gray-800 uppercase first:ltr:rounded-tl-lg last:ltr:rounded-tr-lg"
+                      className={clsx(
+                        "bg-gray-200 font-semibold text-gray-800 uppercase dark:bg-dark-800 dark:text-dark-100",
+                        "first:ltr:rounded-tl-lg last:ltr:rounded-tr-lg",
+                        bordered &&
+                          "border border-gray-200 dark:border-dark-500",
+                      )}
                     >
                       {header.column.getCanSort() ? (
                         <div
@@ -67,7 +80,8 @@ export function MasterTable<T>({
                   <Tr
                     key={row.id}
                     className={clsx(
-                      "dark:border-b-dark-500 border-b border-gray-200",
+                      !bordered &&
+                        "dark:border-b-dark-500 border-b border-gray-200",
                       row.getIsSelected() &&
                         "bg-primary-500/5 dark:bg-primary-500/10",
                     )}
@@ -80,6 +94,8 @@ export function MasterTable<T>({
                           cardSkin === "shadow"
                             ? "dark:bg-dark-700"
                             : "dark:bg-dark-900",
+                          bordered &&
+                            "border border-gray-200 dark:border-dark-500",
                         )}
                       >
                         {flexRender(
@@ -94,7 +110,10 @@ export function MasterTable<T>({
                 <Tr>
                   <Td
                     colSpan={columnCount}
-                    className="py-10 text-center text-gray-500"
+                    className={clsx(
+                      "py-10 text-center text-gray-500",
+                      bordered && "border border-gray-200 dark:border-dark-500",
+                    )}
                   >
                     {emptyMessage}
                   </Td>

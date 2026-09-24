@@ -253,8 +253,6 @@ function collectSelectedTree(
   return result;
 }
 
-
-
 // Walks the whole tree and returns every "subbom" subtree, at any depth.
 // Once a node with source "subbom" is found, its children are already
 // tagged "subbom" too (cloneTree tags the whole inserted subtree), so we
@@ -428,11 +426,9 @@ function BOMTreeNode({
 
         <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
           Qty: {item.quantity}
-          {hasChildren && (
-            <span className="text-primary-600 dark:text-primary-400 ml-2">
-              Wt: {computeTotalWeight(item).toFixed(2)} kg
-            </span>
-          )}
+          <span className="text-primary-600 dark:text-primary-400 ml-2">
+            Wt: {computeTotalWeight(item).toFixed(2)} kg
+          </span>
         </span>
         <button
           type="button"
@@ -850,34 +846,7 @@ export default function BOMFormPage() {
   }, [isBOMDirty, setDirty]);
 
   useEffect(() => {
-    const mockItems: AvailableItem[] = [
-      {
-        id: "1",
-        itemCode: "002",
-        itemName: "Steel Plate",
-        unit: "KG",
-        type: "Raw Material",
-        status: "Active",
-        balanceQty: "100",
-        thickness: "5",
-        length: "1000",
-        width: "500",
-        weight: "19.625",
-      },
-      {
-        id: "2",
-        itemCode: "0077",
-        itemName: "Angle Iron",
-        unit: "MTR",
-        type: "Raw Material",
-        status: "Active",
-        balanceQty: "50",
-        thickness: "6",
-        length: "1000",
-        width: "50",
-        weight: "2.355",
-      },
-    ];
+    const mockItems: AvailableItem[] = [];
 
     const loadAvailableItems = async () => {
       try {
@@ -1582,15 +1551,17 @@ export default function BOMFormPage() {
     setIsBomConfirmOpen(false);
 
     // Root item of the tree = Finished Goods
-  const finishedGoodsItemId = bomItems[0]?.refItemId
-    ? Number(bomItems[0].refItemId)
-    : null;
+    const finishedGoodsItemId = bomItems[0]?.refItemId
+      ? Number(bomItems[0].refItemId)
+      : null;
 
-  // Frontend validation
-  if (!finishedGoodsItemId) {
-    toasterrormsg("Finished Goods Item is missing. Please add a root item first.");
-    return;
-  }
+    // Frontend validation
+    if (!finishedGoodsItemId) {
+      toasterrormsg(
+        "Finished Goods Item is missing. Please add a root item first.",
+      );
+      return;
+    }
 
     try {
       if (isEditMode) {
@@ -2498,7 +2469,7 @@ export default function BOMFormPage() {
                   </div>
                 )}
 
-               {(() => {
+                {(() => {
                   const subBomChildren = bomItems[0]
                     ? collectSubBomSubtrees(bomItems[0].children)
                     : [];

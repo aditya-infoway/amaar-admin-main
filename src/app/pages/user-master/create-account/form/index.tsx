@@ -10,7 +10,7 @@ import { Button, Input } from "@/components/ui";
 import { drCrOptions } from "../../shared/constants";
 import { DatePicker } from "@/components/shared/form/Datepicker";
 import { Get, Post, Put, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
-
+import { Combobox } from "@/components/shared/form/StyledCombobox";
 import {
   Country,
   State,
@@ -445,55 +445,55 @@ export function AccountForm() {
                 )}
               />
 
+           <Controller
+  control={control}
+  name="countryName"
+  render={({ field: { value, onChange } }) => (   // ✅ CHANGED — ...rest hata diya
+    <Combobox
+      data={countryListOptions}
+      value={countryListOptions.find((item) => item.label === value) || null}
+    onChange={(item: any) => {
+  onChange(item?.label || "");
+  setSelectedCountryIso(item?.id || "");
+  setSelectedStateIso("");
+  setValue("stateName", "");
+  setValue("stateCode", "");
+  setValue("districtName", "");
+  setValue("talukaName", "");
+  setValue("cityName", "");
+}}
+      label="Country *"
+      placeholder="Select Country"
+      displayField="label"
+      searchFields={["label"]}
+      error={errors.countryName?.message}
+      // ✅ {...rest} yaha se hata diya
+    />
+  )}
+/>
               <Controller
-                control={control}
-                name="countryName"
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Listbox
-                    data={countryListOptions}
-                    value={countryListOptions.find((item) => item.label === value) || null}
-                    onChange={(item) => {
-                      onChange(item.label);
-                      setSelectedCountryIso(item.id);
-                      setSelectedStateIso("");
-                      setValue("stateName", "");
-                      setValue("stateCode", "");   // 👈 reset
-                      setValue("districtName", "");
-                      setValue("talukaName", "");
-                      setValue("cityName", "");
-                    }}
-                    label="Country *"
-                    placeholder="Select Country"
-                    displayField="label"
-                    error={errors.countryName?.message}
-                    {...rest}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="stateName"
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Listbox
-                    data={stateListOptions}
-                    value={stateListOptions.find((item) => item.label === value) || null}
-                    onChange={(item) => {
-                      onChange(item.label);
-                      setSelectedStateIso(item.id);
-                      setValue("stateCode", item.id); // item.id yahan state ka isoCode hai
-                      setValue("districtName", "");
-                      setValue("talukaName", "");
-                      setValue("cityName", "");
-                    }}
-                    label="State *"
-                    placeholder="Select State"
-                    displayField="label"
-                    error={errors.stateName?.message}
-                    {...rest}
-                  />
-                )}
-              />
+  control={control}
+  name="stateName"
+  render={({ field: { value, onChange } }) => (
+    <Combobox
+      data={stateListOptions}
+      value={stateListOptions.find((item) => item.label === value) || null}
+      onChange={(item: any) => {
+        onChange(item?.label || "");
+        setSelectedStateIso(item?.id || "");
+        setValue("stateCode", item?.id || ""); // item.id yahan state ka isoCode hai
+        setValue("districtName", "");
+        setValue("talukaName", "");
+        setValue("cityName", "");
+      }}
+      label="State *"
+      placeholder="Select State"
+      displayField="label"
+      searchFields={["label"]}
+      error={errors.stateName?.message}
+    />
+  )}
+/>
 
               <Input
                 {...register("stateCode")}
@@ -505,58 +505,59 @@ export function AccountForm() {
               />
 
               {/* District */}
-              <Controller
-                control={control}
-                name="districtName"
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Listbox
-                    data={districtListOptions}
-                    value={districtListOptions.find((item) => item.id === value) || null}
-                    onChange={(item) => onChange(item.id)}
-                    label="District *"
-                    placeholder="Select District"
-                    displayField="label"
-                    error={errors.districtName?.message}
-                    {...rest}
-                  />
-                )}
-              />
+             {/* District */}
+<Controller
+  control={control}
+  name="districtName"
+  render={({ field: { value, onChange } }) => (
+    <Combobox
+      data={districtListOptions}
+      value={districtListOptions.find((item) => item.id === value) || null}
+      onChange={(item: any) => onChange(item?.id || "")}
+      label="District *"
+      placeholder="Select District"
+      displayField="label"
+      searchFields={["label"]}
+      error={errors.districtName?.message}
+    />
+  )}
+/>
 
-              {/* Taluka */}
-              <Controller
-                control={control}
-                name="talukaName"
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Listbox
-                    data={talukaListOptions}
-                    value={talukaListOptions.find((item) => item.id === value) || null}
-                    onChange={(item) => onChange(item.id)}
-                    label="Taluka *"
-                    placeholder="Select Taluka"
-                    displayField="label"
-                    error={errors.talukaName?.message}
-                    {...rest}
-                  />
-                )}
-              />
+{/* Taluka */}
+<Controller
+  control={control}
+  name="talukaName"
+  render={({ field: { value, onChange } }) => (
+    <Combobox
+      data={talukaListOptions}
+      value={talukaListOptions.find((item) => item.id === value) || null}
+      onChange={(item: any) => onChange(item?.id || "")}
+      label="Taluka *"
+      placeholder="Select Taluka"
+      displayField="label"
+      searchFields={["label"]}
+      error={errors.talukaName?.message}
+    />
+  )}
+/>
 
-              {/* City */}
-              <Controller
-                control={control}
-                name="cityName"
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Listbox
-                    data={cityListOptions}
-                    value={cityListOptions.find((item) => item.id === value) || null}
-                    onChange={(item) => onChange(item.id)}
-                    label="City *"
-                    placeholder="Select City"
-                    displayField="label"
-                    error={errors.cityName?.message}
-                    {...rest}
-                  />
-                )}
-              />
+{/* City */}
+<Controller
+  control={control}
+  name="cityName"
+  render={({ field: { value, onChange } }) => (
+    <Combobox
+      data={cityListOptions}
+      value={cityListOptions.find((item) => item.id === value) || null}
+      onChange={(item: any) => onChange(item?.id || "")}
+      label="City *"
+      placeholder="Select City"
+      displayField="label"
+      searchFields={["label"]}
+      error={errors.cityName?.message}
+    />
+  )}
+/>
 
               <Input
                 {...register("area")}
