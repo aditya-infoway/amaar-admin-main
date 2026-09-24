@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -11,18 +11,24 @@ import {
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
+import { Get, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
-import { masterStorage } from "../shared/storage";
 import { ContraDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
 import { Contra, emptyContra } from "./data";
 
+// ✅ NEW — contra list API
+const contraApi = {
+  list: (financialYearId: string) =>
+    Get("payment/contra/list", { financialYearId }, false),
+};
+
 export default function ContraPage() {
-  const [data, setData] = useState<Contra[]>(() =>
-    masterStorage.getContras(),
-  );
+  const [data, setData] = useState<Contra[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -30,6 +36,30 @@ export default function ContraPage() {
   const [editing, setEditing] = useState<Contra | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterVoucher, setFilterVoucher] = useState("");
+
+  // ✅ NEW — API se list fetch
+  const fetchContras = async () => {
+    setLoading(true);
+    try {
+      const financialYearId = localStorage.getItem("financialYearId") || "";
+      const res = await contraApi.list(financialYearId);
+      if (res.data?.success) {
+        setData(res.data.data || []);
+      } else {
+        toasterrormsg(res.data?.message || "Failed to load contras.");
+      }
+    } catch (err: any) {
+      toasterrormsg(
+        err?.response?.data?.message || "Something went wrong while loading contras.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContras();
+  }, []);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -42,11 +72,6 @@ export default function ContraPage() {
     });
   }, [data, filterVoucher]);
 
-  const persist = (next: Contra[]) => {
-    setData(next);
-    masterStorage.saveContras(next);
-  };
-
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -58,14 +83,8 @@ export default function ContraPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      // ✅ Note: delete/edit ke liye backend endpoints abhi nahi banaye —
+      // agar chahiye to bata dena, add kar dunga
     },
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
@@ -116,7 +135,7 @@ export default function ContraPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No contras found. Click Add Contra to add one."
+          emptyMessage={loading ? "Loading contras..." : "No contras found. Click Add Contra to add one."}
         />
       </div>
 
@@ -124,14 +143,7 @@ export default function ContraPage() {
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         contra={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        onSaved={fetchContras} // ✅ CHANGED — save hone ke baad list refresh
       />
     </Page>
   );

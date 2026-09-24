@@ -114,6 +114,7 @@ export interface CashReceipt {
   oppAccount: string;
   amount: string;
   narration: string;
+  paymentMode:string;
   createdAt: string;
 }
 export interface BankReceipt {

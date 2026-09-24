@@ -4,12 +4,12 @@ import {
   SelectCell,
   SelectHeader,
 } from "@/components/shared/table/SelectCheckbox";
-import { createRowActions } from "../shared/createRowActions";
+// import { createRowActions } from "../shared/createRowActions";
 import { TextCell } from "../shared/tableCells";
 import { ExportColumn } from "../shared/export";
 import { CashReceipt } from "../shared/types";
 
-const RowActions = createRowActions<CashReceipt>("cashReceipt");
+// const RowActions = createRowActions<CashReceipt>("cashReceipt");
 
 export const columns: ColumnDef<CashReceipt>[] = [
   {
@@ -49,8 +49,8 @@ export const columns: ColumnDef<CashReceipt>[] = [
   //   cell: (info) => <span className="uppercase">{info.getValue<string>()}</span>,
   // },
   {
-  id: "receiptMode",
-  accessorKey: "receiptMode",
+  id: "paymentMode",
+  accessorKey: "paymentMode",
   header: "Mode",
   cell: (info) => String(info.getValue() ?? "").toUpperCase(),
 },
@@ -63,12 +63,12 @@ export const columns: ColumnDef<CashReceipt>[] = [
       return value ? new Date(value).toLocaleDateString() : "—";
     },
   },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: RowActions,
-    enableSorting: false,
-  },
+  // {
+  //   id: "actions",
+  //   header: "Actions",
+  //   cell: RowActions,
+  //   enableSorting: false,
+  // },
 ];
 
 export const exportColumns: ExportColumn<CashReceipt>[] = [
@@ -76,7 +76,7 @@ export const exportColumns: ExportColumn<CashReceipt>[] = [
   { key: "cashAccount", header: "Cash Account" },
   { key: "oppAccount", header: "Opp. Account" },
   { key: "amount", header: "Amount" },
-  { key: "receiptMode", header: "Mode" },
+  { key: "paymentMode", header: "Mode" },
   {
     key: "date",
     header: "Date",

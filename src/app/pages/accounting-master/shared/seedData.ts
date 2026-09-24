@@ -57,6 +57,7 @@ export const SEED_CASH_RECEIPTS: CashReceipt[] = [
     receiptMode: "manual",
     cashAccount: "cash-account",
     voucherNo: "CR/26-27/490",
+    paymentMode:"Cash",
     date: "2026-06-11",
     oppAccount: "suraj-sunil-bagave",
     amount: "8500",
