@@ -39,7 +39,7 @@ const emptyDefaults = {
   date: "",
   oppAccount: "",
   amount: "",
-  transactionMode: "neft",
+  transactionMode: "upi",
   chequeNumber: "",
   chequeDate: "",
   chequeClearDate: "",

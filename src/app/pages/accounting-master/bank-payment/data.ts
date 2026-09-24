@@ -11,7 +11,7 @@ export const emptyBankPayment = (): BankPayment => ({
   date: "2026-06-11",
   oppAccount: "",
   amount: "",
-  transactionMode: "neft",
+  transactionMode: "upi",
   narration: "",
   createdAt: new Date().toISOString(),
 });

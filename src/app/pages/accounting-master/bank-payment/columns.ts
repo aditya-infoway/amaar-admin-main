@@ -1,33 +1,33 @@
-import { createElement } from "react";
+// import { createElement } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { TrashIcon } from "@heroicons/react/24/outline";
+// import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatDateDDMMYYYY } from "@/ApiHelper";
 
 import {
   SelectCell,
   SelectHeader,
 } from "@/components/shared/table/SelectCheckbox";
-import { Button } from "@/components/ui";
+// import { Button } from "@/components/ui";
 import { TextCell } from "../shared/tableCells";
 import { ExportColumn } from "../shared/export";
 import { BankPayment } from "../shared/types";
 
-const RowActions = ({ row, table }: any) =>
-  createElement(
-    "div",
-    { className: "flex items-center gap-2" },
-    createElement(
-      Button,
-      {
-        isIcon: true,
-        variant: "flat",
-        className: "size-7 rounded-full",
-        onClick: () => (table.options.meta as any)?.deleteRow?.(row),
-        title: "Delete",
-      },
-      createElement(TrashIcon, { className: "size-4" }),
-    ),
-  );
+// const RowActions = ({ row, table }: any) =>
+//   createElement(
+//     "div",
+//     { className: "flex items-center gap-2" },
+//     createElement(
+//       Button,
+//       {
+//         isIcon: true,
+//         variant: "flat",
+//         className: "size-7 rounded-full",
+//         onClick: () => (table.options.meta as any)?.deleteRow?.(row),
+//         title: "Delete",
+//       },
+//       createElement(TrashIcon, { className: "size-4" }),
+//     ),
+//   );
 
 export const columns: ColumnDef<BankPayment>[] = [
   { id: "select", header: SelectHeader, cell: SelectCell, enableSorting: false },
@@ -59,7 +59,7 @@ export const columns: ColumnDef<BankPayment>[] = [
     header: "Created Type",
     cell: TextCell,
   },
-  { id: "actions", header: "Actions", cell: RowActions, enableSorting: false },
+  // { id: "actions", header: "Actions", cell: RowActions, enableSorting: false },
 ];
 
 export const exportColumns: ExportColumn<BankPayment>[] = [

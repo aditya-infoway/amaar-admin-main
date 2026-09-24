@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -9,8 +9,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-
-
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Get, toasterrormsg } from "@/ApiHelper";
@@ -20,12 +18,17 @@ import { MasterToolbar } from "../shared/MasterToolbar";
 import { CashReceiptDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
 import { CashReceipt, emptyCashReceipt } from "./data";
-import { masterStorage } from "../shared/storage";
+
+// ✅ NEW — cash receipt list API
+const cashReceiptApi = {
+  list: (financialYearId: string) =>
+    Get("payment/cash-receipt/list", { financialYearId }, false),
+};
 
 export default function CashReceiptPage() {
-  const [data, setData] = useState<CashReceipt[]>(() =>
-    masterStorage.getCashReceipts(),
-  );
+  const [data, setData] = useState<CashReceipt[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -33,6 +36,30 @@ export default function CashReceiptPage() {
   const [editing, setEditing] = useState<CashReceipt | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterVoucher, setFilterVoucher] = useState("");
+
+  // ✅ NEW — API se list fetch
+  const fetchCashReceipts = async () => {
+    setLoading(true);
+    try {
+      const financialYearId = localStorage.getItem("financialYearId") || "";
+      const res = await cashReceiptApi.list(financialYearId);
+      if (res.data?.success) {
+        setData(res.data.data || []);
+      } else {
+        toasterrormsg(res.data?.message || "Failed to load cash receipts.");
+      }
+    } catch (err: any) {
+      toasterrormsg(
+        err?.response?.data?.message || "Something went wrong while loading cash receipts.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCashReceipts();
+  }, []);
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -45,11 +72,6 @@ export default function CashReceiptPage() {
     });
   }, [data, filterVoucher]);
 
-  const persist = (next: CashReceipt[]) => {
-    setData(next);
-    masterStorage.saveCashReceipts(next);
-  };
-
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -61,14 +83,7 @@ export default function CashReceiptPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
-      deleteRow: (row) => {
-        persist(data.filter((item) => item.id !== row.original.id));
-      },
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        persist(data.filter((item) => !ids.has(item.id)));
-        setRowSelection({});
-      },
+      // Note: delete/edit ke liye backend endpoints abhi nahi banaye
     },
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
@@ -119,7 +134,7 @@ export default function CashReceiptPage() {
         <MasterTable
           table={table}
           columnCount={columns.length}
-          emptyMessage="No cash receipts found. Click Add Cash Receipt to add one."
+          emptyMessage={loading ? "Loading cash receipts..." : "No cash receipts found. Click Add Cash Receipt to add one."}
         />
       </div>
 
@@ -127,14 +142,7 @@ export default function CashReceiptPage() {
         isOpen={drawerOpen}
         close={() => setDrawerOpen(false)}
         cashReceipt={editing}
-        onSave={(item) => {
-          const exists = data.some((row) => row.id === item.id);
-          persist(
-            exists
-              ? data.map((row) => (row.id === item.id ? item : row))
-              : [item, ...data],
-          );
-        }}
+        onSaved={fetchCashReceipts} // ✅ CHANGED — save hone ke baad list refresh
       />
     </Page>
   );

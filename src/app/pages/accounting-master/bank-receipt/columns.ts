@@ -4,12 +4,12 @@ import {
   SelectCell,
   SelectHeader,
 } from "@/components/shared/table/SelectCheckbox";
-import { createRowActions } from "../shared/createRowActions";
+// import { createRowActions } from "../shared/createRowActions";
 import { TextCell } from "../shared/tableCells";
 import { ExportColumn } from "../shared/export";
 import { BankReceipt } from "../shared/types";
 
-const RowActions = createRowActions<BankReceipt>("bankReceipt");
+// const RowActions = createRowActions<BankReceipt>("bankReceipt");
 
 export const columns: ColumnDef<BankReceipt>[] = [
   {
@@ -63,12 +63,12 @@ export const columns: ColumnDef<BankReceipt>[] = [
       return value ? new Date(value).toLocaleDateString() : "—";
     },
   },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: RowActions,
-    enableSorting: false,
-  },
+  // {
+  //   id: "actions",
+  //   header: "Actions",
+  //   cell: RowActions,
+  //   enableSorting: false,
+  // },
 ];
 
 export const exportColumns: ExportColumn<BankReceipt>[] = [

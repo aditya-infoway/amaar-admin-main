@@ -270,6 +270,7 @@ export default function ItemMasterListPage() {
               ? "Loading items..."
               : "No items found. Click Create Item to add one."
           }
+          bordered
         />
       </div>
     </Page>
