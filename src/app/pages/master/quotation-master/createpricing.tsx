@@ -530,7 +530,6 @@ export default function CreatePricing() {
         })),
       };
 
-      console.log("Bulk pricing payload:", payload);
 
       // ============================================================
       // SEND TO BACKEND

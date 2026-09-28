@@ -710,7 +710,6 @@ export default function PurchaseOrderPage() {
           false,
         );
 
-        console.log("PO number API response:", res.data);
 
         if (res.data?.success) {
           setPoNumber(res.data.data?.poNumber || "");
@@ -824,7 +823,7 @@ export default function PurchaseOrderPage() {
   };
 
   const handleSupplierSelect = (supplier: any) => {
-    console.log("Selected Supplier:", supplier);
+
 
     setSelectedSupplierId(
       supplier.id || supplier.accountId || supplier.account_id,

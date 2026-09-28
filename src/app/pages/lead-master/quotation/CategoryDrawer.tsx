@@ -576,7 +576,7 @@ export function QuotationDrawer({
           false,
         );
 
-        console.log("NEXT QUOTATION API RESPONSE:", response?.data);
+      
 
         const generatedQNo = response?.data?.data?.qNo;
 

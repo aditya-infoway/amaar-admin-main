@@ -199,12 +199,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.isAuthenticated]);
 
   // STEP 1: login validate — OTP nahi
-  const login = async (credentials: { email: string; password: string }) => {
+  // const login = async (credentials: { email: string; password: string }) => {
+  const login = async (credentials: {
+    email: string;
+    password: string;
+    role: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     dispatch({ type: "LOGIN_REQUEST" });
     try {
       const response = await Post(
         "superadmin/login",
-        { email: credentials.email, password: credentials.password },
+        // { email: credentials.email, password: credentials.password },
+        {
+          email: credentials.email,
+          password: credentials.password,
+          role: credentials.role,
+          latitude: credentials.latitude,
+          longitude: credentials.longitude,
+        },
         false,
       );
       const result = response.data;
@@ -214,22 +228,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // ✅ CHANGE #2 — companyId/companyName bhi destructure kiya
-      const { token, email, companyId, companyName } = result.data;
+      // const { token, email, companyId, companyName } = result.data;
 
-      window.localStorage.setItem(PENDING_TOKEN_KEY, token);
-      window.localStorage.setItem(PENDING_EMAIL_KEY, email);
-      setSession(token); // axios Authorization header set karega
+      // window.localStorage.setItem(PENDING_TOKEN_KEY, token);
+      // window.localStorage.setItem(PENDING_EMAIL_KEY, email);
+      // setSession(token); // axios Authorization header set karega
+
+      // toastsuccessmsg(result.message);
+
+      // dispatch({
+      //   type: "LOGIN_SUCCESS",
+      //   payload: {
+      //     pendingToken: token,
+      //     pendingEmail: email,
+      //     user: { companyId, companyName, email } as unknown as User,
+      //   },
+      // });
+
+      const data = result.data; // { role, token, email, companyId, companyName? | employeeId?, employeeName? }
+
+      if (data.role === "Super Admin") {
+        window.localStorage.setItem(PENDING_TOKEN_KEY, data.token);
+        window.localStorage.setItem(PENDING_EMAIL_KEY, data.email);
+        setSession(data.token);
+        dispatch({
+          type: "LOGIN_SUCCESS",
+          payload: {
+            pendingToken: data.token,
+            pendingEmail: data.email,
+            user: {
+              companyId: data.companyId,
+              companyName: data.companyName,
+              email: data.email,
+            } as unknown as User,
+          },
+        });
+      }
+      // Employee (and later Branch/Warehouse): this app is just the entry gate,
+      // no local session needed — SignIn.tsx redirects out using the returned token.
 
       toastsuccessmsg(result.message);
-
-      dispatch({
-        type: "LOGIN_SUCCESS",
-        payload: {
-          pendingToken: token,
-          pendingEmail: email,
-          user: { companyId, companyName, email } as unknown as User,
-        },
-      });
+      return data;
     } catch (err: any) {
       const message =
         err?.response?.data?.message || err.message || "Login failed";

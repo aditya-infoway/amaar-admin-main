@@ -41,13 +41,10 @@ const downloadFile = async (
       ? relativePath
       : `${ApiUrl.localurl}${relativePath.replace(/^\/+/, "")}`;
 
-    console.log("========== FILE DOWNLOAD ==========");
-    console.log("Path:", relativePath);
-    console.log("URL:", url);
+   
 
     const response = await fetch(url);
 
-    console.log("Status:", response.status);
     console.log(
       "Content-Type:",
       response.headers.get("content-type"),
@@ -63,8 +60,7 @@ const downloadFile = async (
 
     const blob = await response.blob();
 
-    console.log("Blob Type:", blob.type);
-    console.log("Blob Size:", blob.size);
+   
 
     // Detect extension
     let ext = "";

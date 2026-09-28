@@ -9,12 +9,14 @@ export interface AuthContextType {
   user: User | null;
   pendingToken: string | null;
   pendingEmail: string | null;
-  login: (credentials: { email: string; password: string }) => Promise<void>;
+  // login: (credentials: { email: string; password: string }) => Promise<void>;
+ login: (credentials: { email: string; password: string; role: string; latitude?: number; longitude?: number }) => Promise<any>;
   completeAuth: (companyId: string) => void;
   logout: () => Promise<void>;
 }
 
 export const AuthProvider = createContext<AuthContextType | null>(null);
+
 
 export const useAuthContext = () => {
   const context = useContext(AuthProvider);

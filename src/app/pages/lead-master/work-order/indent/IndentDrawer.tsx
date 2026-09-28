@@ -1,5 +1,4 @@
 import { XMarkIcon } from "@heroicons/react/24/solid";
-import { Transition } from "@headlessui/react"; // optional – remove if you don't use headlessui
 
 type IndentItem = {
   id?: string | number;
@@ -48,26 +47,27 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`fixed inset-0 z-40 bg-gray-900/50 opacity-0 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={close}
       />
 
       {/* Right Side Drawer */}
       <div
-        className={`fixed inset-y-0 right-0 z-40 flex w-full max-w-4xl transform flex-col bg-white text-gray-900 shadow-xl transition-transform duration-300 ease-in-out dark:bg-dark-750 dark:text-gray-100 ${
+        className={`dark:bg-dark-750 fixed inset-y-0 right-0 z-40 flex w-full max-w-4xl transform flex-col bg-white text-gray-900 shadow-xl transition-transform duration-300 ease-in-out dark:text-gray-100 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-dark-600 bg-primary-600">
-          <h2 className="text-lg font-semibold">
+        <div className="dark:border-dark-600 bg-primary-600 flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h2 className="text-lg font-semibold text-white">
             Indent Details – {indent.indentNo || "-"}
           </h2>
           <button
             type="button"
             onClick={close}
-            className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:text-muted-foreground dark:hover:bg-dark-600 cursor-pointer"
+            className="hover:text-primary-600 dark:text-muted-foreground dark:hover:bg-dark-600 cursor-pointer rounded-md p-2 text-white hover:bg-white"
             aria-label="Close"
           >
             <XMarkIcon className="size-5 dark:text-white" />
@@ -77,23 +77,21 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Summary Info */}
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+          <div className="mb-6 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
             <div>
-              <span className="text-gray-500 dark:text-muted-foreground">
+              <span className="dark:text-muted-foreground text-gray-500">
                 Work Order ID:
               </span>{" "}
-              <strong>
-                {indent.workOrderNo || indent.workOrderId || "-"}
-              </strong>
+              <strong>{indent.workOrderNo || indent.workOrderId || "-"}</strong>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-muted-foreground">
+              <span className="dark:text-muted-foreground text-gray-500">
                 Model Name:
               </span>{" "}
               <strong>{indent.modelName || "-"}</strong>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-muted-foreground">
+              <span className="dark:text-muted-foreground text-gray-500">
                 Date:
               </span>{" "}
               <strong>{formatDate(indent.date)}</strong>
@@ -101,10 +99,10 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
           </div>
 
           {/* Items Table */}
-          <div className="rounded-md border border-gray-200 overflow-hidden dark:border-dark-600">
+          <div className="dark:border-dark-600 overflow-hidden rounded-md border border-gray-200">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 whitespace-nowrap dark:bg-dark-700">
-                <tr className="border-b border-gray-200 text-left dark:border-dark-600">
+              <thead className="dark:bg-dark-700 bg-gray-50 whitespace-nowrap">
+                <tr className="dark:border-dark-600 border-b border-gray-200 text-left">
                   <th className="w-12 p-3">Sr. No.</th>
                   <th className="p-3">Item Code</th>
                   <th className="p-3">Item Name</th>
@@ -119,7 +117,7 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
                   <tr>
                     <td
                       colSpan={7}
-                      className="h-24 text-center text-gray-500 dark:text-muted-foreground"
+                      className="dark:text-muted-foreground h-24 text-center text-gray-500"
                     >
                       No items found
                     </td>
@@ -128,7 +126,7 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
                   items.map((item, index) => (
                     <tr
                       key={item.id || index}
-                      className="border-b border-gray-200 last:border-0 dark:border-dark-600"
+                      className="dark:border-dark-600 border-b border-gray-200 last:border-0"
                     >
                       <td className="p-3">{index + 1}</td>
                       <td className="p-3 font-medium">

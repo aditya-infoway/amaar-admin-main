@@ -15,6 +15,8 @@
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "^1.1.0",
     "@babel/eslint-parser": "^7.28.5",
     "@babel/plugin-syntax-jsx": "^7.27.1",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@formkit/auto-animate": "^0.9.0",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
@@ -81,6 +83,7 @@
     "yup": "^1.7.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@eslint/js": "^9.39.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^25.0.3",

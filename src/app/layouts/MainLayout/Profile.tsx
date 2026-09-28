@@ -7,10 +7,9 @@ import {
 } from "@headlessui/react";
 import {
   ArrowLeftStartOnRectangleIcon,
-  ChatBubbleLeftIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
-import { TbCoins, TbUser, TbUsersGroup } from "react-icons/tb";
+import { TbUser } from "react-icons/tb";
 import { Link } from "react-router";
 
 // Local Imports

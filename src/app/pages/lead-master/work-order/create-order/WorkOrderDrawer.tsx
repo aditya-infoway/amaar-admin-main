@@ -182,12 +182,10 @@ const fetchNextWorkOrderNo = async () => {
       false,
     );
 
-    console.log("Work Order Number API Response:", response);
-
     const workOrderNumber =
       response?.data?.data?.workOrderNo;
 
-    console.log("Generated Work Order Number:", workOrderNumber);
+
 
     if (
       response?.data?.success ||

@@ -119,7 +119,7 @@ export default function CreateOrderPage() {
         false,
       );
 
-      console.log("Contractor Managers API:", response.data);
+     
 
       if (response.data?.success) {
         setContractorManagers(response.data.data || []);
@@ -153,7 +153,6 @@ export default function CreateOrderPage() {
         false,
       );
 
-      console.log("Assign Work Order response:", response);
 
       if (response?.data?.success || response?.data?.status === 200) {
         toastsuccessmsg(
