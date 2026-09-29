@@ -4,12 +4,14 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
+import { PaperClipIcon } from "@heroicons/react/24/solid";
+import { Download } from "lucide-react";
 import { Page } from "@/components/shared/Page";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
 import { drCrOptions } from "../../shared/constants";
 import { DatePicker } from "@/components/shared/form/Datepicker";
-import { Get, Post, Put, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import { Get, Post, Put, URL, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import {
   Country,
@@ -27,8 +29,8 @@ const groupApi = {
 };
 
 const accountApi = {
-  create: (payload: Record<string, any>) => Post("master/account/create", payload, false),
-  update: (payload: Record<string, any>) => Put("master/account/update", payload, false),
+  create: (payload: FormData) => Post("master/account/create", payload, true),
+  update: (payload: FormData) => Put("master/account/update", payload, true),
   getById: (id: string) => Get(`master/account/${id}`, {}, false),
 };
 // -----------------------------------------------------------------------------------
@@ -41,6 +43,32 @@ interface GroupItem {
   groupName: string;
   role: string;
 }
+
+// ---------------- KYC (Aadhar / PAN / GST) — same pattern as Sales Order ----------------
+type KycKey = "aadhar" | "pan" | "gst";
+
+interface KycState {
+  number: string;
+  file: File | null;
+  // edit mode me backend se already-uploaded file ka url aa sakta hai
+  existingUrl?: string;
+}
+
+const emptyKyc = (): KycState => ({ number: "", file: null, existingUrl: "" });
+
+const getFileUrl = (path?: string) => {
+  if (!path) return "";
+
+  return /^https?:\/\//i.test(path)
+    ? path
+    : `${URL.localurl}${path.replace(/^\/+/, "")}`;
+};
+
+const kycKeyToFileField: Record<KycKey, string> = {
+  aadhar: "aadharImage",
+  pan: "panImage",
+  gst: "gstImage",
+};
 
 // NOTE: countryId / stateId / stateCode hata diye — sirf NAME store hoga
 interface AccountFormValues {
@@ -165,6 +193,14 @@ export function AccountForm() {
   const [selectedCountryIso, setSelectedCountryIso] = useState<string>("");
   const [selectedStateIso, setSelectedStateIso] = useState<string>("");
 
+  // ---- KYC (Aadhar / PAN / GST) — number RHF me, file + existingUrl local state me ----
+  const [kyc, setKyc] = useState<Record<KycKey, KycState>>({
+    aadhar: emptyKyc(),
+    pan: emptyKyc(),
+    gst: emptyKyc(),
+  });
+  const [kycErrors, setKycErrors] = useState<Partial<Record<KycKey, string>>>({});
+
   const groupListOptions = groupList.map((g) => ({
     id: String(g.id),
     label: g.groupName,
@@ -190,6 +226,9 @@ export function AccountForm() {
 });
 
   const accountNameValue = watch("accountName");
+  const gstNoValue = watch("gstNo");
+  const panCardValue = watch("panCard");
+  const aadharCardNoValue = watch("aadharCardNo");
 
   // Print Name = Account Name (auto-fill, readonly)
   useEffect(() => {
@@ -270,6 +309,25 @@ export function AccountForm() {
             status: account.status || "active",
           });
 
+          // KYC existing files (agar backend se aaye hain)
+          setKyc({
+            aadhar: {
+              number: account.aadharCardNo || "",
+              file: null,
+              existingUrl: account.aadharImage || "",
+            },
+            pan: {
+              number: account.panCard || "",
+              file: null,
+              existingUrl: account.panImage || "",
+            },
+            gst: {
+              number: account.gstNo || "",
+              file: null,
+              existingUrl: account.gstImage || "",
+            },
+          });
+
           // Sirf dropdown cascading ke liye — naam se ISO dhoond lo (best effort)
           const foundCountry = countryList.find((c) => c.name === account.countryName);
           if (foundCountry) {
@@ -290,6 +348,19 @@ export function AccountForm() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isEdit, reset, countryList]);
+
+  // Keep kyc.number in sync whenever the RHF text value changes (typing)
+  useEffect(() => {
+    setKyc((prev) => ({ ...prev, aadhar: { ...prev.aadhar, number: aadharCardNoValue || "" } }));
+  }, [aadharCardNoValue]);
+
+  useEffect(() => {
+    setKyc((prev) => ({ ...prev, pan: { ...prev.pan, number: panCardValue || "" } }));
+  }, [panCardValue]);
+
+  useEffect(() => {
+    setKyc((prev) => ({ ...prev, gst: { ...prev.gst, number: gstNoValue || "" } }));
+  }, [gstNoValue]);
 
   const handleVerifyGst = () => {
     console.log("Verify GST clicked");
@@ -318,30 +389,73 @@ export function AccountForm() {
     return fallback;
   };
 
+  const updateKycFile = (key: KycKey, file: File | null) => {
+    setKyc((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], file },
+    }));
+    setKycErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
+  // Same condition as Sales Order: number diya hai lekin koi image (new ya existing) nahi -> error
+  const validateKyc = (): boolean => {
+    const nextErrors: Partial<Record<KycKey, string>> = {};
+
+    (Object.keys(kyc) as KycKey[]).forEach((key) => {
+      const entry = kyc[key];
+      if (entry.number.trim() && !entry.file && !entry.existingUrl) {
+        const label = key === "aadhar" ? "Aadhar" : key === "pan" ? "PAN" : "GST";
+        nextErrors[key] = `Upload ${label} card image`;
+      }
+    });
+
+    setKycErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
   const onSubmit = async (data: AccountFormValues) => {
+    if (!validateKyc()) return;
+
     try {
       setSubmitting(true);
 
       const financialYearId = localStorage.getItem("financialYearId");
 
+      const formData = new FormData();
+
       // countryId / stateId / stateCode kabhi bhi payload me nahi jaate — sirf naam
-      const payload = {
-        ...data,
-        groupId: Number(data.groupId),
-        birthdayOn: formatDateForApi(data.birthdayOn),
-        anniversary: formatDateForApi(data.anniversary),
-        financialYearId: financialYearId ? Number(financialYearId) : undefined,
-      };
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === "birthdayOn" || key === "anniversary") return;
+        formData.append(key, value === undefined || value === null ? "" : String(value));
+      });
+
+      formData.append("birthdayOn", formatDateForApi(data.birthdayOn) || "");
+      formData.append("anniversary", formatDateForApi(data.anniversary) || "");
+
+      if (financialYearId) {
+        formData.append("financialYearId", financialYearId);
+      }
 
       if (isEdit && id) {
-        const res = await accountApi.update({ accountId: Number(id), ...payload });
+        formData.append("accountId", String(id));
+      }
+
+      (Object.keys(kyc) as KycKey[]).forEach((key) => {
+        const entry = kyc[key];
+        if (entry.file) {
+          formData.append(kycKeyToFileField[key], entry.file);
+        }
+      });
+
+      if (isEdit && id) {
+        const res = await accountApi.update(formData);
         if (res?.data?.status === 400 || res?.data?.success === false) {
           toasterrormsg(extractErrorMessage(res, "Something went wrong."));
           return;
         }
         toastsuccessmsg(extractErrorMessage(res, "Account updated successfully"));
       } else {
-        const res = await accountApi.create(payload);
+        const res = await accountApi.create(formData);
         if (res?.data?.status === 400 || res?.data?.success === false) {
           toasterrormsg(extractErrorMessage(res, "Something went wrong."));
           return;
@@ -357,6 +471,89 @@ export function AccountForm() {
     }
   };
 
+  // ---- KYC field renderer — same design/condition as Sales Order drawer ----
+  // registerName: RHF field for the number; showVerify: GST ke liye Verify button
+  const renderKycField = (
+    key: KycKey,
+    label: string,
+    registerName: "gstNo" | "panCard" | "aadharCardNo",
+    fieldError?: string,
+    showVerify?: boolean,
+  ) => {
+    const entry = kyc[key];
+
+    return (
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+          {label}
+        </label>
+
+        <div className="flex items-stretch">
+          {/* Number Input */}
+          <div className="relative w-[68%]">
+            <input
+              {...register(registerName)}
+              type="text"
+              placeholder={`Enter ${label}`}
+              className={`focus:border-primary dark:bg-dark-800 w-full rounded-l-lg rounded-r-none border border-gray-300 px-3 py-2 text-sm outline-none dark:border-gray-600 ${
+                showVerify ? "pr-16" : ""
+              }`}
+            />
+            {showVerify && (
+              <Button
+                type="button"
+                color="success"
+                onClick={handleVerifyGst}
+                className="absolute right-1 top-1/2 h-auto -translate-y-1/2 px-2 py-1 text-xs font-medium"
+              >
+                Verify
+              </Button>
+            )}
+          </div>
+
+          {/* Upload / Change / Replace */}
+          <label className="border-primary bg-primary/5 text-primary flex w-[32%] cursor-pointer items-center justify-center gap-1 rounded-l-none rounded-r-lg border border-l-0 border-dashed px-2 py-2 text-center text-xs">
+            <PaperClipIcon className="size-4" />
+            {entry.file ? "Change" : entry.existingUrl ? "Replace" : "Upload"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => updateKycFile(key, e.target.files?.[0] || null)}
+            />
+          </label>
+        </div>
+
+        {/* RHF pattern/format error (e.g. invalid PAN format) */}
+        {fieldError && <p className="mt-1 text-xs text-red-600">{fieldError}</p>}
+
+        {/* Selected filename */}
+        {entry.file && (
+          <p className="mt-1 truncate text-xs text-green-600">{entry.file.name}</p>
+        )}
+
+        {/* Existing image preview */}
+        {entry.existingUrl && !entry.file && (
+          <div className="mt-2">
+            <img
+              src={getFileUrl(entry.existingUrl)}
+              alt={`${label} image`}
+              className="max-h-48 w-auto rounded-lg border border-gray-200 object-contain dark:border-gray-600"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        )}
+
+        {/* Upload-required error — same condition as Sales Order */}
+        {kycErrors[key] && (
+          <p className="mt-1 text-xs text-red-600">{kycErrors[key]}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Page title={isEdit ? "Edit Account" : "Create Account"}>
       <div className="transition-content w-full pb-5">
@@ -364,7 +561,7 @@ export function AccountForm() {
           <h1 className="text-2xl font-bold text-primary underline underline-offset-4">
             {isEdit ? "Edit Account" : "Create Account"}
           </h1>
-          <Button type="button" onClick={() => navigate("/user-master/accounts")} className="gap-1.5">
+          <Button type="button" onClick={() => navigate("/user-master/accounts")}  className="bg-primary-500 hover:bg-primary-600 flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors">
             <ArrowLeftIcon className="size-4" />
             Back
           </Button>
@@ -681,38 +878,15 @@ export function AccountForm() {
                 error={errors.branchName?.message}
               />
 
-              <div className="relative">
-                <Input
-                  {...register("gstNo")}
-                  label="GST No."
-                  placeholder="GST Number"
-                  error={errors.gstNo?.message}
-                  className="pr-16"
-                />
-                <Button
-                  type="button"
-                  color="success"
-                  onClick={handleVerifyGst}
-                  className="absolute right-1 top-7 h-auto px-2 py-1 mt-1 text-xs font-medium"
-                >
-                  Verify
-                </Button>
-              </div>
+              {/* GST No. — KYC style: input + Verify + Upload */}
+              {renderKycField("gst", "GST No.", "gstNo", errors.gstNo?.message,)}
 
-              <Input
-                {...register("panCard")}
-                label="PAN Card"
-                placeholder="PAN Card Number"
-                error={errors.panCard?.message}
-              />
+              {/* PAN Card — KYC style: input + Upload */}
+              {renderKycField("pan", "PAN Card", "panCard", errors.panCard?.message)}
 
+              {/* Aadhar Card No — KYC style: input + Upload */}
               <div className="sm:col-span-2">
-                <Input
-                  {...register("aadharCardNo")}
-                  label="Aadhar Card No"
-                  placeholder="Aadhar Number"
-                  error={errors.aadharCardNo?.message}
-                />
+                {renderKycField("aadhar", "Aadhar Card No", "aadharCardNo", errors.aadharCardNo?.message)}
               </div>
             </div>
           </div>
