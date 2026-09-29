@@ -1,0 +1,1 @@
+import{u as o,j as e,T as a,d as s}from"./index-No8PGf7E.js";function r(){const{isDark:i,notification:t}=o();return e.jsx(a,{theme:i?"dark":"light",offset:"16px",position:"top-right",expand:t?.isExpanded||s?.notification?.isExpanded,visibleToasts:t?.visibleToasts||s?.notification?.visibleToasts,richColors:!0})}export{r as default};

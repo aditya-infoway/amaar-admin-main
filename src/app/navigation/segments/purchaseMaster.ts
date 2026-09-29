@@ -25,5 +25,13 @@ export const purchaseMaster: NavigationTree = {
       title: "Purchase GRR",
       icon: "purchase_master.purchaseGrr",
     },
+    
+               {
+      id: "purchase_master.purchaseqc",
+      type: "item",
+      path: "/purchase-master/purchase-qc",
+      title: "Purchase QC",
+      icon: "purchase_master.purchaseGrr",
+    },
   ],
 };

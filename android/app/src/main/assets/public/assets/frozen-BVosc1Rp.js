@@ -1,0 +1,1 @@
+import{r as l,R as o}from"./index-No8PGf7E.js";function a({children:r,freeze:e},n){let t=c(e,r);return l.isValidElement(t)?l.cloneElement(t,{ref:n}):o.createElement(o.Fragment,null,t)}const s=o.forwardRef(a);function c(r,e){let[n,t]=l.useState(e);return!r&&n!==e&&t(e),r?n:e}export{s,c as u};
