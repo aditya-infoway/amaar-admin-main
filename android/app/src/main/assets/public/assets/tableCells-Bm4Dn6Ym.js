@@ -1,0 +1,1 @@
+import{j as t}from"./index-No8PGf7E.js";import{H as o}from"./Highlight-BcxsxUX1.js";import{e as l}from"./ensureString-BZUuH07i.js";function x({getValue:r,table:e}){const a=l(e.getState().globalFilter),s=r()||"—";return t.jsx("span",{className:"dark:text-dark-100 text-gray-800",children:t.jsx(o,{query:a,children:s})})}export{x as T};
