@@ -5,20 +5,12 @@ import {
   Transition,
   TransitionChild,
 } from "@headlessui/react";
-import { XMarkIcon, PaperClipIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon } from "@heroicons/react/24/solid";
 
-import { Button, Input, Radio } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
-import {
-  URL,
-  Get,
-  Post,
-  Put,
-  toasterrormsg,
-  toastsuccessmsg,
-} from "@/ApiHelper";
+import { Get, Post, Put, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 import type { SalesOrder } from "../shared/types";
-import { Download, ExternalLink } from "lucide-react";
 
 interface SalesOrderDrawerProps {
   isOpen: boolean;
@@ -44,25 +36,18 @@ interface QuotationOption {
   label: string;
 }
 
-// One doc = one optional field + its own conditional upload
-type KycKey = "aadhar" | "pan" | "gst";
+// ---------------- Select Party — only Sundry Debtors / Customer group accounts ----------------
+const PARTY_GROUP_NAMES = ["sundry debtors", "customer"];
 
-interface KycState {
-  number: string;
-  file: File | null;
-  // when editing, backend may already have an uploaded file url
-  existingUrl?: string;
+interface PartyOption {
+  id: string;
+  label: string;
+  accountName: string;
+  mobileNo?: string;
+  email?: string;
+  addressLine1?: string;
+  cityName?: string;
 }
-
-const emptyKyc = (): KycState => ({ number: "", file: null, existingUrl: "" });
-
-const getFileUrl = (path?: string) => {
-  if (!path) return "";
-
-  return /^https?:\/\//i.test(path)
-    ? path
-    : `${URL.localurl}${path.replace(/^\/+/, "")}`;
-};
 
 export function SalesOrderDrawer({
   isOpen,
@@ -84,12 +69,12 @@ export function SalesOrderDrawer({
     [],
   );
 
-  // "asIs" = bottom detail fields mirror the quotation, "manual" = user fills them in
-  const [mode, setMode] = useState<"asIs" | "manual">("asIs");
+  // ---- Select Party — replaces the earlier "Details Mode" (As Its / Manual) toggle ----
+  const [partyOptions, setPartyOptions] = useState<PartyOption[]>([]);
+  const [selectedParty, setSelectedParty] = useState<PartyOption[]>([]);
 
   // ---- TOP BLOCK: read-only snapshot of the selected quotation ----
   // Set ONLY when a quotation is selected (or on edit-prefill).
-  // Never touched by the As Its / Manual toggle.
   const [leadCode, setLeadCode] = useState(""); // renamed from leadId
   const [city, setCity] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -100,8 +85,7 @@ export function SalesOrderDrawer({
   const [remark, setRemark] = useState("");
 
   // ---- BOTTOM BLOCK: editable details, actually submitted ----
-  // In "As Its" mode these mirror the quotation. In "Manual" mode
-  // they start blank and the user fills them in.
+  // Auto-filled from the selected Party, but always editable afterwards.
   const [detailCustomerName, setDetailCustomerName] = useState("");
   const [detailMobile, setDetailMobile] = useState("");
   const [detailEmail, setDetailEmail] = useState("");
@@ -109,13 +93,6 @@ export function SalesOrderDrawer({
   const [detailCity, setDetailCity] = useState("");
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [qty, setQty] = useState("1");
-
-  // KYC — each doc independent, upload only appears once its number is typed
-  const [kyc, setKyc] = useState<Record<KycKey, KycState>>({
-    aadhar: emptyKyc(),
-    pan: emptyKyc(),
-    gst: emptyKyc(),
-  });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -210,6 +187,52 @@ export function SalesOrderDrawer({
 
     fetchQuotations();
   }, [isOpen]);
+
+  // Fetch Parties (accounts) — only Sundry Debtors / Customer group
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchParties = async () => {
+      try {
+        const response = await Get("master/account/list", {}, false);
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          const list = response.data.data || response.data || [];
+
+          const filtered = list.filter((acc: any) => {
+            const groupName = (
+              acc.groupName ||
+              acc.group?.groupName ||
+              acc.Group?.groupName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+
+            return PARTY_GROUP_NAMES.some((g) => groupName.includes(g));
+          });
+
+          setPartyOptions(
+            filtered.map((acc: any) => ({
+              id: String(acc.id ?? acc.accountId),
+              label: acc.accountName,
+              accountName: acc.accountName,
+              mobileNo: acc.mobileNo || acc.mobile || "",
+              email: acc.email || "",
+              addressLine1: acc.addressLine1 || acc.address || "",
+              cityName: acc.cityName || acc.city || "",
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("Party list error:", error);
+        toasterrormsg("Unable to load parties.");
+      }
+    };
+
+    fetchParties();
+  }, [isOpen]);
+
   // Fetch sales orders to know which quotations are already used
   useEffect(() => {
     if (!isOpen) return;
@@ -253,9 +276,9 @@ export function SalesOrderDrawer({
 
     return quotationOptions.filter((q) => !usedQuotationIds.has(String(q.id)));
   }, [quotationOptions, usedQuotationIds, selectedQuotation, isEditing]);
-  // Auto-fill Lead ID / City / customer block whenever a quotation is picked.
-  // TOP block always mirrors the quotation, regardless of mode.
-  // BOTTOM (detail) block only mirrors it when mode === "asIs".
+
+  // Auto-fill Lead ID / City / Model / Remark / Price whenever a quotation is picked.
+  // TOP block always mirrors the quotation, regardless of Party selection.
   useEffect(() => {
     const q = selectedQuotation?.[0];
 
@@ -270,12 +293,6 @@ export function SalesOrderDrawer({
         setAddress("");
         setModel("");
         setRemark("");
-
-        setDetailCustomerName("");
-        setDetailMobile("");
-        setDetailEmail("");
-        setDetailAddress("");
-        setDetailCity("");
 
         setQty("1");
         setQuotationAmount(0);
@@ -292,77 +309,69 @@ export function SalesOrderDrawer({
       setModel(q.model || "");
       setRemark(q.remark || "");
 
-      // BOTTOM — only auto-fill in "As Its" mode.
-      if (mode === "asIs") {
-        setDetailCustomerName(q.customerName || "");
-        setDetailMobile(q.mobile || "");
-        setDetailEmail(q.email || "");
-        setDetailAddress(q.address || "");
-        setDetailCity(q.city || "");
-        setQty("1");
-        setQuotationAmount(Number(q.finalPrice) || 0);
-      }
+      setQty("1");
+      setQuotationAmount(Number(q.finalPrice) || 0);
     });
   }, [selectedQuotation]);
 
-  // Prefill on edit / reset on add
-  // Prefill on edit / reset on add
+  // Auto-fill the BOTTOM (editable) block whenever a Party is selected.
+  // Fields stay editable afterwards — this is just a convenient prefill.
   useEffect(() => {
-    if (!isOpen) return;
+    const p = selectedParty?.[0];
+
+    if (!p) return;
 
     queueMicrotask(() => {
-      if (salesOrder && salesOrder.id) {
-        setSoNo((salesOrder as any).soNo || "");
-        const q = quotationOptions.find(
-          (item) => String(item.id) === String((salesOrder as any).quotationId),
-        );
-        setSelectedQuotation(q ? [q] : []);
-        setMode(((salesOrder as any).mode as "asIs" | "manual") || "asIs");
-
-        setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
-        setCity(q?.city || (salesOrder as any).city || "");
-        setCustomerName(
-          q?.customerName || (salesOrder as any).customerName || "",
-        );
-        setMobile(q?.mobile || (salesOrder as any).mobile || "");
-        setEmail(q?.email || (salesOrder as any).email || "");
-        setAddress(q?.address || (salesOrder as any).address || "");
-        setModel(q?.model || (salesOrder as any).model || "");
-        setRemark(q?.remark || (salesOrder as any).remark || "");
-
-        setDetailCustomerName((salesOrder as any).customerName || "");
-        setDetailMobile((salesOrder as any).mobile || "");
-        setDetailEmail((salesOrder as any).email || "");
-        setDetailAddress((salesOrder as any).address || "");
-        setDetailCity((salesOrder as any).city || "");
-
-        setQty(String((salesOrder as any).qty ?? "1"));
-        setKyc({
-          aadhar: {
-            number: (salesOrder as any).aadharNumber || "",
-            file: null,
-            existingUrl: (salesOrder as any).aadharImage || "",
-          },
-          pan: {
-            number: (salesOrder as any).panNumber || "",
-            file: null,
-            existingUrl: (salesOrder as any).panImage || "",
-          },
-          gst: {
-            number: (salesOrder as any).gstNumber || "",
-            file: null,
-            existingUrl: (salesOrder as any).gstImage || "",
-          },
-        });
-      }
-      // NOTE: no "else" branch here anymore — the reset-for-add-mode
-      // now happens only once per drawer open, in the effect below.
-
-      setErrors({});
+      setDetailCustomerName(p.accountName || "");
+      setDetailMobile(p.mobileNo || "");
+      setDetailEmail(p.email || "");
+      setDetailAddress(p.addressLine1 || "");
+      setDetailCity(p.cityName || "");
     });
-  }, [salesOrder, quotationOptions]); // isOpen removed from here on purpose, see below
+  }, [selectedParty]);
 
-  // Reset form for "Add" mode — runs once per drawer open, not on every quotationOptions change
+  // Prefill on edit / reset on add
+ useEffect(() => {
+  if (!isOpen) return;
+
+  queueMicrotask(() => {
+    if (salesOrder && salesOrder.id) {
+      setSoNo((salesOrder as any).soNo || "");
+      const q = quotationOptions.find(
+        (item) => String(item.id) === String((salesOrder as any).quotationId),
+      );
+      setSelectedQuotation(q ? [q] : []);
+
+      const p = partyOptions.find(
+        (item) => String(item.id) === String((salesOrder as any).accountId),
+      );
+      setSelectedParty(p ? [p] : []);
+
+      setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
+      setCity(q?.city || (salesOrder as any).city || "");
+      setCustomerName(
+        q?.customerName || (salesOrder as any).customerName || "",
+      );
+      setMobile(q?.mobile || (salesOrder as any).mobile || "");
+      setEmail(q?.email || (salesOrder as any).email || "");
+      setAddress(q?.address || (salesOrder as any).address || "");
+      setModel(q?.model || (salesOrder as any).model || "");
+      setRemark(q?.remark || (salesOrder as any).remark || "");
+
+      setDetailCustomerName((salesOrder as any).customerName || "");
+      setDetailMobile((salesOrder as any).mobile || "");
+      setDetailEmail((salesOrder as any).email || "");
+      setDetailAddress((salesOrder as any).address || "");
+      setDetailCity((salesOrder as any).city || "");
+
+      setQty(String((salesOrder as any).qty ?? "1"));
+    }
+
+    setErrors({});
+  });
+}, [salesOrder, quotationOptions, partyOptions]); // isOpen removed from here on purpose, see below
+
+  // Reset form for "Add" mode — runs once per drawer open, not on every list change
   useEffect(() => {
     if (!isOpen) return;
     if (salesOrder && salesOrder.id) return; // editing — handled by the effect above
@@ -370,9 +379,8 @@ export function SalesOrderDrawer({
     queueMicrotask(() => {
       setSoNo("");
       setSelectedQuotation([]);
-      setMode("asIs");
+      setSelectedParty([]);
       setQty("1");
-      setKyc({ aadhar: emptyKyc(), pan: emptyKyc(), gst: emptyKyc() });
       setErrors({});
     });
   }, [isOpen]); // ← only isOpen, nothing else
@@ -409,32 +417,10 @@ export function SalesOrderDrawer({
     fetchNextSoNo();
   }, [isOpen, isEditing]);
 
-  const updateKycNumber = (key: KycKey, value: string) => {
-    setKyc((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], number: value },
-    }));
-  };
-
-  const updateKycFile = (key: KycKey, file: File | null) => {
-    setKyc((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], file },
-    }));
-  };
-
   const validate = () => {
     const nextErrors: Record<string, string> = {};
 
     if (!selectedQuotation?.[0]) nextErrors.quotation = "Select a Quotation";
-
-    // Any KYC field that has text but no image (new or existing) is incomplete
-    (Object.keys(kyc) as KycKey[]).forEach((key) => {
-      const entry = kyc[key];
-      if (entry.number.trim() && !entry.file && !entry.existingUrl) {
-        nextErrors[key] = `Upload ${key.toUpperCase()} card image`;
-      }
-    });
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -444,6 +430,7 @@ export function SalesOrderDrawer({
     if (!validate()) return;
 
     const q = selectedQuotation?.[0];
+    const p = selectedParty?.[0];
     const financialYearId = localStorage.getItem("financialYearId");
 
     if (!financialYearId) {
@@ -451,38 +438,23 @@ export function SalesOrderDrawer({
       return;
     }
 
-    // FormData because Aadhar/PAN/GST images are optional file uploads
-    const formData = new FormData();
-    formData.append("financialYearId", financialYearId);
-    formData.append("quotationId", String(q?.id ?? ""));
-    formData.append("leadId", String(q?.leadId ?? ""));
-    formData.append("mode", mode);
-
-    // Actual saved contact info comes from the editable (bottom) fields
-    formData.append("customerName", detailCustomerName);
-    formData.append("mobile", detailMobile);
-    formData.append("email", detailEmail || "");
-    formData.append("address", detailAddress || "");
-    formData.append("city", detailCity || "");
-
-    formData.append("model", model || "");
-    formData.append("remark", remark || "");
-    formData.append("qty", qty);
-    formData.append("unitPrice", String(quotationAmount));
-    formData.append("totalAmount", String(totalAmount));
-
-    formData.append("aadharNumber", kyc.aadhar.number);
-    formData.append("panNumber", kyc.pan.number);
-    formData.append("gstNumber", kyc.gst.number);
-    if (kyc.aadhar.file) formData.append("aadharImage", kyc.aadhar.file);
-    if (kyc.pan.file) formData.append("panImage", kyc.pan.file);
-    if (kyc.gst.file) formData.append("gstImage", kyc.gst.file);
+  const payload = {
+  financialYearId: Number(financialYearId),
+  quotationId: q?.id ?? "",
+  leadId: q?.leadId ?? "",
+  accountId: p?.id ? Number(p.id) : null,
+  model: model || "",
+  remark: remark || "",
+  qty,
+  unitPrice: quotationAmount,
+  totalAmount,
+};
 
     try {
       const response =
         isEditing && salesOrder?.id
-          ? await Put(`salesorder/${salesOrder.id}`, formData, true)
-          : await Post("salesorder/create", formData, true);
+          ? await Put(`salesorder/${salesOrder.id}`, payload, false)
+          : await Post("salesorder/create", payload, false);
 
       const responseData = response?.data;
 
@@ -508,108 +480,6 @@ export function SalesOrderDrawer({
           "Something went wrong while saving sales order.",
       );
     }
-  };
-
-  // Small reusable block: number input + its own conditional upload
-  const renderKycField = (key: KycKey, label: string) => {
-    const entry = kyc[key];
-
-    return (
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-          {label}
-        </label>
-
-        <div className="flex items-stretch">
-          {/* Number Input */}
-          <div className={readOnly ? "w-full" : "w-[68%]"}>
-            <input
-              type="text"
-              placeholder={`Enter ${label}`}
-              value={entry.number}
-              disabled={readOnly}
-              onChange={(e) => updateKycNumber(key, e.target.value)}
-              className="focus:border-primary dark:bg-dark-800 w-full rounded-l-lg rounded-r-none border border-gray-300 px-3 py-2 text-sm outline-none disabled:opacity-60 dark:border-gray-600"
-            />
-          </div>
-
-          {/* Upload or Download */}
-          {!readOnly ? (
-            <label className="border-primary bg-primary/5 text-primary flex w-[32%] cursor-pointer items-center justify-center gap-1 rounded-l-none rounded-r-lg border border-l-0 border-dashed px-2 py-2 text-center text-xs">
-              <PaperClipIcon className="size-4" />
-              {entry.file ? "Change" : entry.existingUrl ? "Replace" : "Upload"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) =>
-                  updateKycFile(key, e.target.files?.[0] || null)
-                }
-              />
-            </label>
-          ) : (
-            entry.existingUrl && (
-              <button
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = entry.existingUrl!;
-                  link.download = `${label}_${entry.number || "document"}.jpg`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="border-primary bg-primary/5 text-primary hover:bg-primary/10 flex w-[32%] cursor-pointer items-center justify-center gap-1 rounded-l-none rounded-r-lg border border-l-0 px-2 py-2 text-center text-xs transition-colors"
-                title="Download"
-              >
-                <Download className="size-4" />
-                Download
-              </button>
-            )
-          )}
-        </div>
-
-        {/* Selected filename */}
-        {entry.file && (
-          <p className="mt-1 truncate text-xs text-green-600">
-            {entry.file.name}
-          </p>
-        )}
-
-        {/* Existing Image - Direct display in view mode */}
-        {entry.existingUrl && !entry.file && (
-          <div className="mt-2">
-            <img
-              src={getFileUrl(entry.existingUrl)}
-              alt={`${label} image`}
-              className="max-h-48 w-auto rounded-lg border border-gray-200 object-contain dark:border-gray-600"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-            {readOnly && (
-              <button
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = getFileUrl(entry.existingUrl);
-                  link.download = `${label}_${entry.number || "document"}.jpg`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs text-blue-600 hover:underline"
-              >
-                <Download className="size-3" />
-                View Image
-              </button>
-            )}
-          </div>
-        )}
-
-        {errors[key] && (
-          <p className="mt-1 text-xs text-red-600">{errors[key]}</p>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -687,10 +557,7 @@ export function SalesOrderDrawer({
                 />
               </div>
 
-              {/* TOP BLOCK — read-only snapshot of the selected quotation.
-    Never changed by the As Its / Manual toggle. */}
-              {/* TOP BLOCK — read-only snapshot of the selected quotation.
-    Never changed by the As Its / Manual toggle. */}
+              {/* TOP BLOCK — read-only snapshot of the selected quotation. */}
               <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
                 <div className="grid grid-cols-1 sm:grid-cols-2">
                   <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
@@ -759,150 +626,28 @@ export function SalesOrderDrawer({
                   </div>
                 </div>
               </div>
-              {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Client Name"
-                  value={customerName}
-                  disabled
-                  onChange={() => {}}
-                />
-                <Input
-                  label="Address"
-                  value={address}
-                  disabled
-                  onChange={() => {}}
-                />
-                <Input
-                  label="Client Number"
-                  value={mobile}
-                  disabled
-                  onChange={() => {}}
-                />
-                <Input
-                  label="Model"
-                  value={model}
-                  disabled
-                  onChange={() => {}}
-                />
-                <Input
-                  label="Email ID"
-                  value={email}
-                  disabled
-                  onChange={() => {}}
-                />
-                <Input
-                  label="Remark"
-                  value={remark}
-                  disabled
-                  onChange={() => {}}
-                />
-              </div> */}
 
-              {/* As Its / Manual */}
+              {/* Select Party — only Sundry Debtors / Customer group accounts.
+                  Replaces the earlier "Details Mode" (As Its / Manual) toggle:
+                  picking a party prefills the editable block below. */}
               <div>
-                <p className="dark:text-dark-100 mb-2 text-sm font-medium text-gray-800">
-                  Details Mode
-                </p>
-
-                <div className="flex gap-5">
-                  <Radio
-                    label="As Its"
-                    checked={mode === "asIs"}
-                    disabled={readOnly}
-                    onChange={() => {
-                      if (readOnly) return;
-                      setMode("asIs");
-
-                      const q = selectedQuotation?.[0];
-                      if (!q) return;
-
-                      // Refill ONLY the bottom (editable) block.
-                      setDetailCustomerName(q.customerName || "");
-                      setDetailMobile(q.mobile || "");
-                      setDetailEmail(q.email || "");
-                      setDetailAddress(q.address || "");
-                      setDetailCity(q.city || "");
-                      setQty("1");
-                      setQuotationAmount(Number(q.finalPrice) || 0);
-                    }}
-                  />
-
-                  <Radio
-                    label="Manual"
-                    checked={mode === "manual"}
-                    disabled={readOnly}
-                    onChange={() => {
-                      if (readOnly) return;
-                      setMode("manual");
-
-                      // ONLY the bottom (editable) block resets.
-                      // Top block (Lead ID, City, Client Name, Address,
-                      // Client Number, Model, Email ID, Remark) stays as-is.
-                      setDetailCustomerName("");
-                      setDetailMobile("");
-                      setDetailEmail("");
-                      setDetailAddress("");
-                      setDetailCity("");
-                      setQty("1");
-                      setQuotationAmount(0);
-                    }}
-                  />
-                </div>
-
-                <p className="mt-2 text-xs text-gray-500">
-                  As Its automatically fills the details below from the
-                  quotation, but you can still edit them.
-                </p>
-              </div>
-
-              {/* BOTTOM BLOCK — editable, actually submitted. Auto-filled from
-                                the quotation in "As Its" mode, blank in "Manual" mode. */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Client Name"
-                  value={detailCustomerName}
-                  disabled={fieldsDisabled}
-                  onChange={(e) => setDetailCustomerName(e.target.value)}
-                />
-                <Input
-                  label="Client Number"
-                  value={detailMobile}
-                  disabled={fieldsDisabled}
-                  onChange={(e) => setDetailMobile(e.target.value)}
-                />
-                <Input
-                  label="Email ID"
-                  value={detailEmail}
-                  disabled={fieldsDisabled}
-                  onChange={(e) => setDetailEmail(e.target.value)}
-                />
-                <Input
-                  label="Address"
-                  value={detailAddress}
-                  disabled={fieldsDisabled}
-                  onChange={(e) => setDetailAddress(e.target.value)}
-                />
-                <Input
-                  label="City"
-                  value={detailCity}
-                  disabled={fieldsDisabled}
-                  onChange={(e) => setDetailCity(e.target.value)}
+                <Combobox
+                  data={partyOptions}
+                  displayField="label"
+                  value={selectedParty[0] ?? null}
+                  onChange={(val: any) =>
+                    setSelectedParty(
+                      val ? (Array.isArray(val) ? val : [val]) : [],
+                    )
+                  }
+                  placeholder="Select Party"
+                  label="Select Party"
+                  searchFields={["label", "accountName"]}
+                  disabled={readOnly}
                 />
               </div>
 
-              {/* KYC */}
-              <div className="dark:border-dark-500 border-t border-dashed border-gray-300 pt-4">
-                <p className="dark:text-dark-100 mb-2 text-sm font-medium text-gray-800">
-                  KYC Details (optional)
-                </p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  {renderKycField("aadhar", "Aadhar Card")}
-                  {renderKycField("pan", "PAN Card")}
-                  {renderKycField("gst", "GST")}
-                </div>
-              </div>
-
-              {/* Model / Qty / Amount + GST note */}
+           
               <div className="dark:border-dark-500 border-t border-dashed border-gray-300 pt-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Input
@@ -936,7 +681,6 @@ export function SalesOrderDrawer({
               </div>
             </div>
 
-            {/* Footer */}
             {/* Footer */}
             <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
               {readOnly ? (
