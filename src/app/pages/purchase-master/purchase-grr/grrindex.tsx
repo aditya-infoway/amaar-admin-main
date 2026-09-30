@@ -2,7 +2,7 @@
 
 // Import Dependencies
 import { useEffect, useMemo, useState, useRef } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useLocation } from "react-router";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import {
@@ -151,6 +151,15 @@ export default function GrrPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isViewMode = Boolean(id);
+
+  const location = useLocation();
+
+  const handleClose = () => {
+    // location.key is "default" when this is the first page of the session
+    if (isViewMode && location.key !== "default") navigate(-1);
+    else navigate("/purchase-master/purchase-grr");
+  };
+
   const { cardSkin } = useThemeContext();
   const [stage, setStage] = useState<Stage>("verify");
   const [selectedPo, setSelectedPo] = useState<PoOption | null>(null);
@@ -161,7 +170,7 @@ export default function GrrPage() {
   const [supplierNumber, setSupplierNumber] = useState("");
   const [orderDate, setOrderDate] = useState("");
   const [requestedDate, setRequestedDate] = useState("");
-  
+
   const [remarks, setRemarks] = useState("");
   const [items, setItems] = useState<GrrItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -288,8 +297,6 @@ export default function GrrPage() {
 
     fetchGrr();
   }, [id, financialYearId]);
-
-
 
   useEffect(() => {
     if (!financialYearId) return;
@@ -656,7 +663,7 @@ export default function GrrPage() {
             <h2 className="dark:text-dark-100 truncate text-base font-medium tracking-wide text-gray-800">
               Item Details
             </h2>
-           {items.length > 0 && !isViewMode && (
+            {items.length > 0 && !isViewMode && (
               <div className="flex items-center gap-2">
                 <Badge
                   variant="soft"
@@ -935,7 +942,7 @@ export default function GrrPage() {
         {/* ───── Bottom Actions ───── */}
         <div className="dark:border-dark-500 mt-5 flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
           <Link to="/purchase-master/purchase-grr">
-            <Button variant="outlined">
+            <Button variant="outlined" onClick={handleClose}>
               {isViewMode ? "Close" : "Cancel"}
             </Button>
           </Link>

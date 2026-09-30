@@ -6,10 +6,31 @@ export const accountingMaster: NavigationTree = {
   childs: [
     {
       id: "accounting_master.debitNote",
-      type: "item",
+      type: "collapse",
       path: "/accounting-master/debit-note",
       title: "Debit Note",
+      transKey: "Debit Note",
       icon: "accounting_master.debitNote",
+      childs: [
+        {
+          id: "accounting_master.vendorNote",
+          type: "item",
+          path: "/accounting-master/debit-note/vendor-note",
+          title: "Vendor Note",
+        },
+        {
+          id: "accounting_master.salespurchasenote",
+          type: "item",
+          path: "/accounting-master/debit-note/sales-purchase",
+          title: "Sales & Purchase Note",
+        },
+        {
+          id: "accounting_master.debitnoteregister",
+          type: "item",
+          path: "/accounting-master/debit-note/debitnote-register",
+          title: "Debit Note Register",
+        },
+      ],
     },
     {
       id: "accounting_master.creditNote",
