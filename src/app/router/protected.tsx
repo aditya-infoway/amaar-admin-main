@@ -430,11 +430,63 @@ const protectedRoutes: RouteObject = {
 
             {
               path: "debit-note",
-              lazy: async () => ({
-                Component: (
-                  await import("@/app/pages/accounting-master/debit-note")
-                ).default,
-              }),
+              children: [
+                {
+                  index: true,
+                  element: (
+                    <Navigate
+                      to="/accounting-master/debit-note/vendor-note"
+                      replace
+                    />
+                  ),
+                },
+
+                {
+                  path: "vendor-note",
+                  children: [
+                    {
+                      index: true,
+                      lazy: async () => ({
+                        Component: (
+                          await import("@/app/pages/accounting-master/debit-note/vendor-note")
+                        ).default,
+                      }),
+                    },
+                    {
+                      path: ":vendorId/:type", // page 2 (type = grr | qc)
+                      lazy: async () => ({
+                        Component: (
+                          await import("@/app/pages/accounting-master/debit-note/vendor-note/vendordocs")
+                        ).default,
+                      }),
+                    },
+                    {
+                      path: "create/:type/:id", // page 3
+                      lazy: async () => ({
+                        Component: (
+                          await import("@/app/pages/accounting-master/debit-note/vendor-note/debitnoteform")
+                        ).default,
+                      }),
+                    },
+                  ],
+                },
+                {
+                  path: "sales-purchase",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/accounting-master/debit-note/sales-purchase")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "debitnote-register",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/accounting-master/debit-note/debitnote-register")
+                    ).default,
+                  }),
+                },
+              ],
             },
 
             {
@@ -627,7 +679,7 @@ const protectedRoutes: RouteObject = {
                     ).default,
                   }),
                 },
-                 {
+                {
                   path: "view/:id",
                   lazy: async () => ({
                     Component: (
@@ -637,14 +689,32 @@ const protectedRoutes: RouteObject = {
                 },
               ],
             },
-             {
+            {
               path: "purchase-qc",
               children: [
                 {
                   index: true,
+                  // LIST
                   lazy: async () => ({
                     Component: (
-                      await import("@/app/pages/purchase-master/purchase-qc")
+                      await import("@/app/pages/purchase-master/purchase-qc/index")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "create",
+                  // CREATE form (GrrPage lives in grrindex.tsx)
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/purchase-qc/qcindex")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "view/:id",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/purchase-qc/qcindex")
                     ).default,
                   }),
                 },

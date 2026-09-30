@@ -35,6 +35,8 @@ const prefixForOptions = [
   { id: "WORK ORDER", label: "WORK ORDER" },
   { id: "INDENT", label: "INDENT" },
   { id: "GRR", label: "GRR" },
+  { id: "QC", label: "QC" },
+  { id: "Debit Note", label: "Debit Note" },
 ];
 
 const schema = yup.object({
@@ -83,7 +85,9 @@ export default function Prefix() {
       }
     } catch (error: any) {
       console.error(error);
-      toasterrormsg(error?.response?.data?.message || "Failed to load prefixes");
+      toasterrormsg(
+        error?.response?.data?.message || "Failed to load prefixes",
+      );
     }
   };
 
@@ -148,7 +152,8 @@ export default function Prefix() {
                 error={errors.prefixFor?.message}
                 data={prefixForOptions}
                 value={
-                  prefixForOptions.find((item) => item.id === field.value) || null
+                  prefixForOptions.find((item) => item.id === field.value) ||
+                  null
                 }
                 onChange={(item: any) => field.onChange(item?.id || "")}
                 placeholder="Select Prefix For"
@@ -184,7 +189,7 @@ export default function Prefix() {
         </form>
       </div>
 
-      <div className="mt-6 max-h-125 overflow-auto  border border-gray-100 ">
+      <div className="mt-6 max-h-125 overflow-auto border border-gray-100">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 z-0 bg-white dark:bg-gray-900">
             <tr>
@@ -202,14 +207,19 @@ export default function Prefix() {
           <tbody>
             {prefixes.length === 0 ? (
               <tr>
-                <td colSpan={3} className="border border-gray-700 p-3 text-center text-gray-500">
+                <td
+                  colSpan={3}
+                  className="border border-gray-700 p-3 text-center text-gray-500"
+                >
                   No prefixes added yet
                 </td>
               </tr>
             ) : (
               prefixes.map((item) => (
                 <tr key={item.prefixId}>
-                  <td className="border border-gray-500 p-3">{item.prefixFor}</td>
+                  <td className="border border-gray-500 p-3">
+                    {item.prefixFor}
+                  </td>
                   <td className="border border-gray-700 p-3">{item.prefix}</td>
                   <td className="border border-gray-700 p-3 text-center">
                     <Button
