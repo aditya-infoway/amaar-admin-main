@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useLocation } from "react-router";
 import { Page } from "@/components/shared/Page";
 import { Button, Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
@@ -32,6 +32,15 @@ export default function QcPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isViewMode = Boolean(id);
+
+  const location = useLocation();
+
+  const handleClose = () => {
+    // location.key is "default" when this page was opened directly (new tab / refresh)
+    if (isViewMode && location.key !== "default") navigate(-1);
+    else navigate("/purchase-master/purchase-qc");
+  };
+
   // ---- GRR / item selection ----
   const [grrOptions, setGrrOptions] = useState<Option[]>([]);
   const [grrItems, setGrrItems] = useState<GrrItem[]>([]);
@@ -409,9 +418,9 @@ export default function QcPage() {
                       <td className="dark:border-dark-500 border-r border-gray-200 px-4 py-2.5">
                         {r.itemName}
                       </td>
-                      <th className="dark:border-dark-500 border-r border-gray-200 px-4 py-2.5">
-                        In Qty
-                      </th>
+                      <td className="dark:border-dark-500 border-r border-gray-200 px-4 py-2.5">
+                        {r.inQty}
+                      </td>
                       <td className="dark:border-dark-500 border-r border-gray-200 px-4 py-2.5">
                         {r.verifyQty}
                       </td>
@@ -439,11 +448,7 @@ export default function QcPage() {
 
           {/* ---- Cancel / Submit ---- */}
           <div className="mt-6 flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={() => navigate("/purchase-master/purchase-qc")}
-            >
+            <Button type="button" variant="outlined" onClick={handleClose}>
               {isViewMode ? "Close" : "Cancel"}
             </Button>
             {!isViewMode && (
