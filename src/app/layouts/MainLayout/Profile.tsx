@@ -7,10 +7,9 @@ import {
 } from "@headlessui/react";
 import {
   ArrowLeftStartOnRectangleIcon,
-  ChatBubbleLeftIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
-import { TbCoins, TbUser, TbUsersGroup } from "react-icons/tb";
+import { TbUser } from "react-icons/tb";
 import { Link } from "react-router";
 
 // Local Imports
@@ -83,6 +82,7 @@ export function Profile() {
   const navigate = useNavigate();
 
   const [companyName, setCompanyName] = useState("Company Name");
+  const [companyLogo, setCompanyLogo] = useState("");
 
   useEffect(() => {
     const fetchCompanyName = async () => {
@@ -100,7 +100,9 @@ export function Profile() {
         );
 
         if (response.data?.success) {
-          setCompanyName(response.data.data?.companyName || "Company Name");
+          const d = response.data.data;
+          setCompanyName(d?.companyName || "Company Name");
+          setCompanyLogo(d?.logo || "");
         }
       } catch (error) {
         console.error("Failed to fetch company name:", error);
@@ -120,14 +122,16 @@ export function Profile() {
     }
   };
 
+  const logoSrc = companyLogo || APP_FAVICON;
+
   return (
     <Popover className="relative">
       <PopoverButton
         as={Avatar}
         size={12}
         role="button"
-        src={APP_FAVICON}
-        alt={APP_NAME}
+        src={logoSrc}
+        alt={companyName || APP_NAME}
         classNames={{ image: "object-contain p-0.5" }}
         className="cursor-pointer"
       />
@@ -150,8 +154,8 @@ export function Profile() {
               <div className="dark:bg-dark-800 flex items-center gap-4 rounded-t-lg bg-gray-100 px-4 py-5">
                 <Avatar
                   size={14}
-                  src={APP_FAVICON}
-                  alt={APP_NAME}
+                  src={logoSrc}
+                  alt={companyName || APP_NAME}
                   classNames={{ image: "object-contain p-1" }}
                 />
 
