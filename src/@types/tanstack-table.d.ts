@@ -14,8 +14,7 @@ declare module "@tanstack/react-table" {
     setTableSettings?: Dispatch<SetStateAction<TableSettings>>;
     setToolbarFilters?: Dispatch<SetStateAction<string[] | undefined>>;
     setViewType?: Dispatch<SetStateAction<ItemViewType>>;
-    
-    
+
     createBOMWithFirstComponent?: (
       item: TData,
       mainParent: string,
@@ -23,7 +22,6 @@ declare module "@tanstack/react-table" {
     ) => void;
     addBOMComponent?: (item: TData, component: BOMComponent) => void;
   }
-
 
   interface TableState {
     tableSettings?: TableSettings;

@@ -220,8 +220,9 @@ export default function DebitNoteFormPage() {
             <Button
               type="button"
               color="primary"
-              onClick={handleSubmit}
-              disabled={!paymentType.id || items.length === 0 || submitting}
+              // onClick={handleSubmit}
+              // disabled={!paymentType.id || items.length === 0 || submitting}
+              disabled
             >
               {submitting ? "Saving..." : "Save Debit Note"}
             </Button>
