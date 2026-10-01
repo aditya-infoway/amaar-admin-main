@@ -589,9 +589,11 @@ const mapApiVehicleItem = (item: any): VehicleCatalogItem => ({
 function AddItemSelector({
   itemCatalog,
   onAdd,
+  receivedQty = {},
 }: {
   itemCatalog: VehicleCatalogItem[];
   onAdd: (item: any) => void;
+  receivedQty?: Record<string, number>;
 }) {
   const [row, setRow] = useState({ ...EMPTY_ROW });
   const [touched, setTouched] = useState(false);
@@ -608,7 +610,10 @@ function AddItemSelector({
       itemName: m.itemName,
       hsnCode: m.hsnCode,
       uom: m.unit,
-      qty: "",
+      qty:
+        receivedQty[String(m.itemId)] > 0
+          ? String(receivedQty[String(m.itemId)])
+          : "",
       rate: String(m.salesPrice),
       discount: "0",
       gstPct: String(m.taxSlab),
@@ -651,6 +656,9 @@ function AddItemSelector({
   const qtyInvalid = touched && !row.qty;
   const hasItem = !!row.itemId;
 
+  const isQtyFromGrr =
+    row.itemId != null && (receivedQty[String(row.itemId)] || 0) > 0;
+
   const iCls =
     "w-full px-2.5 py-[8px] text-xs border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder-gray-300 dark:placeholder-gray-600 transition-all";
   const roCls =
@@ -672,10 +680,12 @@ function AddItemSelector({
           placeholder="Select item"
           searchFields={["itemCode", "itemName"]}
           renderItem={(item: any) => (
-          <div className="flex w-full items-center text-inherit">
-    <span className="w-16 shrink-0 text-xs font-bold">{item.itemCode}</span>
-    <span className="truncate text-sm">{item.itemName}</span>
-  </div>
+            <div className="flex w-full items-center text-inherit">
+              <span className="w-16 shrink-0 text-xs font-bold">
+                {item.itemCode}
+              </span>
+              <span className="truncate text-sm">{item.itemName}</span>
+            </div>
           )}
         />
       </div>
@@ -724,7 +734,9 @@ function AddItemSelector({
             type="number"
             min={0}
             value={row.qty}
+            readOnly={isQtyFromGrr} // ✅ read-only when from GRR
             onChange={(e) => {
+              if (isQtyFromGrr) return; // safety
               setRow((r) => ({ ...r, qty: e.target.value }));
               setTouched(false);
             }}
@@ -732,11 +744,13 @@ function AddItemSelector({
             className={[
               iCls,
               "text-right",
-              qtyInvalid
-                ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-300 dark:border-red-500 dark:bg-red-900/20"
-                : row.qty
-                  ? "border-green-400 focus:border-green-400 focus:ring-green-300 dark:border-green-600"
-                  : "border-orange-300 dark:border-orange-600",
+              isQtyFromGrr
+                ? "cursor-not-allowed bg-gray-50 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300" // look like other read-only fields
+                : qtyInvalid
+                  ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-300 dark:border-red-500 dark:bg-red-900/20"
+                  : row.qty
+                    ? "border-green-400 focus:border-green-400 focus:ring-green-300 dark:border-green-600"
+                    : "border-orange-300 dark:border-orange-600",
             ].join(" ")}
           />
         </div>
@@ -1176,6 +1190,8 @@ export default function VehiclePurchaseBill() {
   const [remarks, setRemarks] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [grrQtyMap, setGrrQtyMap] = useState<Record<string, number>>({});
+
   type UploadedFile = {
     name: string;
     size: string;
@@ -1257,6 +1273,7 @@ export default function VehiclePurchaseBill() {
 
   const handlePoSelect = async (selected: any) => {
     if (!selected) {
+      setGrrQtyMap({});
       setHdr((h) => ({
         ...h,
         poNo: [],
@@ -1270,6 +1287,7 @@ export default function VehiclePurchaseBill() {
     }
 
     // store selected PO
+    setGrrQtyMap({});
     setHdr((h) => ({
       ...h,
       poNo: [selected],
@@ -1382,7 +1400,7 @@ export default function VehiclePurchaseBill() {
   interface LocationOption {
     id: number;
     name: string;
-      purchaseOrderId?: string | number;
+    purchaseOrderId?: string | number;
   }
 
   interface HdrState {
@@ -1416,6 +1434,33 @@ export default function VehiclePurchaseBill() {
   });
 
   const isFromPo = billType === "po" && hdr.poNo.length > 0;
+
+  const selectedPoId = hdr.poNo[0]?.purchaseOrderId || hdr.poNo[0]?.id;
+
+  useEffect(() => {
+    if (!selectedPoId) return;
+
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await Get(`purchase-grr/po-qty/${selectedPoId}`, {}, false);
+        if (cancelled) return;
+
+        const map: Record<string, number> = {};
+        (res.data?.data || []).forEach((r: any) => {
+          map[String(r.itemId)] = Number(r.inQty) || 0;
+        });
+        setGrrQtyMap(map);
+      } catch {
+        if (!cancelled) setGrrQtyMap({});
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPoId]);
 
   // ---- Field-level errors for client-side pre-submit checks ----
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -2159,6 +2204,7 @@ export default function VehiclePurchaseBill() {
           <AddItemSelector
             itemCatalog={availableItemCatalog}
             onAdd={addItemFromPreview}
+            receivedQty={grrQtyMap}
           />
         </Card>
 
