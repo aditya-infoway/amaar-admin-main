@@ -553,12 +553,10 @@ export default function GrrPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to="/purchase-master/purchase-grr">
-              <Button variant="outlined" className="gap-2">
-                <ChevronLeftIcon className="size-4" />{" "}
-                {isViewMode ? "Close" : "Cancel"}
-              </Button>
-            </Link>
+            <Button variant="outlined" className="gap-2" onClick={handleClose}>
+              <ChevronLeftIcon className="size-4" />{" "}
+              {isViewMode ? "Close" : "Cancel"}
+            </Button>
 
             {stage === "verify" && (
               <Button
@@ -941,11 +939,9 @@ export default function GrrPage() {
 
         {/* ───── Bottom Actions ───── */}
         <div className="dark:border-dark-500 mt-5 flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
-          <Link to="/purchase-master/purchase-grr">
-            <Button variant="outlined" onClick={handleClose}>
-              {isViewMode ? "Close" : "Cancel"}
-            </Button>
-          </Link>
+          <Button variant="outlined" onClick={handleClose}>
+            {isViewMode ? "Close" : "Cancel"}
+          </Button>
 
           {stage === "verify" && (
             <Button
