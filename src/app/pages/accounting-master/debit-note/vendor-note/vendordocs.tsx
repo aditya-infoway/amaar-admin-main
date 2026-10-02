@@ -93,6 +93,7 @@ export default function DebitNoteVendorDocsPage() {
                 <th className={th}>{label} No</th>
                 <th className={th}>{label} Date</th>
                 <th className={th}>PO No</th>
+                <th className={th}>Bill No</th>
                 <th className={`${th} w-24 text-center`}>View</th>
                 <th className="w-28 px-4 py-2.5 text-center font-semibold">
                   Action
@@ -103,7 +104,7 @@ export default function DebitNoteVendorDocsPage() {
               {rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-gray-500"
                   >
                     No {label} found for this vendor.
@@ -118,6 +119,7 @@ export default function DebitNoteVendorDocsPage() {
                     <td className={td}>{r.docNo}</td>
                     <td className={td}>{fmtDate(r.docDate)}</td>
                     <td className={td}>{r.poNo}</td>
+                    <td className={td}>{r.billNo}</td>
                     <td className={`${td} text-center`}>
                       <button
                         type="button"

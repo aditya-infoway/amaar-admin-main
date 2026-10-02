@@ -14,6 +14,7 @@ export type DocRow = {
   docNo: string;
   docDate: string; // YYYY-MM-DD
   poNo: string;
+  billNo?: string;
 };
 
 export type DebitItem = {
