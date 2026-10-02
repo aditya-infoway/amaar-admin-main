@@ -125,16 +125,26 @@ export default function DebitNoteListPage() {
                       />
                     </td>
                     <td className={`${td} text-center`}>
-                      <Count
-                        value={v.complete.grr}
-                        onClick={() => open(v.vendorId, "grr", "complete")}
-                      />
+                      <span
+                        className={
+                          v.complete.grr > 0
+                            ? "dark:text-dark-100 text-gray-800"
+                            : "dark:text-dark-300 text-gray-400"
+                        }
+                      >
+                        {v.complete.grr}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 text-center">
-                      <Count
-                        value={v.complete.qc}
-                        onClick={() => open(v.vendorId, "qc", "complete")}
-                      />
+                      <span
+                        className={
+                          v.complete.qc > 0
+                            ? "dark:text-dark-100 text-gray-800"
+                            : "dark:text-dark-300 text-gray-400"
+                        }
+                      >
+                        {v.complete.qc}
+                      </span>
                     </td>
                   </tr>
                 ))

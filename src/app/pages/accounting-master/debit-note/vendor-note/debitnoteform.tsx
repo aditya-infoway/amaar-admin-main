@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Page } from "@/components/shared/Page";
-import { Button, Input } from "@/components/ui";
-import { Listbox } from "@/components/shared/form/StyledListbox";
+import { Button, Input, Textarea } from "@/components/ui";
 import { Get, Post, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 import { fmtDate, DocType } from "./data";
 
@@ -23,6 +22,8 @@ type SourceItem = {
 
 type Source = {
   docNo: string;
+  billNo?: string;
+  purchaseBillNo?: string;
   docDate: string;
   poNo: string;
   vendorName: string;
@@ -30,11 +31,6 @@ type Source = {
   total: number;
 };
 
-const PAYMENT_TYPES: Option[] = [
-  { id: "credit", label: "Credit" },
-  { id: "bank", label: "Bank" },
-  { id: "cash", label: "Cash" },
-];
 const EMPTY: Option = { id: "", label: "" };
 
 const th =
@@ -52,6 +48,7 @@ export default function DebitNoteFormPage() {
   const [debitNoteNo, setDebitNoteNo] = useState("");
   const [src, setSrc] = useState<Source | null>(null);
   const [paymentType, setPaymentType] = useState<Option>(EMPTY);
+  const [narration, setNarration] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
 
@@ -76,7 +73,6 @@ export default function DebitNoteFormPage() {
   }, [docType, id, financialYearId]);
 
   const handleSubmit = async () => {
-    if (!paymentType.id) return toasterrormsg("Please select a payment type.");
     try {
       setSubmitting(true);
       const companyId = localStorage.getItem("companyId");
@@ -88,7 +84,7 @@ export default function DebitNoteFormPage() {
           type: docType,
           sourceId: id,
           debitNoteDate: today,
-          paymentType: paymentType.id,
+                    remarks: narration.trim(),
           createdBy: companyId ? Number(companyId) : undefined,
           createdType: roleName || "Super Admin",
         },
@@ -135,6 +131,12 @@ export default function DebitNoteFormPage() {
             />
             <Input label="Vendor Name" value={src?.vendorName || ""} readOnly />
             <Input label="PO No" value={src?.poNo || ""} readOnly />
+            <Input label="Bill No" value={src?.billNo || ""} readOnly />
+            <Input
+              label="Purchase Bill No"
+              value={src?.purchaseBillNo || ""}
+              readOnly
+            />
           </div>
 
           <div className="dark:border-dark-500 mt-6 overflow-auto rounded-lg border border-gray-200">
@@ -198,14 +200,13 @@ export default function DebitNoteFormPage() {
             </table>
           </div>
 
-          <div className="mt-6 max-w-xs">
-            <Listbox
-              data={PAYMENT_TYPES}
-              value={paymentType}
-              onChange={setPaymentType}
-              label="Payment Type"
-              placeholder="Select payment type"
-              displayField="label"
+          <div className="mt-6">
+            <Textarea
+              label="Narration"
+              placeholder="Enter narration"
+              rows={2}
+              value={narration}
+              onChange={(e) => setNarration(e.target.value)}
             />
           </div>
 
@@ -220,9 +221,8 @@ export default function DebitNoteFormPage() {
             <Button
               type="button"
               color="primary"
-              // onClick={handleSubmit}
-              // disabled={!paymentType.id || items.length === 0 || submitting}
-              disabled
+              onClick={handleSubmit}
+              disabled={items.length === 0 || submitting}
             >
               {submitting ? "Saving..." : "Save Debit Note"}
             </Button>
