@@ -655,36 +655,34 @@ export default function GrrPage() {
           </SectionCard>
         </div>
 
-        {/* ───── Item Table (Material-Availability style) ───── */}
+        {/* ───── Item Table ───── */}
         <div className="mt-4 flex flex-col">
-          <div className="flex items-center justify-between">
-            <h2 className="dark:text-dark-100 truncate text-base font-medium tracking-wide text-gray-800">
-              Item Details
-            </h2>
-            {items.length > 0 && !isViewMode && (
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant="soft"
-                  color={allVerified ? "success" : "warning"}
-                  className="rounded-full"
-                >
-                  {verifiedCount} / {items.length} verified
+          {items.length > 0 && !isViewMode && (
+            <div className="mb-3 flex items-center justify-end gap-2">
+              <Badge
+                variant="soft"
+                color={allVerified ? "success" : "warning"}
+                className="rounded-full"
+              >
+                {verifiedCount} / {items.length} verified
+              </Badge>
+              {stage === "difference" && (
+                <Badge variant="soft" color="info" className="rounded-full">
+                  Reviewing differences
                 </Badge>
-                {stage === "difference" && (
-                  <Badge variant="soft" color="info" className="rounded-full">
-                    Reviewing differences
-                  </Badge>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
-          <Card className="relative mt-3 flex grow flex-col" ref={cardRef}>
-            <div className="table-wrapper min-w-full grow overflow-x-auto">
+          {/* removed `grow` and `mt-3` so there is no empty space below the table */}
+          <Card className="relative flex flex-col" ref={cardRef}>
+            <div className="table-wrapper min-w-full overflow-x-auto">
               {/* ───────── STAGE 1: Verify (TanStack Table) ───────── */}
               {stage === "verify" && (
                 <>
-                  <Toolbar table={table} />
+                  <div className="px-4 pt-3 sm:px-5">
+                    <Toolbar table={table} />
+                  </div>
                   <Table
                     hoverable
                     dense={tableSettings.enableRowDense}
@@ -903,14 +901,14 @@ export default function GrrPage() {
                           <Td colSpan={3} className="dark:bg-dark-800">
                             Total
                           </Td>
-                          <Td className="dark:bg-dark-800 text-right">
+                          <Td className="dark:bg-dark-800">
                             {items.reduce((s, i) => s + i.orderQty, 0)}
                           </Td>
-                          <Td className="dark:bg-dark-800 text-right">
+                          <Td className="dark:bg-dark-800">
                             {items.reduce((s, i) => s + (i.inQty ?? 0), 0)}
                           </Td>
                           <Td className="dark:bg-dark-800" />
-                          <Td className="dark:bg-dark-800 text-right">
+                          <Td className="dark:bg-dark-800">
                             {items.reduce(
                               (s, i) => s + (i.orderQty - (i.inQty ?? 0)),
                               0,
