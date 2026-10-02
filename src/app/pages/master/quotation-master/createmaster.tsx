@@ -1,13 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  MagnifyingGlassIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PlusIcon,
-  XMarkIcon,
-  ArrowDownTrayIcon,
-  DocumentArrowDownIcon,
-} from "@heroicons/react/24/outline";
+import React, { useState, useEffect } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -17,8 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { Table, THead, TBody, Tr, Th, Td } from "@/components/ui/Table";
-import { DatePicker } from "@/components/shared/form/Datepicker";
+
 import { Button, Input, Textarea } from "@/components/ui";
 
 import { exportToExcel, exportToPdf } from "../shared/export";
@@ -27,10 +18,6 @@ import {
   DialogPanel,
   Transition,
   TransitionChild,
-  Menu,
-  MenuButton,
-  MenuItems,
-  MenuItem,
 } from "@headlessui/react";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import MultiSelect from "@/components/shared/form/MultiSelect";
@@ -43,7 +30,6 @@ import {
   toasterrormsg,
   toastsuccessmsg,
 } from "@/ApiHelper";
-import dayjs from "dayjs";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { MasterTable } from "../shared/MasterTable";
@@ -99,64 +85,62 @@ export default function CreateMaster() {
 
   // ─── HANDLERS ────────────────────────────────────────────────────────────
 
-  const formatDateForPicker = (date: any): string => {
-    if (!date) return "";
+  // const formatDateForPicker = (date: any): string => {
+  //   if (!date) return "";
 
-    if (typeof date?.format === "function") {
-      return date.format("DD-MM-YYYY");
-    }
+  //   if (typeof date?.format === "function") {
+  //     return date.format("DD-MM-YYYY");
+  //   }
 
-    if (date instanceof Date) {
-      return dayjs(date).format("DD-MM-YYYY");
-    }
+  //   if (date instanceof Date) {
+  //     return dayjs(date).format("DD-MM-YYYY");
+  //   }
 
-    if (typeof date === "string") {
-      if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
-        const [year, month, day] = date.substring(0, 10).split("-");
-        return `${day}-${month}-${year}`;
-      }
+  //   if (typeof date === "string") {
+  //     if (/^\d{4}-\d{2}-\d{2}/.test(date)) {
+  //       const [year, month, day] = date.substring(0, 10).split("-");
+  //       return `${day}-${month}-${year}`;
+  //     }
 
-      if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
-        return date;
-      }
-    }
+  //     if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
+  //       return date;
+  //     }
+  //   }
 
-    return "";
-  };
+  //   return "";
+  // };
 
-  const getDatePickerValue = (date: string): Date | undefined => {
-    if (!date) return undefined;
+  // const getDatePickerValue = (date: string): Date | undefined => {
+  //   if (!date) return undefined;
 
-    const [day, month, year] = date.split("-");
+  //   const [day, month, year] = date.split("-");
 
-    if (!day || !month || !year) return undefined;
+  //   if (!day || !month || !year) return undefined;
 
-    return new Date(Number(year), Number(month) - 1, Number(day));
-  };
+  //   return new Date(Number(year), Number(month) - 1, Number(day));
+  // };
 
-  const handleEffectiveDateChange = (selectedDates: Date[]) => {
-    const selectedDate = selectedDates?.[0];
+  // const handleEffectiveDateChange = (selectedDates: Date[]) => {
+  //   const selectedDate = selectedDates?.[0];
 
-    setFormData((prev) => ({
-      ...prev,
-      effectiveDate: selectedDate
-        ? dayjs(selectedDate).format("DD-MM-YYYY")
-        : "",
-    }));
-  };
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     effectiveDate: selectedDate
+  //       ? dayjs(selectedDate).format("DD-MM-YYYY")
+  //       : "",
+  //   }));
+  // };
 
-  
+  // const formatDateForApi = (date: string): string => {
+  //   if (!date) return "";
 
-  const formatDateForApi = (date: string): string => {
-    if (!date) return "";
+  //   if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
+  //     const [day, month, year] = date.split("-");
+  //     return `${year}-${month}-${day}`;
+  //   }
 
-    if (/^\d{2}-\d{2}-\d{4}$/.test(date)) {
-      const [day, month, year] = date.split("-");
-      return `${year}-${month}-${day}`;
-    }
-
-    return date;
-  };
+  //   return date;
+  // };
 
   const handleOpenEditDrawer = (item: CreateMasterItem) => {
     setEditing(item);
@@ -241,15 +225,16 @@ export default function CreateMaster() {
         return;
       }
 
+  
       // Calculate weight again before saving.
-      // Do not depend only on the input value.
       const totalWeight = formData.actualItem.reduce(
         (total, item) => total + Number(item.weight || 0),
         0,
       );
 
-      if (totalWeight <= 0) {
-        toasterrormsg("Total Weight is required");
+      // 0 is allowed now. Only block invalid / negative values.
+      if (Number.isNaN(totalWeight) || totalWeight < 0) {
+        toasterrormsg("Total Weight must be a valid number");
         return;
       }
 
