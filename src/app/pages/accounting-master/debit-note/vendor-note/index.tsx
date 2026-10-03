@@ -1,40 +1,93 @@
-// src/app/pages/debit-note/index.tsx  — Page 1: vendor summary list
-import { useNavigate } from "react-router";
-import { Page } from "@/components/shared/Page";
-import { DocType } from "./data";
+// Debit Note - Page 1: vendor summary list
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import {
+  ColumnDef,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Page } from "@/components/shared/Page";
+import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
 import { Get, toasterrormsg } from "@/ApiHelper";
+import { MasterTable } from "../shared/MasterTable";
+import { MasterToolbar } from "../shared/MasterToolbar";
+import { exportToExcel, exportToPdf } from "../shared/export";
+import { TextCell } from "../shared/tableCells";
+import { DocType } from "./data";
 
-const th =
-  "dark:border-dark-500 border-r border-gray-200 px-4 py-2.5 font-semibold";
-const td = "dark:border-dark-500 border-r border-gray-200 px-4 py-2.5";
+type VendorRow = {
+  vendorId: string;
+  vendorName: string;
+  number: number;
+  pending: { grr: number; qc: number };
+  complete: { grr: number; qc: number };
+};
+
+// number + icon. With onClick the icon opens the next page (disabled at 0),
+// without onClick it is a plain icon (used for Complete until view feature is built)
+function Count({ value, onClick }: { value: number; onClick?: () => void }) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <span
+        className={
+          value > 0
+            ? "dark:text-dark-100 font-semibold text-gray-800"
+            : "dark:text-dark-300 text-gray-400"
+        }
+      >
+        {value}
+      </span>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={value === 0}
+          title="Open"
+          className="text-primary-600 dark:text-primary-400 dark:hover:bg-dark-500 cursor-pointer rounded p-1 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+        >
+          <ArrowDownTrayIcon className="size-6" />
+        </button>
+      ) : (
+        <span
+          className={`text-primary-600 dark:text-primary-400 p-1 ${
+            value > 0 ? "" : "opacity-30"
+          }`}
+        >
+          <ArrowDownTrayIcon className="size-6" />
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function DebitNoteListPage() {
   const navigate = useNavigate();
-  const [vendors, setVendors] = useState<
-    {
-      vendorId: string;
-      vendorName: string;
-      number: number;
-      pending: { grr: number; qc: number };
-      complete: { grr: number; qc: number };
-    }[]
-  >([]);
+  const [data, setData] = useState<VendorRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       try {
+        setLoading(true);
         const financialYearId = localStorage.getItem("financialYearId");
         const res = await Get("debit-note/vendors", { financialYearId }, false);
-        if (res.data?.success) setVendors(res.data.data || []);
+        if (res.data?.success) setData(res.data.data || []);
         else toasterrormsg(res.data?.message || "Failed to load vendors.");
       } catch (err: any) {
         toasterrormsg(
           err?.response?.data?.message || "Failed to load vendors.",
         );
+      } finally {
+        setLoading(false);
       }
-    };
-    load();
+    })();
   }, []);
 
   const open = (
@@ -46,112 +99,116 @@ export default function DebitNoteListPage() {
       `/accounting-master/debit-note/vendor-note/${vendorId}/${type}?status=${status}`,
     );
 
-  // number that opens the next page; plain "0" when nothing to open
-  const Count = ({ value, onClick }: { value: number; onClick: () => void }) =>
-    value > 0 ? (
-      <button
-        type="button"
-        onClick={onClick}
-        className="text-primary-600 dark:text-primary-400 font-semibold underline underline-offset-2 hover:opacity-80"
-      >
-        {value}
-      </button>
-    ) : (
-      <span className="dark:text-dark-300 text-gray-400">0</span>
-    );
+  const columns: ColumnDef<VendorRow>[] = [
+    { accessorKey: "vendorName", header: "Vendor Name", cell: TextCell },
+    { accessorKey: "number", header: "Number", cell: TextCell },
+    {
+      id: "pending",
+      header: "Pending",
+      columns: [
+        {
+          id: "pendingGrr",
+          header: "GRR",
+          accessorFn: (v) => v.pending.grr,
+          cell: ({ row }) => (
+            <Count
+              value={row.original.pending.grr}
+              onClick={() => open(row.original.vendorId, "grr", "pending")}
+            />
+          ),
+        },
+        {
+          id: "pendingQc",
+          header: "QC",
+          accessorFn: (v) => v.pending.qc,
+          cell: ({ row }) => (
+            <Count
+              value={row.original.pending.qc}
+              onClick={() => open(row.original.vendorId, "qc", "pending")}
+            />
+          ),
+        },
+      ],
+    },
+    {
+      id: "complete",
+      header: "Complete",
+      columns: [
+        {
+          id: "completeGrr",
+          header: "GRR",
+          accessorFn: (v) => v.complete.grr,
+          cell: ({ row }) => <Count value={row.original.complete.grr} />,
+        },
+        {
+          id: "completeQc",
+          header: "QC",
+          accessorFn: (v) => v.complete.qc,
+          cell: ({ row }) => <Count value={row.original.complete.qc} />,
+        },
+      ],
+    },
+  ];
+
+  const exportColumns = [
+    { key: "vendorName" as const, header: "Vendor Name" },
+    { key: "number" as const, header: "Number" },
+    { key: "pendingGrr" as const, header: "Pending GRR" },
+    { key: "pendingQc" as const, header: "Pending QC" },
+    { key: "completeGrr" as const, header: "Complete GRR" },
+    { key: "completeQc" as const, header: "Complete QC" },
+  ];
+
+  const exportData = () =>
+    data.map((v) => ({
+      vendorName: v.vendorName,
+      number: v.number,
+      pendingGrr: v.pending.grr,
+      pendingQc: v.pending.qc,
+      completeGrr: v.complete.grr,
+      completeQc: v.complete.qc,
+    }));
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: { globalFilter, sorting },
+    filterFns: { fuzzy: fuzzyFilter },
+    globalFilterFn: fuzzyFilter,
+    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
 
   return (
     <Page title="Debit Note">
-      <div className="transition-content w-full px-6 py-4 pb-5">
-        <h2 className="dark:text-dark-50 mb-4 text-xl font-semibold text-gray-800">
-          Debit Note
-        </h2>
-
-        <div className="dark:border-dark-500 dark:bg-dark-700 overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-700">
-              <tr>
-                <th rowSpan={2} className={th}>
-                  Vendor Name
-                </th>
-                <th rowSpan={2} className={th}>
-                  Number
-                </th>
-                <th colSpan={2} className={`${th} text-center`}>
-                  Pending
-                </th>
-                <th
-                  colSpan={2}
-                  className="px-4 py-2.5 text-center font-semibold"
-                >
-                  Complete
-                </th>
-              </tr>
-              <tr className="dark:border-dark-500 border-t border-gray-200">
-                <th className={`${th} text-center`}>GRR</th>
-                <th className={`${th} text-center`}>QC</th>
-                <th className={`${th} text-center`}>GRR</th>
-                <th className="px-4 py-2.5 text-center font-semibold">QC</th>
-              </tr>
-            </thead>
-            <tbody className="dark:text-dark-100 text-gray-800">
-              {vendors.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-10 text-center text-gray-500"
-                  >
-                    No vendors found.
-                  </td>
-                </tr>
-              ) : (
-                vendors.map((v) => (
-                  <tr
-                    key={v.vendorId}
-                    className="dark:border-dark-500 border-t border-gray-200"
-                  >
-                    <td className={td}>{v.vendorName}</td>
-                    <td className={td}>{v.number}</td>
-                    <td className={`${td} text-center`}>
-                      <Count
-                        value={v.pending.grr}
-                        onClick={() => open(v.vendorId, "grr", "pending")}
-                      />
-                    </td>
-                    <td className={`${td} text-center`}>
-                      <Count
-                        value={v.pending.qc}
-                        onClick={() => open(v.vendorId, "qc", "pending")}
-                      />
-                    </td>
-                    <td className={`${td} text-center`}>
-                      <span
-                        className={
-                          v.complete.grr > 0
-                            ? "dark:text-dark-100 text-gray-800"
-                            : "dark:text-dark-300 text-gray-400"
-                        }
-                      >
-                        {v.complete.grr}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-center">
-                      <span
-                        className={
-                          v.complete.qc > 0
-                            ? "dark:text-dark-100 text-gray-800"
-                            : "dark:text-dark-300 text-gray-400"
-                        }
-                      >
-                        {v.complete.qc}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="transition-content w-full pb-5">
+        <MasterToolbar
+          title="Debit Note"
+          searchPlaceholder="Search vendor..."
+          table={table}
+          showFilters={false}
+          onToggleFilters={() => {}}
+          onExportExcel={() =>
+            exportToExcel(exportData(), exportColumns, "debit-note-vendors")
+          }
+          onExportPdf={() =>
+            exportToPdf(
+              exportData(),
+              exportColumns,
+              "Debit Note",
+              "debit-note-vendors",
+            )
+          }
+        />
+        <MasterTable
+          table={table}
+          columnCount={6}
+          emptyMessage={loading ? "Loading vendors..." : "No vendors found."}
+        />
       </div>
     </Page>
   );

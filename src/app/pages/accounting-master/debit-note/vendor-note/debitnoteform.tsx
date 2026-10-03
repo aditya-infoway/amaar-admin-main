@@ -6,8 +6,6 @@ import { Button, Input, Textarea } from "@/components/ui";
 import { Get, Post, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 import { fmtDate, DocType } from "./data";
 
-type Option = { id: string; label: string };
-
 type SourceItem = {
   itemId: number;
   itemName: string;
@@ -28,10 +26,11 @@ type Source = {
   poNo: string;
   vendorName: string;
   items: SourceItem[];
+  taxableValue: number;
+  gstAmount: number;
+  isInterState?: boolean; // true -> IGST, false -> CGST + SGST
   total: number;
 };
-
-const EMPTY: Option = { id: "", label: "" };
 
 const th =
   "dark:border-dark-500 border-r border-gray-200 px-4 py-2.5 font-semibold";
@@ -47,7 +46,7 @@ export default function DebitNoteFormPage() {
 
   const [debitNoteNo, setDebitNoteNo] = useState("");
   const [src, setSrc] = useState<Source | null>(null);
-  const [paymentType, setPaymentType] = useState<Option>(EMPTY);
+
   const [narration, setNarration] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
@@ -84,7 +83,7 @@ export default function DebitNoteFormPage() {
           type: docType,
           sourceId: id,
           debitNoteDate: today,
-                    remarks: narration.trim(),
+          remarks: narration.trim(),
           createdBy: companyId ? Number(companyId) : undefined,
           createdType: roleName || "Super Admin",
         },
@@ -106,6 +105,14 @@ export default function DebitNoteFormPage() {
   };
 
   const items = src?.items ?? [];
+
+  const subTotal = src?.taxableValue ?? 0;
+  const gstTotal = src?.gstAmount ?? 0;
+  const inter = !!src?.isInterState;
+  const cgst = inter ? 0 : Number((gstTotal / 2).toFixed(2));
+  const sgst = inter ? 0 : Number((gstTotal - cgst).toFixed(2));
+  const igst = inter ? gstTotal : 0;
+  const fmt = (n: number) => (n > 0 ? n.toFixed(2) : "-");
 
   return (
     <Page title="Debit Note">
@@ -209,6 +216,28 @@ export default function DebitNoteFormPage() {
               onChange={(e) => setNarration(e.target.value)}
             />
           </div>
+
+          {items.length > 0 && (
+            <div className="mt-6 flex justify-end">
+              <div className="dark:border-dark-500 w-full max-w-sm space-y-2 rounded-lg border border-gray-200 p-4 text-sm">
+                {[
+                  ["Taxable Amount", fmt(subTotal)],
+                  ["CGST Amount", fmt(cgst)],
+                  ["SGST Amount", fmt(sgst)],
+                  ["IGST Amount", fmt(igst)],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between">
+                    <span>{k}</span>
+                    <span>{v}</span>
+                  </div>
+                ))}
+                <div className="dark:border-dark-500 flex justify-between border-t border-gray-200 pt-2 text-base font-semibold">
+                  <span>Grand Total</span>
+                  <span>{(src?.total ?? 0).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 flex justify-end gap-3">
             <Button
