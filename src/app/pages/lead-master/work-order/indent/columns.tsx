@@ -1,6 +1,10 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import { SelectCell, SelectHeader } from "@/components/shared/table/SelectCheckbox";
-import { createRowActions } from "../shared/createRowActions";
+import {
+  SelectCell,
+  SelectHeader,
+} from "@/components/shared/table/SelectCheckbox";
+import { EyeIcon } from "@heroicons/react/24/outline";
+import type { CellContext } from "@tanstack/react-table";
 import type { ExportColumn } from "../shared/export";
 import type { Indent } from "./types";
 
@@ -19,9 +23,16 @@ const formatDate = (value?: string) => {
 
 const columnHelper = createColumnHelper<Indent>();
 
-const RowActions = createRowActions<Indent>("indent", {
-  withView: true,
-});
+const ViewAction = ({ row, table }: CellContext<Indent, unknown>) => (
+  <button
+    type="button"
+    title="View"
+    onClick={() => (table.options.meta as any)?.viewRow?.(row.original)}
+    className="dark:hover:bg-dark-500 flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-gray-200"
+  >
+    <EyeIcon className="size-4.5" />
+  </button>
+);
 
 export const createColumns = () => [
   columnHelper.display({
@@ -59,14 +70,14 @@ export const createColumns = () => [
   }),
 
   columnHelper.accessor("date", {
-  header: "Date",
-  cell: ({ getValue }) => formatDate(getValue()),
-}),
+    header: "Date",
+    cell: ({ getValue }) => formatDate(getValue()),
+  }),
 
   columnHelper.display({
     id: "actions",
     header: "Action",
-    cell: RowActions,
+    cell: ViewAction,
     enableSorting: false,
   }),
 ];

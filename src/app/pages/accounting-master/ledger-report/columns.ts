@@ -10,7 +10,7 @@ const BalanceCell = (info: any) => {
   return createElement(
     "span",
     { className: isDr ? "text-emerald-600" : "text-red-500" },
-    `${Number(row.currentBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} ${row.currentDrOrCr}`
+    `${Number(row.currentBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} ${row.currentDrOrCr}`,
   );
 };
 
@@ -27,12 +27,14 @@ const EyeIcon = () =>
       strokeLinejoin: "round",
       className: "size-4",
     },
-    createElement("path", { d: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" }),
-    createElement("circle", { cx: "12", cy: "12", r: "3" })
+    createElement("path", {
+      d: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z",
+    }),
+    createElement("circle", { cx: "12", cy: "12", r: "3" }),
   );
 
 export const getLedgerColumns = (
-  onView: (row: LedgerAccountRow) => void
+  onView: (row: LedgerAccountRow) => void,
 ): ColumnDef<LedgerAccountRow>[] => [
   {
     id: "srNo",
@@ -40,12 +42,37 @@ export const getLedgerColumns = (
     cell: (info) => info.row.index + 1,
     enableSorting: false,
   },
-  { id: "accountName", accessorKey: "accountName", header: "Account Name", cell: TextCell },
-  { id: "groupName", accessorKey: "groupName", header: "Group", cell: TextCell },
-  { id: "addressLine1", accessorKey: "addressLine1", header: "Address", cell: TextCell },
+  {
+    id: "accountName",
+    accessorKey: "accountName",
+    header: "Account Name",
+    cell: TextCell,
+  },
+  {
+    id: "groupName",
+    accessorKey: "groupName",
+    header: "Group",
+    cell: TextCell,
+  },
+  {
+    id: "addressLine1",
+    accessorKey: "addressLine1",
+    header: "Address",
+    cell: TextCell,
+  },
   { id: "cityName", accessorKey: "cityName", header: "City", cell: TextCell },
-  { id: "stateName", accessorKey: "stateName", header: "State", cell: TextCell },
-  { id: "currentBalance", accessorKey: "currentBalance", header: "Closing Balance", cell: BalanceCell },
+  {
+    id: "stateName",
+    accessorKey: "stateName",
+    header: "State",
+    cell: TextCell,
+  },
+  {
+    id: "currentBalance",
+    accessorKey: "currentBalance",
+    header: "Closing Balance",
+    cell: BalanceCell,
+  },
   {
     id: "action",
     header: "Action",
@@ -55,10 +82,11 @@ export const getLedgerColumns = (
         "button",
         {
           onClick: () => onView(info.row.original as LedgerAccountRow),
-          className: "rounded-md border p-1.5 text-slate-600 hover:bg-slate-50",
+          className:
+            "rounded-md border p-1.5 text-slate-600 hover:bg-slate-50 cursor-pointer dark:border-dark-500 dark:text-dark-100 dark:hover:bg-dark-600",
           title: "View Details",
         },
-        createElement(EyeIcon)
+        createElement(EyeIcon),
       ),
   },
 ];

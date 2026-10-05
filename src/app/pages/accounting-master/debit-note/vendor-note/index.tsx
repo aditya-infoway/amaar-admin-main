@@ -138,13 +138,23 @@ export default function DebitNoteListPage() {
           id: "completeGrr",
           header: "GRR",
           accessorFn: (v) => v.complete.grr,
-          cell: ({ row }) => <Count value={row.original.complete.grr} />,
+          cell: ({ row }) => (
+            <Count
+              value={row.original.complete.grr}
+              onClick={() => openComplete(row.original.vendorId, "grr")}
+            />
+          ),
         },
         {
           id: "completeQc",
           header: "QC",
           accessorFn: (v) => v.complete.qc,
-          cell: ({ row }) => <Count value={row.original.complete.qc} />,
+          cell: ({ row }) => (
+            <Count
+              value={row.original.complete.qc}
+              onClick={() => openComplete(row.original.vendorId, "qc")}
+            />
+          ),
         },
       ],
     },
@@ -158,6 +168,11 @@ export default function DebitNoteListPage() {
     { key: "completeGrr" as const, header: "Complete GRR" },
     { key: "completeQc" as const, header: "Complete QC" },
   ];
+
+  const openComplete = (vendorId: string, type: DocType) =>
+    navigate(
+      `/accounting-master/debit-note/vendor-note/complete/${vendorId}/${type}`,
+    );
 
   const exportData = () =>
     data.map((v) => ({
