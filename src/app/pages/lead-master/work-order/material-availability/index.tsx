@@ -354,7 +354,7 @@ export default function MaterialAvailability() {
         </div>
         {selectedWorkOrder && items.length > 0 && (
           <Button
-            className="h-8 space-x-1.5 rounded-md px-3 text-xs"
+            className="h-8 cursor-pointer space-x-1.5 rounded-md px-3 text-xs"
             color="primary"
             disabled={indentInfo?.exists || savingIndent}
             onClick={handleSaveIndent}

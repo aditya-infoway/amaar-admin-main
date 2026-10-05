@@ -460,6 +460,14 @@ const protectedRoutes: RouteObject = {
                         ).default,
                       }),
                     },
+                                        {
+                      path: "complete/:vendorId/:type", // complete list (type = grr | qc)
+                      lazy: async () => ({
+                        Component: (
+                          await import("@/app/pages/accounting-master/debit-note/vendor-note/debitnotecomplete")
+                        ).default,
+                      }),
+                    },
                     {
                       path: "create/:type/:id", // page 3
                       lazy: async () => ({

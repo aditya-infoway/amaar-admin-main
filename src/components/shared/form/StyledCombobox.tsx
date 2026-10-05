@@ -262,8 +262,8 @@ function CustomCombobox<TValue = DataItem>(
                     style={{
                       width: inputWidth,
                     }}
-                     className={clsx(
-                      "dark:border-dark-500 dark:bg-dark-750 z-10 max-h-60 overflow-y-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg outline-hidden",
+                    className={clsx(
+                      "dark:border-dark-500 dark:bg-dark-750 z-10 max-h-60 overflow-x-hidden overflow-y-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg outline-hidden",
                       multiple && "mt-2",
                     )}
                   >
@@ -303,7 +303,7 @@ function CustomCombobox<TValue = DataItem>(
                               renderItem(item as TValue, selected, query)
                             ) : (
                               <span
-                                className={`block truncate ${
+                                className={`block wrap-break-word whitespace-normal ${
                                   selected ? "font-medium" : "font-normal"
                                 }`}
                               >

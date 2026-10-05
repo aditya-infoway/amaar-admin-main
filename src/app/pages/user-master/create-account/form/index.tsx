@@ -11,7 +11,14 @@ import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
 import { drCrOptions } from "../../shared/constants";
 import { DatePicker } from "@/components/shared/form/Datepicker";
-import { Get, Post, Put, URL, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import {
+  Get,
+  Post,
+  Put,
+  URL,
+  toastsuccessmsg,
+  toasterrormsg,
+} from "@/ApiHelper";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import {
   Country,
@@ -108,7 +115,10 @@ const schema = yup.object({
   accountName: yup.string().trim().required("Account Name is required"),
   printName: yup.string().trim().notRequired(),
   groupId: yup.string().required("Group is required"),
-  drOrCr: yup.string().oneOf(["DR", "CR"] as const).required("Dr./Cr. is required"),
+  drOrCr: yup
+    .string()
+    .oneOf(["DR", "CR"] as const)
+    .required("Dr./Cr. is required"),
   openingBalance: yup.string().notRequired(),
 
   countryName: yup.string().trim().required("Country is required"),
@@ -122,24 +132,71 @@ const schema = yup.object({
   area: yup.string().trim().required("Area is required"),
   addressLine1: yup.string().trim().required("Address Line 1 is required"),
   addressLine2: yup.string().trim().notRequired(),
-  pincode: yup.string().trim().required("Pincode is required").matches(/^[0-9]{6}$/, "Pincode must be 6 digits"),
+  pincode: yup
+    .string()
+    .trim()
+    .required("Pincode is required")
+    .matches(/^[0-9]{6}$/, "Pincode must be 6 digits"),
 
-  phoneNo: yup.string().trim().notRequired().matches(/^[0-9]{6,15}$/, { message: "Please enter a valid phone number", excludeEmptyString: true }),
-  mobileNo: yup.string().trim().required("Mobile number is required").matches(/^[6-9][0-9]{9}$/, "Please enter a valid 10-digit mobile number"),
+  phoneNo: yup
+    .string()
+    .trim()
+    .notRequired()
+    .matches(/^[0-9]{6,15}$/, {
+      message: "Please enter a valid phone number",
+      excludeEmptyString: true,
+    }),
+  mobileNo: yup
+    .string()
+    .trim()
+    .required("Mobile number is required")
+    .matches(/^[6-9][0-9]{9}$/, "Please enter a valid 10-digit mobile number"),
 
-  email: yup.string().trim().notRequired().email("Please enter a valid email address"),
+  email: yup
+    .string()
+    .trim()
+    .notRequired()
+    .email("Please enter a valid email address"),
   contactPersonName: yup.string().notRequired(),
   birthdayOn: yup.string().notRequired(),
   anniversary: yup.string().notRequired(),
 
   bankAccountNo: yup.string().notRequired(),
   bankName: yup.string().notRequired(),
-  ifscCode: yup.string().trim().notRequired().matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, { message: "Please enter a valid IFSC code", excludeEmptyString: true }),
+  ifscCode: yup
+    .string()
+    .trim()
+    .notRequired()
+    .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, {
+      message: "Please enter a valid IFSC code",
+      excludeEmptyString: true,
+    }),
   branchName: yup.string().notRequired(),
 
-  gstNo: yup.string().trim().notRequired().matches(/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1}$/, { message: "Please enter a valid GST number", excludeEmptyString: true }),
-  panCard: yup.string().trim().notRequired().matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, { message: "Please enter a valid PAN number (e.g. ABCDE1234F)", excludeEmptyString: true }),
-  aadharCardNo: yup.string().trim().notRequired().matches(/^\d{12}$/, { message: "Aadhar number must be exactly 12 digits", excludeEmptyString: true }),
+  gstNo: yup
+    .string()
+    .trim()
+    .notRequired()
+    .matches(/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1}$/, {
+      message: "Please enter a valid GST number",
+      excludeEmptyString: true,
+    }),
+  panCard: yup
+    .string()
+    .trim()
+    .notRequired()
+    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, {
+      message: "Please enter a valid PAN number (e.g. ABCDE1234F)",
+      excludeEmptyString: true,
+    }),
+  aadharCardNo: yup
+    .string()
+    .trim()
+    .notRequired()
+    .matches(/^\d{12}$/, {
+      message: "Aadhar number must be exactly 12 digits",
+      excludeEmptyString: true,
+    }),
 
   status: yup.string().notRequired(),
 });
@@ -199,31 +256,39 @@ export function AccountForm() {
     pan: emptyKyc(),
     gst: emptyKyc(),
   });
-  const [kycErrors, setKycErrors] = useState<Partial<Record<KycKey, string>>>({});
+  const [kycErrors, setKycErrors] = useState<Partial<Record<KycKey, string>>>(
+    {},
+  );
 
   const groupListOptions = groupList.map((g) => ({
     id: String(g.id),
     label: g.groupName,
     effect: g.role || "",
   }));
-  const countryListOptions = countryList.map((c) => ({ id: c.isoCode, label: c.name }));
-  const stateListOptions = stateList.map((s) => ({ id: s.isoCode, label: s.name }));
+  const countryListOptions = countryList.map((c) => ({
+    id: c.isoCode,
+    label: c.name,
+  }));
+  const stateListOptions = stateList.map((s) => ({
+    id: s.isoCode,
+    label: s.name,
+  }));
   const cityListOptions = cityList.map((c) => ({ id: c.name, label: c.name }));
   const districtListOptions = cityListOptions;
   const talukaListOptions = cityListOptions;
 
   const {
-  register,
-  handleSubmit,
-  control,
-  reset,
-  watch,
-  setValue,
-  formState: { errors },
-} = useForm<AccountFormValues>({
-  defaultValues: emptyFormValues,
-  resolver: yupResolver(schema) as Resolver<AccountFormValues>,
-});
+    register,
+    handleSubmit,
+    control,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<AccountFormValues>({
+    defaultValues: emptyFormValues,
+    resolver: yupResolver(schema) as Resolver<AccountFormValues>,
+  });
 
   const accountNameValue = watch("accountName");
   const gstNoValue = watch("gstNo");
@@ -329,16 +394,24 @@ export function AccountForm() {
           });
 
           // Sirf dropdown cascading ke liye — naam se ISO dhoond lo (best effort)
-          const foundCountry = countryList.find((c) => c.name === account.countryName);
+          const foundCountry = countryList.find(
+            (c) => c.name === account.countryName,
+          );
           if (foundCountry) {
             setSelectedCountryIso(foundCountry.isoCode);
-            const statesForCountry = State.getStatesOfCountry(foundCountry.isoCode);
-            const foundState = statesForCountry.find((s) => s.name === account.stateName);
+            const statesForCountry = State.getStatesOfCountry(
+              foundCountry.isoCode,
+            );
+            const foundState = statesForCountry.find(
+              (s) => s.name === account.stateName,
+            );
             setStateList(statesForCountry);
             if (foundState) {
               setSelectedStateIso(foundState.isoCode);
               setValue("stateCode", foundState.isoCode);
-              setCityList(City.getCitiesOfState(foundCountry.isoCode, foundState.isoCode));
+              setCityList(
+                City.getCitiesOfState(foundCountry.isoCode, foundState.isoCode),
+              );
             }
           }
         } catch (err) {
@@ -351,15 +424,24 @@ export function AccountForm() {
 
   // Keep kyc.number in sync whenever the RHF text value changes (typing)
   useEffect(() => {
-    setKyc((prev) => ({ ...prev, aadhar: { ...prev.aadhar, number: aadharCardNoValue || "" } }));
+    setKyc((prev) => ({
+      ...prev,
+      aadhar: { ...prev.aadhar, number: aadharCardNoValue || "" },
+    }));
   }, [aadharCardNoValue]);
 
   useEffect(() => {
-    setKyc((prev) => ({ ...prev, pan: { ...prev.pan, number: panCardValue || "" } }));
+    setKyc((prev) => ({
+      ...prev,
+      pan: { ...prev.pan, number: panCardValue || "" },
+    }));
   }, [panCardValue]);
 
   useEffect(() => {
-    setKyc((prev) => ({ ...prev, gst: { ...prev.gst, number: gstNoValue || "" } }));
+    setKyc((prev) => ({
+      ...prev,
+      gst: { ...prev.gst, number: gstNoValue || "" },
+    }));
   }, [gstNoValue]);
 
   const handleVerifyGst = () => {
@@ -404,7 +486,8 @@ export function AccountForm() {
     (Object.keys(kyc) as KycKey[]).forEach((key) => {
       const entry = kyc[key];
       if (entry.number.trim() && !entry.file && !entry.existingUrl) {
-        const label = key === "aadhar" ? "Aadhar" : key === "pan" ? "PAN" : "GST";
+        const label =
+          key === "aadhar" ? "Aadhar" : key === "pan" ? "PAN" : "GST";
         nextErrors[key] = `Upload ${label} card image`;
       }
     });
@@ -426,7 +509,10 @@ export function AccountForm() {
       // countryId / stateId / stateCode kabhi bhi payload me nahi jaate — sirf naam
       Object.entries(data).forEach(([key, value]) => {
         if (key === "birthdayOn" || key === "anniversary") return;
-        formData.append(key, value === undefined || value === null ? "" : String(value));
+        formData.append(
+          key,
+          value === undefined || value === null ? "" : String(value),
+        );
       });
 
       formData.append("birthdayOn", formatDateForApi(data.birthdayOn) || "");
@@ -453,19 +539,28 @@ export function AccountForm() {
           toasterrormsg(extractErrorMessage(res, "Something went wrong."));
           return;
         }
-        toastsuccessmsg(extractErrorMessage(res, "Account updated successfully"));
+        toastsuccessmsg(
+          extractErrorMessage(res, "Account updated successfully"),
+        );
       } else {
         const res = await accountApi.create(formData);
         if (res?.data?.status === 400 || res?.data?.success === false) {
           toasterrormsg(extractErrorMessage(res, "Something went wrong."));
           return;
         }
-        toastsuccessmsg(extractErrorMessage(res, "Account created successfully"));
+        toastsuccessmsg(
+          extractErrorMessage(res, "Account created successfully"),
+        );
       }
 
       navigate("/user-master/accounts");
     } catch (err: any) {
-      toasterrormsg(extractErrorMessage(err?.response, "Something went wrong. Please try again."));
+      toasterrormsg(
+        extractErrorMessage(
+          err?.response,
+          "Something went wrong. Please try again.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -504,7 +599,7 @@ export function AccountForm() {
                 type="button"
                 color="success"
                 onClick={handleVerifyGst}
-                className="absolute right-1 top-1/2 h-auto -translate-y-1/2 px-2 py-1 text-xs font-medium"
+                className="absolute top-1/2 right-1 h-auto -translate-y-1/2 px-2 py-1 text-xs font-medium"
               >
                 Verify
               </Button>
@@ -525,11 +620,15 @@ export function AccountForm() {
         </div>
 
         {/* RHF pattern/format error (e.g. invalid PAN format) */}
-        {fieldError && <p className="mt-1 text-xs text-red-600">{fieldError}</p>}
+        {fieldError && (
+          <p className="mt-1 text-xs text-red-600">{fieldError}</p>
+        )}
 
         {/* Selected filename */}
         {entry.file && (
-          <p className="mt-1 truncate text-xs text-green-600">{entry.file.name}</p>
+          <p className="mt-1 truncate text-xs text-green-600">
+            {entry.file.name}
+          </p>
         )}
 
         {/* Existing image preview */}
@@ -558,10 +657,14 @@ export function AccountForm() {
     <Page title={isEdit ? "Edit Account" : "Create Account"}>
       <div className="transition-content w-full pb-5">
         <div className="mb-6 flex items-center justify-between p-6 pb-0">
-          <h1 className="text-2xl font-bold text-primary underline underline-offset-4">
+          <h1 className="text-primary text-2xl font-bold underline underline-offset-4">
             {isEdit ? "Edit Account" : "Create Account"}
           </h1>
-          <Button type="button" onClick={() => navigate("/user-master/accounts")}  className="bg-primary-500 hover:bg-primary-600 flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors">
+          <Button
+            type="button"
+            onClick={() => navigate("/user-master/accounts")}
+            className="bg-primary-500 hover:bg-primary-600 flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors"
+          >
             <ArrowLeftIcon className="size-4" />
             Back
           </Button>
@@ -570,9 +673,9 @@ export function AccountForm() {
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          className="rounded-lg bg-white p-6 shadow-sm dark:bg-dark-800"
+          className="dark:bg-dark-800 rounded-lg bg-white p-6 shadow-sm"
         >
-          <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2 lg:divide-x lg:divide-gray-200 dark:lg:divide-dark-500">
+          <div className="dark:lg:divide-dark-500 grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2 lg:divide-x lg:divide-gray-200">
             {/* Left section */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:pr-8">
               <div className="sm:col-span-2">
@@ -602,14 +705,20 @@ export function AccountForm() {
                     displayField="label"
                     searchFields={["label", "effect"]}
                     highlight
-                    value={groupListOptions.find((item) => item.id === value) || null}
+                    value={
+                      groupListOptions.find((item) => item.id === value) || null
+                    }
                     onChange={(item: any) => {
                       onChange(item?.id || "");
-                      const autoDrCr = CR_GROUP_IDS.includes(String(item?.id)) ? "CR" : "DR";
+                      const autoDrCr = CR_GROUP_IDS.includes(String(item?.id))
+                        ? "CR"
+                        : "DR";
                       setValue("drOrCr", autoDrCr);
                     }}
                     label="Group *"
-                    placeholder={loadingGroups ? "Loading groups..." : "Search Group"}
+                    placeholder={
+                      loadingGroups ? "Loading groups..." : "Search Group"
+                    }
                     error={errors.groupId?.message}
                   />
                 )}
@@ -631,7 +740,9 @@ export function AccountForm() {
                 render={({ field: { value, onChange, ...rest } }) => (
                   <Listbox
                     data={drCrOptions}
-                    value={drCrOptions.find((item) => item.id === value) || null}
+                    value={
+                      drCrOptions.find((item) => item.id === value) || null
+                    }
                     onChange={(item) => onChange(item.id)}
                     label="Dr./Cr. *"
                     placeholder="Select"
@@ -642,55 +753,63 @@ export function AccountForm() {
                 )}
               />
 
-           <Controller
-  control={control}
-  name="countryName"
-  render={({ field: { value, onChange } }) => (   // ✅ CHANGED — ...rest hata diya
-    <Combobox
-      data={countryListOptions}
-      value={countryListOptions.find((item) => item.label === value) || null}
-    onChange={(item: any) => {
-  onChange(item?.label || "");
-  setSelectedCountryIso(item?.id || "");
-  setSelectedStateIso("");
-  setValue("stateName", "");
-  setValue("stateCode", "");
-  setValue("districtName", "");
-  setValue("talukaName", "");
-  setValue("cityName", "");
-}}
-      label="Country *"
-      placeholder="Select Country"
-      displayField="label"
-      searchFields={["label"]}
-      error={errors.countryName?.message}
-      // ✅ {...rest} yaha se hata diya
-    />
-  )}
-/>
               <Controller
-  control={control}
-  name="stateName"
-  render={({ field: { value, onChange } }) => (
-    <Combobox
-      data={stateListOptions}
-      value={stateListOptions.find((item) => item.label === value) || null}
-      onChange={(item: any) => {
-        onChange(item?.label || "");
-        setSelectedStateIso(item?.id || "");
-        setValue("stateCode", item?.id || ""); // item.id yahan state ka isoCode hai
-        setValue("districtName", "");
-        setValue("talukaName", "");
-        setValue("cityName", "");
-      }}
-      label="State *"
-      placeholder="Select State"
-      displayField="label"
-      searchFields={["label"]}
-      error={errors.stateName?.message}
-    />
-  )}
-/>
+                control={control}
+                name="countryName"
+                render={(
+                  { field: { value, onChange } }, // ✅ CHANGED — ...rest hata diya
+                ) => (
+                  <Combobox
+                    data={countryListOptions}
+                    value={
+                      countryListOptions.find((item) => item.label === value) ||
+                      null
+                    }
+                    onChange={(item: any) => {
+                      onChange(item?.label || "");
+                      setSelectedCountryIso(item?.id || "");
+                      setSelectedStateIso("");
+                      setValue("stateName", "");
+                      setValue("stateCode", "");
+                      setValue("districtName", "");
+                      setValue("talukaName", "");
+                      setValue("cityName", "");
+                    }}
+                    label="Country *"
+                    placeholder="Select Country"
+                    displayField="label"
+                    searchFields={["label"]}
+                    error={errors.countryName?.message}
+                    // ✅ {...rest} yaha se hata diya
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="stateName"
+                render={({ field: { value, onChange } }) => (
+                  <Combobox
+                    data={stateListOptions}
+                    value={
+                      stateListOptions.find((item) => item.label === value) ||
+                      null
+                    }
+                    onChange={(item: any) => {
+                      onChange(item?.label || "");
+                      setSelectedStateIso(item?.id || "");
+                      setValue("stateCode", item?.id || ""); // item.id yahan state ka isoCode hai
+                      setValue("districtName", "");
+                      setValue("talukaName", "");
+                      setValue("cityName", "");
+                    }}
+                    label="State *"
+                    placeholder="Select State"
+                    displayField="label"
+                    searchFields={["label"]}
+                    error={errors.stateName?.message}
+                  />
+                )}
+              />
 
               <Input
                 {...register("stateCode")}
@@ -702,59 +821,67 @@ export function AccountForm() {
               />
 
               {/* District */}
-             {/* District */}
-<Controller
-  control={control}
-  name="districtName"
-  render={({ field: { value, onChange } }) => (
-    <Combobox
-      data={districtListOptions}
-      value={districtListOptions.find((item) => item.id === value) || null}
-      onChange={(item: any) => onChange(item?.id || "")}
-      label="District *"
-      placeholder="Select District"
-      displayField="label"
-      searchFields={["label"]}
-      error={errors.districtName?.message}
-    />
-  )}
-/>
+              {/* District */}
+              <Controller
+                control={control}
+                name="districtName"
+                render={({ field: { value, onChange } }) => (
+                  <Combobox
+                    data={districtListOptions}
+                    value={
+                      districtListOptions.find((item) => item.id === value) ||
+                      null
+                    }
+                    onChange={(item: any) => onChange(item?.id || "")}
+                    label="District *"
+                    placeholder="Select District"
+                    displayField="label"
+                    searchFields={["label"]}
+                    error={errors.districtName?.message}
+                  />
+                )}
+              />
 
-{/* Taluka */}
-<Controller
-  control={control}
-  name="talukaName"
-  render={({ field: { value, onChange } }) => (
-    <Combobox
-      data={talukaListOptions}
-      value={talukaListOptions.find((item) => item.id === value) || null}
-      onChange={(item: any) => onChange(item?.id || "")}
-      label="Taluka *"
-      placeholder="Select Taluka"
-      displayField="label"
-      searchFields={["label"]}
-      error={errors.talukaName?.message}
-    />
-  )}
-/>
+              {/* Taluka */}
+              <Controller
+                control={control}
+                name="talukaName"
+                render={({ field: { value, onChange } }) => (
+                  <Combobox
+                    data={talukaListOptions}
+                    value={
+                      talukaListOptions.find((item) => item.id === value) ||
+                      null
+                    }
+                    onChange={(item: any) => onChange(item?.id || "")}
+                    label="Taluka *"
+                    placeholder="Select Taluka"
+                    displayField="label"
+                    searchFields={["label"]}
+                    error={errors.talukaName?.message}
+                  />
+                )}
+              />
 
-{/* City */}
-<Controller
-  control={control}
-  name="cityName"
-  render={({ field: { value, onChange } }) => (
-    <Combobox
-      data={cityListOptions}
-      value={cityListOptions.find((item) => item.id === value) || null}
-      onChange={(item: any) => onChange(item?.id || "")}
-      label="City *"
-      placeholder="Select City"
-      displayField="label"
-      searchFields={["label"]}
-      error={errors.cityName?.message}
-    />
-  )}
-/>
+              {/* City */}
+              <Controller
+                control={control}
+                name="cityName"
+                render={({ field: { value, onChange } }) => (
+                  <Combobox
+                    data={cityListOptions}
+                    value={
+                      cityListOptions.find((item) => item.id === value) || null
+                    }
+                    onChange={(item: any) => onChange(item?.id || "")}
+                    label="City *"
+                    placeholder="Select City"
+                    displayField="label"
+                    searchFields={["label"]}
+                    error={errors.cityName?.message}
+                  />
+                )}
+              />
 
               <Input
                 {...register("area")}
@@ -879,21 +1006,34 @@ export function AccountForm() {
               />
 
               {/* GST No. — KYC style: input + Verify + Upload */}
-              {renderKycField("gst", "GST No.", "gstNo", errors.gstNo?.message,)}
+              {renderKycField("gst", "GST No.", "gstNo", errors.gstNo?.message)}
 
               {/* PAN Card — KYC style: input + Upload */}
-              {renderKycField("pan", "PAN Card", "panCard", errors.panCard?.message)}
+              {renderKycField(
+                "pan",
+                "PAN Card",
+                "panCard",
+                errors.panCard?.message,
+              )}
 
               {/* Aadhar Card No — KYC style: input + Upload */}
               <div className="sm:col-span-2">
-                {renderKycField("aadhar", "Aadhar Card No", "aadharCardNo", errors.aadharCardNo?.message)}
+                {renderKycField(
+                  "aadhar",
+                  "Aadhar Card No",
+                  "aadharCardNo",
+                  errors.aadharCardNo?.message,
+                )}
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-dark-500">
-            <Button type="button" onClick={() => navigate("/user-master/accounts")}>
+          <div className="dark:border-dark-500 mt-6 flex justify-end gap-3 border-t border-gray-200 pt-6">
+            <Button
+              type="button"
+              onClick={() => navigate("/user-master/accounts")}
+            >
               Cancel
             </Button>
             <Button type="submit" color="primary" disabled={submitting}>
