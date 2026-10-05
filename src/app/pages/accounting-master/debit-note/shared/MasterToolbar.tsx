@@ -1,5 +1,6 @@
 import {
   ArrowDownTrayIcon,
+  ArrowLeftIcon,
   DocumentArrowDownIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
@@ -22,6 +23,8 @@ interface MasterToolbarProps<T> {
   onExportExcel: () => void;
   onExportPdf: () => void;
   filterPanel?: ReactNode;
+  hideFilterButton?: boolean;
+  onBack?: () => void;
 }
 
 export function MasterToolbar<T>({
@@ -35,6 +38,8 @@ export function MasterToolbar<T>({
   onExportExcel,
   onExportPdf,
   filterPanel,
+  hideFilterButton,
+  onBack,
 }: MasterToolbarProps<T>) {
   return (
     <div className="table-toolbar px-(--margin-x) pt-4">
@@ -43,22 +48,24 @@ export function MasterToolbar<T>({
           {title}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outlined"
-            className="h-9 gap-2 rounded-md px-3 text-sm"
-            onClick={onToggleFilters}
-          >
-            <FunnelIcon
-              className={clsx("size-4", showFilters && "text-primary-600")}
-            />
-            <span>Filter</span>
-          </Button>
+          {!hideFilterButton && (
+            <Button
+              variant="outlined"
+              className="h-9 gap-2 rounded-md px-3 text-sm"
+              onClick={onToggleFilters}
+            >
+              <FunnelIcon
+                className={clsx("size-4", showFilters && "text-primary-600")}
+              />
+              <span>Filter</span>
+            </Button>
+          )}
           <Button
             variant="outlined"
             className="h-9 gap-2 rounded-md px-3 text-sm"
             onClick={onExportExcel}
           >
-            <ArrowDownTrayIcon className="size-4 text-success-600" />
+            <ArrowDownTrayIcon className="text-success-600 size-4" />
             <span>Excel</span>
           </Button>
           <Button
@@ -66,9 +73,19 @@ export function MasterToolbar<T>({
             className="h-9 gap-2 rounded-md px-3 text-sm"
             onClick={onExportPdf}
           >
-            <DocumentArrowDownIcon className="size-4 text-error-600" />
+            <DocumentArrowDownIcon className="text-error-600 size-4" />
             <span>PDF</span>
           </Button>
+          {onBack && (
+            <Button
+              variant="outlined"
+              className="h-9 gap-2 rounded-md px-3 text-sm"
+              onClick={onBack}
+            >
+              <ArrowLeftIcon className="size-4" />
+              <span>Back</span>
+            </Button>
+          )}
           {onCreate && (
             <Button
               color="primary"
@@ -95,7 +112,7 @@ export function MasterToolbar<T>({
       </div>
 
       {showFilters && filterPanel && (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-500 dark:bg-dark-600">
+        <div className="dark:border-dark-500 dark:bg-dark-600 mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
           {filterPanel}
         </div>
       )}
