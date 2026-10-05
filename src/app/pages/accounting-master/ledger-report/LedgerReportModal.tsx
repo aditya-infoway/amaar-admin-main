@@ -13,7 +13,11 @@ import { DatePicker } from "@/components/shared/form/Datepicker";
 interface LedgerReportModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (values: { fromDate: string; toDate: string; displayType: string }) => void;
+  onConfirm: (values: {
+    fromDate: string;
+    toDate: string;
+    displayType: string;
+  }) => void;
 }
 
 const DISPLAY_TYPE_OPTIONS = [
@@ -26,7 +30,8 @@ const DISPLAY_TYPE_OPTIONS = [
 // Current financial year: 01-04 se aaj tak (April se pehle ke months me pichle saal ka April)
 function getDefaultFYDates() {
   const today = new Date();
-  const fyStartYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+  const fyStartYear =
+    today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
   const pad = (n: number) => String(n).padStart(2, "0");
   const fromDate = `${fyStartYear}-04-01`;
   const toDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
@@ -42,7 +47,11 @@ const toDateInputValue = (dates: Date[]) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-export function LedgerReportModal({ open, onClose, onConfirm }: LedgerReportModalProps) {
+export function LedgerReportModal({
+  open,
+  onClose,
+  onConfirm,
+}: LedgerReportModalProps) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [displayType, setDisplayType] = useState("");
@@ -88,9 +97,14 @@ export function LedgerReportModal({ open, onClose, onConfirm }: LedgerReportModa
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full transform-gpu flex-col bg-white transition-transform duration-200 sm:max-w-md lg:max-w-lg"
         >
-          <div className="flex items-center justify-between border-b border-gray-200 bg-primary-600 px-4 py-4 dark:border-dark-500 sm:px-5">
+          <div className="bg-primary-600 dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
             <h3 className="text-lg font-semibold text-white">Ledger Report</h3>
-            <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full text-white">
+            <Button
+              onClick={handleClose}
+              variant="flat"
+              isIcon
+              className="size-6 rounded-full text-white"
+            >
               <XMarkIcon className="size-4.5" />
             </Button>
           </div>
@@ -116,18 +130,18 @@ export function LedgerReportModal({ open, onClose, onConfirm }: LedgerReportModa
               onChange={(e) => setDisplayType(e.target.value)}
             >
               {DISPLAY_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </Select>
           </div>
 
-          <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
-            <Button type="button" onClick={handleClose}>Cancel</Button>
-            <Button
-              type="button"
-              onClick={handleConfirm}
-             color="primary"
-            >
+          <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-5">
+            <Button type="button" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleConfirm} color="primary">
               OK
             </Button>
           </div>

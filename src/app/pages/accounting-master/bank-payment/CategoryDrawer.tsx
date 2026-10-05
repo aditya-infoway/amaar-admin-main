@@ -12,7 +12,10 @@ import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input, Radio, Textarea } from "@/components/ui";
 import { BankPayment } from "../shared/types";
 import { DatePicker } from "@/components/shared/form/Datepicker";
-import { AccountListbox, AccountOption } from "@/components/shared/form/AccountListbox";
+import {
+  AccountListbox,
+  AccountOption,
+} from "@/components/shared/form/AccountListbox";
 import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 
 interface BankPaymentDrawerProps {
@@ -23,8 +26,13 @@ interface BankPaymentDrawerProps {
 
 const paymentApi = {
   nextVoucherNo: (financialYearId: string) =>
-    Get("payment/next-voucher-no", { financialYearId, voucherType: "BANK PAYMENT" }, false),
-  create: (payload: Record<string, any>) => Post("payment/bank/create", payload, false),
+    Get(
+      "payment/next-voucher-no",
+      { financialYearId, voucherType: "BANK PAYMENT" },
+      false,
+    ),
+  create: (payload: Record<string, any>) =>
+    Post("payment/bank/create", payload, false),
 };
 
 const accountApi = {
@@ -44,7 +52,7 @@ const emptyDefaults = {
   chequeDate: "",
   chequeClearDate: "",
   narration: "",
-} as const; 
+} as const;
 
 const formatDateForApi = (date: Date): string => {
   const yyyy = date.getFullYear();
@@ -53,10 +61,18 @@ const formatDateForApi = (date: Date): string => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerProps) {
+export function BankPaymentDrawer({
+  isOpen,
+  close,
+  onSaved,
+}: BankPaymentDrawerProps) {
   const [submitting, setSubmitting] = useState(false);
-  const [bankAccountOptions, setBankAccountOptions] = useState<{ id: string; label: string }[]>([]);
-  const [oppAccountOptions, setOppAccountOptions] = useState<AccountOption[]>([]);
+  const [bankAccountOptions, setBankAccountOptions] = useState<
+    { id: string; label: string }[]
+  >([]);
+  const [oppAccountOptions, setOppAccountOptions] = useState<AccountOption[]>(
+    [],
+  );
 
   const {
     register,
@@ -92,7 +108,10 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
 
         const bankList = bankRes?.data?.data || [];
         setBankAccountOptions(
-          bankList.map((a: any) => ({ id: String(a.id), label: a.accountName })),
+          bankList.map((a: any) => ({
+            id: String(a.id),
+            label: a.accountName,
+          })),
         );
 
         const oppList = oppRes?.data?.data || [];
@@ -126,8 +145,13 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
     }
 
     // Cheque mode client-side guard
-    if (data.transactionMode === "cheque" && (!data.chequeNumber || !data.chequeDate)) {
-      toasterrormsg("Cheque number and cheque date are required for cheque mode.");
+    if (
+      data.transactionMode === "cheque" &&
+      (!data.chequeNumber || !data.chequeDate)
+    ) {
+      toasterrormsg(
+        "Cheque number and cheque date are required for cheque mode.",
+      );
       return;
     }
 
@@ -145,7 +169,8 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
         transactionMode: String(data.transactionMode).toUpperCase(),
         chequeNo: data.transactionMode === "cheque" ? data.chequeNumber : "",
         chequeDate: data.transactionMode === "cheque" ? data.chequeDate : "",
-        chequeClearDate: data.transactionMode === "cheque" ? data.chequeClearDate : "",
+        chequeClearDate:
+          data.transactionMode === "cheque" ? data.chequeClearDate : "",
         narration: data.narration || "",
         financialYearId: financialYearId ? Number(financialYearId) : undefined,
         createdBy: companyId ? Number(companyId) : undefined,
@@ -161,7 +186,10 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
       onSaved();
       handleClose();
     } catch (err: any) {
-      toasterrormsg(err?.response?.data?.message || "Something went wrong. Please try again.");
+      toasterrormsg(
+        err?.response?.data?.message ||
+          "Something went wrong. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -189,16 +217,26 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
           leave="ease-in transform-gpu transition-transform duration-200"
           leaveFrom="translate-x-0"
           leaveTo="translate-x-full"
-          className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full lg:max-w-[50%] transform-gpu flex-col bg-white transition-transform duration-200"
+          className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full transform-gpu flex-col bg-white transition-transform duration-200 lg:max-w-[50%]"
         >
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary-600">
-            <h3 className="text-lg font-semibold text-white">Add Bank Payment</h3>
-            <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full text-white">
+          <div className="dark:border-dark-500 bg-primary-600 flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
+            <h3 className="text-lg font-semibold text-white">
+              Add Bank Payment
+            </h3>
+            <Button
+              onClick={handleClose}
+              variant="flat"
+              isIcon
+              className="size-6 rounded-full text-white"
+            >
               <XMarkIcon className="size-4.5" />
             </Button>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col overflow-hidden">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex grow flex-col overflow-hidden"
+          >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
               {/* Payment Mode Radio */}
               <Controller
@@ -206,12 +244,19 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
                 name="paymentMode"
                 render={({ field }) => (
                   <div className="flex items-center gap-6 py-2">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-dark-100">
-                      <Radio checked={field.value === "manual"} onChange={() => field.onChange("manual")} />
+                    <label className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                      <Radio
+                        checked={field.value === "manual"}
+                        onChange={() => field.onChange("manual")}
+                      />
                       Manual
                     </label>
                     <label className="flex cursor-not-allowed items-center gap-2 text-sm font-medium text-gray-400">
-                      <Radio checked={field.value === "bom"} disabled onChange={() => field.onChange("bom")} />
+                      <Radio
+                        checked={field.value === "bom"}
+                        disabled
+                        onChange={() => field.onChange("bom")}
+                      />
                       BOM (Coming Soon)
                     </label>
                   </div>
@@ -227,7 +272,10 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
                   render={({ field: { value, onChange, ...rest } }) => (
                     <Listbox
                       data={bankAccountOptions}
-                      value={bankAccountOptions.find((item) => item.id === value) || null}
+                      value={
+                        bankAccountOptions.find((item) => item.id === value) ||
+                        null
+                      }
                       onChange={(item) => onChange(item.id)}
                       label="Bank Account"
                       placeholder="Select Bank Account"
@@ -239,7 +287,9 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
                 />
 
                 <Input
-                  {...register("voucherNo", { required: "Voucher no is required" })}
+                  {...register("voucherNo", {
+                    required: "Voucher no is required",
+                  })}
                   label="Voucher No."
                   placeholder="Auto generated"
                   readOnly
@@ -265,7 +315,7 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
                 />
               </div>
 
-              <div className="border-t-3 border-dotted border-primary my-8" />
+              <div className="border-primary my-8 border-t-3 border-dotted" />
 
               {/* Opp Account / Amount */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -277,7 +327,9 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
                     render={({ field: { value, onChange } }) => (
                       <AccountListbox
                         data={oppAccountOptions}
-                        value={oppAccountOptions.find((item) => item.id === value)}
+                        value={oppAccountOptions.find(
+                          (item) => item.id === value,
+                        )}
                         onChange={(item: AccountOption) => onChange(item.id)}
                         label="Opp. Account"
                         placeholder="Select Opp. Account"
@@ -302,11 +354,19 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
                 name="transactionMode"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-dark-100">Mode:</label>
+                    <label className="dark:text-dark-100 block text-sm font-semibold text-gray-700">
+                      Mode:
+                    </label>
                     <div className="flex flex-wrap items-center gap-6">
                       {["neft", "rtgs", "imps", "cheque", "upi"].map((mode) => (
-                        <label key={mode} className="flex cursor-pointer items-center gap-2 text-sm font-medium uppercase text-gray-700 dark:text-dark-100">
-                          <Radio checked={field.value === mode} onChange={() => field.onChange(mode)} />
+                        <label
+                          key={mode}
+                          className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 uppercase"
+                        >
+                          <Radio
+                            checked={field.value === mode}
+                            onChange={() => field.onChange(mode)}
+                          />
                           {mode}
                         </label>
                       ))}
@@ -319,7 +379,9 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
               {transactionMode === "cheque" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Input
-                    {...register("chequeNumber", { required: "Cheque number is required" })}
+                    {...register("chequeNumber", {
+                      required: "Cheque number is required",
+                    })}
                     label="Cheque Number"
                     placeholder="Enter cheque number"
                     error={errors.chequeNumber?.message as string}
@@ -370,8 +432,10 @@ export function BankPaymentDrawer({ isOpen, close, onSaved }: BankPaymentDrawerP
               />
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
-              <Button type="button" onClick={handleClose}>Cancel</Button>
+            <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-5">
+              <Button type="button" onClick={handleClose}>
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 disabled={submitting || paymentMode === "bom"}
