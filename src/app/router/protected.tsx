@@ -460,7 +460,7 @@ const protectedRoutes: RouteObject = {
                         ).default,
                       }),
                     },
-                                        {
+                    {
                       path: "complete/:vendorId/:type", // complete list (type = grr | qc)
                       lazy: async () => ({
                         Component: (
@@ -779,6 +779,14 @@ const protectedRoutes: RouteObject = {
                 Component: (
                   await import("@/app/pages/user-master/create-account/form")
                 ).AccountForm,
+              }),
+            },
+            {
+              path: "account-group",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/user-master/account-group")
+                ).default,
               }),
             },
             {

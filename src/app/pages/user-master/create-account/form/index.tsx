@@ -5,7 +5,6 @@ import * as yup from "yup";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { PaperClipIcon } from "@heroicons/react/24/solid";
-import { Download } from "lucide-react";
 import { Page } from "@/components/shared/Page";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
@@ -35,6 +34,10 @@ const groupApi = {
   list: () => Get("master/group/list", {}, false),
 };
 
+const accountGroupApi = {
+  list: () => Get("master/account-group/list", {}, false),
+};
+
 const accountApi = {
   create: (payload: FormData) => Post("master/account/create", payload, true),
   update: (payload: FormData) => Put("master/account/update", payload, true),
@@ -51,6 +54,12 @@ interface GroupItem {
   role: string;
 }
 
+interface AccountGroupItem {
+  id: number | string;
+  groupName: string; // main group
+  groupId: number | string; // sub group (group master id)
+  subGroupName: string;
+}
 // ---------------- KYC (Aadhar / PAN / GST) — same pattern as Sales Order ----------------
 type KycKey = "aadhar" | "pan" | "gst";
 
@@ -239,6 +248,10 @@ export function AccountForm() {
   const isEdit = Boolean(id);
 
   const [groupList, setGroupList] = useState<GroupItem[]>([]);
+  const [accountGroupList, setAccountGroupList] = useState<AccountGroupItem[]>(
+    [],
+  );
+  const [selectedMainGroup, setSelectedMainGroup] = useState<string>("");
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -260,11 +273,30 @@ export function AccountForm() {
     {},
   );
 
-  const groupListOptions = groupList.map((g) => ({
-    id: String(g.id),
-    label: g.groupName,
-    effect: g.role || "",
-  }));
+  // Group dropdown = main groups (typed) + normal groups jo kisi main group ke under nahi hain
+  const subGroupMasterIds = new Set(
+    accountGroupList.map((r) => String(r.groupId)),
+  );
+  // sirf wahi rows jinka sub group sach me linked hai
+  const validRows = accountGroupList.filter((r) => r.subGroupName);
+  const mainGroupNames = new Set(
+    validRows.map((r) => r.groupName.trim().toLowerCase()),
+  );
+  const mainGroupOptions = Array.from(
+    new Set(validRows.map((r) => r.groupName)),
+  ).map((name) => ({ id: `m:${name}`, label: name, effect: "" }));
+  const directGroupOptions = groupList
+    .filter(
+      (g) =>
+        !subGroupMasterIds.has(String(g.id)) &&
+        !mainGroupNames.has(String(g.groupName).trim().toLowerCase()),
+    )
+    .map((g) => ({
+      id: `g:${g.id}`,
+      label: g.groupName,
+      effect: g.role || "",
+    }));
+  const groupListOptions = [...mainGroupOptions, ...directGroupOptions];
   const countryListOptions = countryList.map((c) => ({
     id: c.isoCode,
     label: c.name,
@@ -295,6 +327,21 @@ export function AccountForm() {
   const panCardValue = watch("panCard");
   const aadharCardNoValue = watch("aadharCardNo");
 
+  const groupIdValue = watch("groupId");
+
+  const subGroupOptions = accountGroupList
+    .filter((r) => r.groupName === selectedMainGroup)
+    .map((r) => ({ id: String(r.groupId), label: r.subGroupName }));
+
+  // Edit mode: account ka groupId kisi sub group ka hai to uska main group restore karo
+  useEffect(() => {
+    if (!groupIdValue) return;
+    const row = accountGroupList.find(
+      (r) => String(r.groupId) === String(groupIdValue),
+    );
+    if (row) setSelectedMainGroup(row.groupName);
+  }, [groupIdValue, accountGroupList]);
+
   // Print Name = Account Name (auto-fill, readonly)
   useEffect(() => {
     setValue("printName", accountNameValue || "");
@@ -311,6 +358,18 @@ export function AccountForm() {
         toasterrormsg("Failed to load groups");
       } finally {
         setLoadingGroups(false);
+      }
+    })();
+  }, []);
+
+  // Fetch Account Groups (sub groups) - Sub Group dropdown ke liye
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await accountGroupApi.list();
+        setAccountGroupList(res?.data?.data || []);
+      } catch (err) {
+        toasterrormsg("Failed to load sub groups");
       }
     })();
   }, []);
@@ -706,23 +765,63 @@ export function AccountForm() {
                     searchFields={["label", "effect"]}
                     highlight
                     value={
-                      groupListOptions.find((item) => item.id === value) || null
+                      selectedMainGroup
+                        ? mainGroupOptions.find(
+                            (o) => o.id === `m:${selectedMainGroup}`,
+                          ) || null
+                        : directGroupOptions.find(
+                            (o) => o.id === `g:${value}`,
+                          ) || null
                     }
                     onChange={(item: any) => {
-                      onChange(item?.id || "");
-                      const autoDrCr = CR_GROUP_IDS.includes(String(item?.id))
-                        ? "CR"
-                        : "DR";
-                      setValue("drOrCr", autoDrCr);
+                      const picked = String(item?.id || "");
+                      if (picked.startsWith("m:")) {
+                        // main group -> ab sub group select karna padega
+                        setSelectedMainGroup(picked.slice(2));
+                        onChange("");
+                      } else {
+                        setSelectedMainGroup("");
+                        const realId = picked.slice(2);
+                        onChange(realId);
+                        setValue(
+                          "drOrCr",
+                          CR_GROUP_IDS.includes(realId) ? "CR" : "DR",
+                        );
+                      }
                     }}
                     label="Group *"
                     placeholder={
                       loadingGroups ? "Loading groups..." : "Search Group"
                     }
-                    error={errors.groupId?.message}
+                    error={
+                      selectedMainGroup ? undefined : errors.groupId?.message
+                    }
                   />
                 )}
               />
+
+              {/* Sub Group - sirf tab dikhega jab selected group ke sub groups bane hon */}
+              {selectedMainGroup && (
+                <Combobox
+                  data={subGroupOptions}
+                  value={
+                    subGroupOptions.find((o) => o.id === groupIdValue) || null
+                  }
+                  onChange={(item: any) => {
+                    const sid = item?.id ? String(item.id) : "";
+                    setValue("groupId", sid, { shouldValidate: true });
+                    setValue(
+                      "drOrCr",
+                      CR_GROUP_IDS.includes(sid) ? "CR" : "DR",
+                    );
+                  }}
+                  label="Sub Group *"
+                  placeholder="Select Sub Group"
+                  displayField="label"
+                  searchFields={["label"]}
+                  error={errors.groupId ? "Sub Group is required" : undefined}
+                />
+              )}
 
               <Input
                 {...register("openingBalance")}
@@ -820,7 +919,6 @@ export function AccountForm() {
                 error={errors.stateCode?.message}
               />
 
-              {/* District */}
               {/* District */}
               <Controller
                 control={control}

@@ -11,7 +11,9 @@ import { Account } from "../shared/types";
 
 const RowActions = createRowActions<Account>("account");
 
-export const columns: ColumnDef<Account>[] = [
+export const createColumns = (
+  getGroupLabel: (groupName?: string) => string,
+): ColumnDef<Account>[] => [
   {
     id: "select",
     header: SelectHeader,
@@ -32,7 +34,7 @@ export const columns: ColumnDef<Account>[] = [
   },
   {
     id: "group",
-    accessorKey: "groupName",
+    accessorFn: (row) => getGroupLabel(row.groupName),
     header: "Group",
     cell: TextCell,
   },
