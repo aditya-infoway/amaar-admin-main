@@ -9,7 +9,6 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
@@ -19,14 +18,19 @@ import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { statusOptions } from "../shared/constants";
-import { columns, exportColumns } from "./columns";
+import { createColumns, exportColumns } from "./columns";
 import { Account, mapApiAccountToAccount } from "../shared/types";
 
 export default function AccountPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [groupOptions, setGroupOptions] = useState<{ id: string; label: string }[]>([]);
+  const [groupOptions, setGroupOptions] = useState<
+    { id: string; label: string }[]
+  >([]);
+  const [accountGroups, setAccountGroups] = useState<
+    { groupName: string; subGroupName: string }[]
+  >([]);
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -41,14 +45,22 @@ export default function AccountPage() {
     try {
       const response = await Get("master/account/list", {}, false);
       if (response.data?.success) {
-        const mapped: Account[] = (response.data.data || []).map(mapApiAccountToAccount);
+        const mapped: Account[] = (response.data.data || []).map(
+          mapApiAccountToAccount,
+        );
         setData(mapped);
 
         const uniqueGroups = Array.from(
           new Map(
             mapped
               .filter((item) => item.groupName)
-              .map((item) => [item.groupName as string, { id: item.groupName as string, label: item.groupName as string }]),
+              .map((item) => [
+                item.groupName as string,
+                {
+                  id: item.groupName as string,
+                  label: item.groupName as string,
+                },
+              ]),
           ).values(),
         );
         setGroupOptions(uniqueGroups);
@@ -67,11 +79,40 @@ export default function AccountPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Main group (typed) ka naam dikhane ke liye account groups
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await Get("master/account-group/list", {}, false);
+        if (res.data?.success) setAccountGroups(res.data.data || []);
+      } catch {
+        // main group na mile to sirf group name dikhega
+      }
+    })();
+  }, []);
+
+  const getGroupLabel = (groupName?: string) => {
+    if (!groupName) return "";
+    const row = accountGroups.find(
+      (r) =>
+        r.subGroupName?.trim().toLowerCase() === groupName.trim().toLowerCase(),
+    );
+    return row ? `${row.groupName} → ${groupName}` : groupName;
+  };
+
+  const columns = useMemo(
+    () => createColumns(getGroupLabel),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [accountGroups],
+  );
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       if (
         filterAccountName &&
-        !item.accountName?.toLowerCase().includes(filterAccountName.toLowerCase())
+        !item.accountName
+          ?.toLowerCase()
+          .includes(filterAccountName.toLowerCase())
       )
         return false;
       if (filterGroup && item.groupName !== filterGroup) return false;
@@ -80,16 +121,23 @@ export default function AccountPage() {
     });
   }, [data, filterAccountName, filterGroup, filterStatus]);
 
+  const exportRows = filteredData.map((row) => ({
+    ...row,
+    groupName: getGroupLabel(row.groupName),
+  }));
+
   // ---- Delete (single) ----
   const handleDeleteOne = async (row: Account) => {
     try {
       const response = await Delete(
         "master/account/delete",
         { accountId: Number(row.id) },
-        false
+        false,
       );
       if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "Account deleted successfully.");
+        toastsuccessmsg(
+          response.data?.message || "Account deleted successfully.",
+        );
         setData((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         toasterrormsg(response.data?.message || "Failed to delete account.");
@@ -107,9 +155,9 @@ export default function AccountPage() {
           Delete(
             "master/account/delete",
             { accountId: Number(r.original.id) },
-            false
-          )
-        )
+            false,
+          ),
+        ),
       );
       const ids = new Set(rows.map((r) => r.original.id));
       setData((prev) => prev.filter((item) => !ids.has(item.id)));
@@ -124,7 +172,7 @@ export default function AccountPage() {
     data: filteredData,
     columns,
     state: { globalFilter, sorting, rowSelection },
-    enableRowSelection: true,
+    enableRowSelection: (row) => !row.original.isDefault,
     getRowId: (row) => row.id,
     meta: {
       openEditDrawer: (row: Account) => {
@@ -156,15 +204,10 @@ export default function AccountPage() {
           onToggleFilters={() => setShowFilters((v) => !v)}
           onCreate={() => navigate("/user-master/accounts/create")}
           onExportExcel={() =>
-            exportToExcel(filteredData, exportColumns, "accounts")
+            exportToExcel(exportRows, exportColumns, "accounts")
           }
           onExportPdf={() =>
-            exportToPdf(
-              filteredData,
-              exportColumns,
-              "Account List",
-              "accounts",
-            )
+            exportToPdf(exportRows, exportColumns, "Account List", "accounts")
           }
           filterPanel={
             <div className="grid gap-4 sm:grid-cols-3">

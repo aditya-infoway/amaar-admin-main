@@ -262,69 +262,73 @@ function GroupCombobox<TValue = DataItem>(
                       ["--left-anchor" as string]: `${inputLeft}px`,
                     }}
                     className={clsx(
-                      "dark:border-dark-500 dark:bg-dark-750 absolute left-(--left-anchor)! z-10 max-h-60 overflow-x-hidden overflow-y-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg shadow-gray-200/50 outline-hidden focus-visible:outline-hidden dark:shadow-none",
+                      // Removed overflow-y-auto and py-1 from here. Added overflow-hidden.
+                      "dark:border-dark-500 dark:bg-dark-750 absolute left-(--left-anchor)! z-10 overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg shadow-gray-200/50 outline-hidden focus-visible:outline-hidden dark:shadow-none",
                       multiple && "mt-2",
                     )}
                   >
-                    {filteredData.length === 0 && query !== "" ? (
-                      <div className="dark:text-dark-100 relative cursor-default px-4 py-2 text-gray-800 select-none">
-                        Nothing found for {query}
-                      </div>
-                    ) : (
-                      <>
-                        {/* Header */}
-                        <div className="dark:border-dark-500 dark:bg-dark-750 sticky top-0 z-10 grid grid-cols-[1fr_140px] border-b bg-white px-4 py-2 text-xs font-semibold">
-                          <span>Group</span>
-                          <span className="text-right">Effect</span>
+                    {/* NEW WRAPPER DIV: Controls height and scrolling */}
+                    <div className="max-h-[300px] overflow-x-hidden overflow-y-auto py-1">
+                      {filteredData.length === 0 && query !== "" ? (
+                        <div className="dark:text-dark-100 relative cursor-default px-4 py-2 text-gray-800 select-none">
+                          Nothing found for {query}
                         </div>
+                      ) : (
+                        <>
+                          {/* Header */}
+                          <div className="dark:border-dark-500 dark:bg-dark-750 sticky top-0 z-10 grid grid-cols-[1fr_140px] border-b bg-white px-4 py-2 text-xs font-semibold">
+                            <span>Group</span>
+                            <span className="text-right">Effect</span>
+                          </div>
 
-                        {filteredData.map(({ item, refIndex }) => (
-                          <ComboboxOption
-                            key={refIndex}
-                            className={({ selected, active }) =>
-                              clsx(
-                                "relative cursor-pointer px-4 py-2 outline-hidden transition-colors select-none",
-                                active &&
-                                  !selected &&
-                                  "dark:bg-dark-600 bg-gray-100",
-                                selected
-                                  ? "bg-primary-600 dark:bg-primary-500 text-white"
-                                  : "dark:text-dark-100 text-gray-800",
-                              )
-                            }
-                            value={item}
-                          >
-                            {({ selected }) => (
-                              <div className="grid grid-cols-[minmax(0,1fr)_140px] items-start gap-2">
-                                <span
-                                  className={`break-word whitespace-normal ${
-                                    selected ? "font-medium" : "font-normal"
-                                  }`}
-                                >
-                                  {highlight ? (
-                                    <Highlight query={query}>
-                                      {String(item?.label ?? "")}
-                                    </Highlight>
-                                  ) : (
-                                    String(item?.label ?? "")
-                                  )}
-                                </span>
+                          {filteredData.map(({ item, refIndex }) => (
+                            <ComboboxOption
+                              key={refIndex}
+                              className={({ selected, active }) =>
+                                clsx(
+                                  "relative cursor-pointer px-4 py-2 outline-hidden transition-colors select-none",
+                                  active &&
+                                    !selected &&
+                                    "dark:bg-dark-600 bg-gray-100",
+                                  selected
+                                    ? "bg-primary-600 dark:bg-primary-500 text-white"
+                                    : "dark:text-dark-100 text-gray-800",
+                                )
+                              }
+                              value={item}
+                            >
+                              {({ selected }) => (
+                                <div className="grid grid-cols-[minmax(0,1fr)_140px] items-start gap-2">
+                                  <span
+                                    className={`break-word whitespace-normal ${
+                                      selected ? "font-medium" : "font-normal"
+                                    }`}
+                                  >
+                                    {highlight ? (
+                                      <Highlight query={query}>
+                                        {String(item?.label ?? "")}
+                                      </Highlight>
+                                    ) : (
+                                      String(item?.label ?? "")
+                                    )}
+                                  </span>
 
-                                <span
-                                  className={`text-right text-xs font-semibold ${
-                                    selected
-                                      ? "text-white"
-                                      : "text-gray-500 dark:text-gray-300"
-                                  }`}
-                                >
-                                  {String(item?.effect ?? "")}
-                                </span>
-                              </div>
-                            )}
-                          </ComboboxOption>
-                        ))}
-                      </>
-                    )}
+                                  <span
+                                    className={`text-right text-xs font-semibold ${
+                                      selected
+                                        ? "text-white"
+                                        : "text-gray-500 dark:text-gray-300"
+                                    }`}
+                                  >
+                                    {String(item?.effect ?? "")}
+                                  </span>
+                                </div>
+                              )}
+                            </ComboboxOption>
+                          ))}
+                        </>
+                      )}
+                    </div>
                   </ComboboxOptions>
                 </Transition>
               </div>
