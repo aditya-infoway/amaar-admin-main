@@ -139,7 +139,7 @@ export interface Account {
   id: string;
   accountName: string;
   printName?: string;
-
+isDefault?: boolean;
   groupId?: string | number;
   groupName?: string;
 
@@ -180,6 +180,7 @@ export interface Account {
 
   status: string;
   createdAt?: string;
+  
 }
 
 // API se aane wale raw row ko frontend Type me map karta hai (EnquiryType jaisa hi pattern)
@@ -208,4 +209,5 @@ export const mapApiAccountToAccount = (item: any): Account => ({
   email: item.email,
   status: item.status,
   createdAt: item.created,
+  isDefault: !!item.isDefault,
 });

@@ -283,7 +283,7 @@ function CustomCombobox<TValue = DataItem>(
                             active: boolean;
                           }) =>
                             clsx(
-                              "relative cursor-pointer px-4 py-2 outline-hidden transition-colors select-none",
+                              "relative cursor-pointer px-3 py-1.5 text-sm outline-hidden transition-colors select-none",
                               active &&
                                 !selected &&
                                 "dark:bg-dark-600 bg-gray-100",
