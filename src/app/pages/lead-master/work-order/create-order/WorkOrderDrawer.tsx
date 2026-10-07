@@ -311,6 +311,16 @@ export default function WorkOrderDrawer({
   const allStagesSelected =
     stageFields.length > 0 && stageFields.every((f) => stageSelection[f.key]);
 
+  const lockedStages = useMemo(
+    () =>
+      new Set(
+        (workOrder?.stages || [])
+          .filter((s) => s.status && s.status !== "Pending")
+          .map((s) => s.stage),
+      ),
+    [workOrder],
+  );
+
   /*
    * Submit
    */
@@ -320,14 +330,12 @@ export default function WorkOrderDrawer({
       return;
     }
 
-    if (!isEditing) {
-      const missing = stageFields.find((f) => !stageSelection[f.key]);
-      if (stageFields.length === 0 || missing) {
-        toasterrormsg(
-          `Please select an employee for ${missing?.label || "all stages"}.`,
-        );
-        return;
-      }
+    const missing = stageFields.find((f) => !stageSelection[f.key]);
+    if (stageFields.length === 0 || missing) {
+      toasterrormsg(
+        `Please select an employee for ${missing?.label || "all stages"}.`,
+      );
+      return;
     }
 
     try {
@@ -339,6 +347,10 @@ export default function WorkOrderDrawer({
         toasterrormsg("Financial Year not found.");
         return;
       }
+
+      const stagesPayload = Object.fromEntries(
+        stageFields.map((f) => [f.key, stageSelection[f.key]?.id]),
+      );
 
       const payload = {
         financialYearId,
@@ -366,19 +378,16 @@ export default function WorkOrderDrawer({
         gst: amount.gst,
 
         grandTotal: amount.grandTotal,
-
-        ...(isEditing
-          ? {}
-          : {
-              stages: Object.fromEntries(
-                stageFields.map((f) => [f.key, stageSelection[f.key]?.id]),
-              ),
-            }),
+        stages: stagesPayload,
       };
 
       const response =
         isEditing && workOrder?.id
-          ? await Put(`workorder/${workOrder.id}`, payload, false)
+          ? await Put(
+              `workorder/${workOrder.id}/stages`,
+              { stages: stagesPayload },
+              false,
+            )
           : await Post("workorder/create", payload, false);
 
       if (response?.data?.success || response?.data?.status === 200) {
@@ -558,8 +567,6 @@ export default function WorkOrderDrawer({
 
               {/* PRODUCTION STAGES */}
               <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
-              
-
                 <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
                   {stageFields.map((field) => (
                     <Combobox
@@ -578,7 +585,7 @@ export default function WorkOrderDrawer({
                       placeholder={`Select ${field.label} employee`}
                       label={field.label}
                       searchFields={["name"]}
-                      disabled={readOnly || isEditing}
+                      disabled={readOnly || lockedStages.has(field.key)}
                     />
                   ))}
                 </div>
@@ -597,13 +604,13 @@ export default function WorkOrderDrawer({
                   color="primary"
                   onClick={handleSubmit}
                   disabled={
-                    loading ||
-                    !selectedSalesOrder ||
-                    (!isEditing && !allStagesSelected)
+                    loading || !selectedSalesOrder || !allStagesSelected
                   }
                 >
                   {loading
-                    ? "Generating..."
+                    ? isEditing
+                      ? "Updating..."
+                      : "Generating..."
                     : isEditing
                       ? "Update"
                       : "Generate To Work Order"}
