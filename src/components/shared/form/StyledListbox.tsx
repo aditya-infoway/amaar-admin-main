@@ -128,7 +128,11 @@ const StyledListbox: ListboxComponentType = forwardRef((props, ref) => {
               >
                 <ListboxOptions
                   anchor={{ to: "bottom end", gap: 8 }}
-                  className="dark:border-dark-500 dark:bg-dark-750 absolute z-100 max-h-60 w-(--button-width) overflow-y-auto overflow-x-hidden rounded-lg border border-gray-300 bg-white py-1 shadow-lg shadow-gray-200/50 outline-hidden focus-visible:outline-hidden dark:shadow-none"
+                  style={{
+                    // Force the max height (change 11rem to whatever you prefer)
+                    ["--anchor-max-height" as any]: "11rem",
+                  }}
+                  className="dark:border-dark-500 dark:bg-dark-750 absolute z-100 w-(--button-width) overflow-x-hidden overflow-y-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg shadow-gray-200/50 outline-hidden focus-visible:outline-hidden dark:shadow-none"
                 >
                   {data.map((item: DataItem, i: number) => (
                     <ListboxOption
@@ -152,7 +156,7 @@ const StyledListbox: ListboxComponentType = forwardRef((props, ref) => {
                     >
                       {({ selected }: { selected: boolean }) => (
                         <>
-                            <span className="block wrap-break-word whitespace-normal">
+                          <span className="block wrap-break-word whitespace-normal">
                             {item[displayField]}
                           </span>
 

@@ -797,6 +797,14 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+             {
+              path: "contractor-type",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/user-master/contractor-type")
+                ).default,
+              }),
+            },
             {
               path: "contractor-employee",
               lazy: async () => ({

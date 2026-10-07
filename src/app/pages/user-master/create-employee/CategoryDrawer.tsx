@@ -51,7 +51,9 @@ export function EmployeeDrawer({
   const isEditing = Boolean(employee?.id);
 
   // Sundry Creditor account list - ab static nahi, API se dynamically aayegi
-  const [accountGroupOptions, setAccountGroupOptions] = useState<AccountGroupOption[]>([]);
+  const [accountGroupOptions, setAccountGroupOptions] = useState<
+    AccountGroupOption[]
+  >([]);
   const [loadingAccountGroups, setLoadingAccountGroups] = useState(false);
 
   const {
@@ -91,14 +93,18 @@ export function EmployeeDrawer({
     const fetchSundryCreditorAccounts = async () => {
       setLoadingAccountGroups(true);
       try {
-       const response = await Get("master/account/sundry-creditor/list", {}, false);
+        const response = await Get(
+          "master/account/sundry-creditor/list",
+          {},
+          false,
+        );
         if (isMounted && response.data?.success) {
           const list: any[] = response.data.data || [];
           setAccountGroupOptions(
             list.map((item) => ({
               id: String(item.id),
               label: item.accountName,
-            }))
+            })),
           );
         }
       } catch (error) {
@@ -132,12 +138,12 @@ export function EmployeeDrawer({
         const mobileTaken = allEmployees.some(
           (e) =>
             e.mobileNumber?.trim() === mobileNumber.trim() &&
-            String(e.employeeId) !== String(employee?.id || "")
+            String(e.employeeId) !== String(employee?.id || ""),
         );
         const emailTaken = allEmployees.some(
           (e) =>
             e.email?.trim().toLowerCase() === email.trim().toLowerCase() &&
-            String(e.employeeId) !== String(employee?.id || "")
+            String(e.employeeId) !== String(employee?.id || ""),
         );
         return { mobileTaken, emailTaken };
       }
@@ -150,13 +156,17 @@ export function EmployeeDrawer({
   };
 
   const onSubmit = async (data: EmployeeFormValues) => {
-    const { mobileTaken, emailTaken } = await checkUnique(data.mobileNumber, data.email);
+    const { mobileTaken, emailTaken } = await checkUnique(
+      data.mobileNumber,
+      data.email,
+    );
 
     let hasError = false;
     if (mobileTaken) {
       setError("mobileNumber", {
         type: "manual",
-        message: "Mobile number already exists. Please enter a different number.",
+        message:
+          "Mobile number already exists. Please enter a different number.",
       });
       hasError = true;
     }
@@ -168,7 +178,10 @@ export function EmployeeDrawer({
       hasError = true;
     }
     if (!isEditing && data.password !== data.confirmPassword) {
-      setError("confirmPassword", { type: "manual", message: "Passwords do not match" });
+      setError("confirmPassword", {
+        type: "manual",
+        message: "Passwords do not match",
+      });
       hasError = true;
     }
     if (hasError) return;
@@ -201,16 +214,24 @@ export function EmployeeDrawer({
           leaveTo="translate-x-full"
           className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-md transform-gpu flex-col bg-white transition-transform duration-200"
         >
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5 bg-primary-600">
+          <div className="dark:border-dark-500 bg-primary-600 flex items-center justify-between border-b border-gray-200 px-4 py-4 sm:px-5">
             <h3 className="text-lg font-semibold text-white">
               {isEditing ? "Edit Employee" : "Add Employee"}
             </h3>
-            <Button onClick={handleClose} variant="flat" isIcon className="size-6 rounded-full">
+            <Button
+              onClick={handleClose}
+              variant="flat"
+              isIcon
+              className="size-6 rounded-full"
+            >
               <XMarkIcon className="size-4.5 text-white" />
             </Button>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col overflow-hidden">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex grow flex-col overflow-hidden"
+          >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
               <Controller
                 control={control}
@@ -219,7 +240,10 @@ export function EmployeeDrawer({
                 render={({ field: { value, onChange, ...rest } }) => (
                   <Listbox
                     data={departmentOptions}
-                    value={departmentOptions.find((item) => item.id === value) || null}
+                    value={
+                      departmentOptions.find((item) => item.id === value) ||
+                      null
+                    }
                     onChange={(item) => {
                       onChange(item.id);
                       setValue("roleId", "");
@@ -240,7 +264,10 @@ export function EmployeeDrawer({
                 render={({ field: { value, onChange, ...rest } }) => (
                   <Listbox
                     data={branchOptions}
-                    value={branchOptions.find((item) => item.id === value) || branchOptions[0]}
+                    value={
+                      branchOptions.find((item) => item.id === value) ||
+                      branchOptions[0]
+                    }
                     onChange={(item) => onChange(item.id)}
                     label="Branch"
                     placeholder="Select branch"
@@ -258,7 +285,9 @@ export function EmployeeDrawer({
                 render={({ field: { value, onChange, ...rest } }) => (
                   <Listbox
                     data={roleOptions}
-                    value={roleOptions.find((item) => item.id === value) || null}
+                    value={
+                      roleOptions.find((item) => item.id === value) || null
+                    }
                     onChange={(item) => {
                       onChange(item.id);
                       // Role badalne par account group reset karo,
@@ -275,20 +304,27 @@ export function EmployeeDrawer({
                 )}
               />
 
-                         {isContractorManager && (
+              {isContractorManager && (
                 <Controller
                   control={control}
-                  name="accountId"              // 👈 accountGroup se accountId
+                  name="accountId" // 👈 accountGroup se accountId
                   rules={{ required: "Account group is required" }}
                   render={({ field: { value, onChange } }) => (
                     <Combobox
                       data={accountGroupOptions}
-                      value={accountGroupOptions.find((item) => item.id === value) || null}
-                     onChange={(item: AccountGroupOption) => onChange(item.id)}
+                      value={
+                        accountGroupOptions.find((item) => item.id === value) ||
+                        null
+                      }
+                      onChange={(item: AccountGroupOption) => onChange(item.id)}
                       label="Select Party"
-                      placeholder={loadingAccountGroups ? "Loading..." : "Select account group"}
+                      placeholder={
+                        loadingAccountGroups
+                          ? "Loading..."
+                          : "Select account group"
+                      }
                       displayField="label"
-                      error={errors.accountId?.message}   // 👈
+                      error={errors.accountId?.message} // 👈
                       inputProps={{ disabled: loadingAccountGroups }}
                     />
                   )}
@@ -296,7 +332,9 @@ export function EmployeeDrawer({
               )}
 
               <Input
-                {...register("employeeName", { required: "Employee name is required" })}
+                {...register("employeeName", {
+                  required: "Employee name is required",
+                })}
                 label="Employee Name"
                 placeholder="Enter employee name"
                 error={errors.employeeName?.message}
@@ -306,7 +344,10 @@ export function EmployeeDrawer({
                 <Input
                   {...register("mobileNumber", {
                     required: "Mobile number is required",
-                    pattern: { value: /^[0-9]{10}$/, message: "Mobile number must be 10 digits" },
+                    pattern: {
+                      value: /^[0-9]{10}$/,
+                      message: "Mobile number must be 10 digits",
+                    },
                     onChange: () => clearErrors("mobileNumber"),
                   })}
                   label="Mobile Number"
@@ -315,7 +356,10 @@ export function EmployeeDrawer({
                 />
                 <Input
                   {...register("alternateNumber", {
-                    pattern: { value: /^[0-9]{10}$/, message: "Alternate number must be 10 digits" },
+                    pattern: {
+                      value: /^[0-9]{10}$/,
+                      message: "Alternate number must be 10 digits",
+                    },
                   })}
                   label="Alternate Number"
                   placeholder="Enter alternate number"
@@ -326,7 +370,10 @@ export function EmployeeDrawer({
               <Input
                 {...register("email", {
                   required: "Email is required",
-                  pattern: { value: /^\S+@\S+\.\S+$/, message: "Enter a valid email" },
+                  pattern: {
+                    value: /^\S+@\S+\.\S+$/,
+                    message: "Enter a valid email",
+                  },
                   onChange: () => clearErrors("email"),
                 })}
                 label="Email"
@@ -338,7 +385,10 @@ export function EmployeeDrawer({
               <Input
                 {...register("password", {
                   required: isEditing ? false : "Password is required",
-                  minLength: { value: 6, message: "Password must be at least 6 characters" },
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters",
+                  },
                 })}
                 label={isEditing ? "New Password" : "Password"}
                 type="password"
@@ -360,7 +410,7 @@ export function EmployeeDrawer({
                 error={errors.confirmPassword?.message}
               />
             </div>
-            <div className="flex justify-end gap-3 border-t border-gray-200 px-4 py-4 dark:border-dark-500 sm:px-5">
+            <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 px-4 py-4 sm:px-5">
               <Button type="button" onClick={handleClose}>
                 Cancel
               </Button>
@@ -374,5 +424,3 @@ export function EmployeeDrawer({
     </Transition>
   );
 }
-
-
