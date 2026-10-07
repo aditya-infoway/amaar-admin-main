@@ -261,9 +261,11 @@ function CustomCombobox<TValue = DataItem>(
                     anchor={{ to: "bottom end", gap: 8 }}
                     style={{
                       width: inputWidth,
+                      // Force the max height (adjust the value as you like)
+                      ["--anchor-max-height" as any]: "11rem",
                     }}
                     className={clsx(
-                      "dark:border-dark-500 dark:bg-dark-750 z-10 max-h-60 overflow-x-hidden overflow-y-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg outline-hidden",
+                      "dark:border-dark-500 dark:bg-dark-750 z-10 overflow-x-hidden overflow-y-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg outline-hidden",
                       multiple && "mt-2",
                     )}
                   >

@@ -176,7 +176,7 @@ export function createRowActions<
                 </button>
               )}
             </MenuItem>
-            {withAssign && !row.original.assignedEmployeeId && (
+            {/* {withAssign && !row.original.assignedEmployeeId && (
               <MenuItem>
                 {({ focus }) => (
                   <button
@@ -193,7 +193,7 @@ export function createRowActions<
                   </button>
                 )}
               </MenuItem>
-            )}
+            )} */}
           </MenuItems>
         </Menu>
 
