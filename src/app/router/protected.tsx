@@ -983,6 +983,14 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+               {
+              path: "itemcategory",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/settings/sections/itemcategory")
+                ).default,
+              }),
+            },
           ],
         },
       ],
