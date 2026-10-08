@@ -13,14 +13,25 @@ import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
-import { Get, Post, Put, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import {
+  Get,
+  Post,
+  Put,
+  Delete,
+  toastsuccessmsg,
+  toasterrormsg,
+} from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { EmployeeDrawer } from "./CategoryDrawer";
 import { createColumns, exportColumns } from "./columns";
 import { emptyEmployee, Employee, mapApiEmployeeToEmployee } from "./data";
-import { departmentOptions, getBranchLabel, getDepartmentLabel } from "./options";
+import {
+  departmentOptions,
+  getBranchLabel,
+  getDepartmentLabel,
+} from "./options";
 
 interface RoleOption {
   id: string;
@@ -57,14 +68,16 @@ export default function EmployeePage() {
             id: String(item.roleId),
             label: item.roleName,
             department: item.department,
-          }))
+          })),
         );
       }
 
       if (employeeRes.data?.success) {
         setData((employeeRes.data.data || []).map(mapApiEmployeeToEmployee));
       } else {
-        toasterrormsg(employeeRes.data?.message || "Failed to fetch employees.");
+        toasterrormsg(
+          employeeRes.data?.message || "Failed to fetch employees.",
+        );
       }
     } catch (error) {
       toasterrormsg("Something went wrong while fetching employee data.");
@@ -94,7 +107,8 @@ export default function EmployeePage() {
         !item.employeeName.toLowerCase().includes(filterName.toLowerCase())
       )
         return false;
-      if (filterDepartment && item.department !== filterDepartment) return false;
+      if (filterDepartment && item.department !== filterDepartment)
+        return false;
       return true;
     });
   }, [data, filterName, filterDepartment]);
@@ -107,7 +121,7 @@ export default function EmployeePage() {
   }));
 
   // ---- Save (create or update) via API ----
-   const handleSave = async (item: Employee) => {
+  const handleSave = async (item: Employee) => {
     const payload: any = {
       department: item.department,
       branch: item.branch,
@@ -126,10 +140,12 @@ export default function EmployeePage() {
         const response = await Put(
           "master/employee/update",
           { employeeId: Number(item.id), ...payload },
-          false
+          false,
         );
         if (response.data?.success) {
-          toastsuccessmsg(response.data?.message || "Employee updated successfully.");
+          toastsuccessmsg(
+            response.data?.message || "Employee updated successfully.",
+          );
           fetchAll();
         } else {
           toasterrormsg(response.data?.message || "Failed to update employee.");
@@ -144,7 +160,9 @@ export default function EmployeePage() {
 
         const response = await Post("master/employee/create", payload, false);
         if (response.data?.success) {
-          toastsuccessmsg(response.data?.message || "Employee created successfully.");
+          toastsuccessmsg(
+            response.data?.message || "Employee created successfully.",
+          );
           fetchAll();
         } else {
           toasterrormsg(response.data?.message || "Failed to create employee.");
@@ -160,10 +178,12 @@ export default function EmployeePage() {
       const response = await Delete(
         "master/employee/delete",
         { employeeId: Number(row.id) },
-        false
+        false,
       );
       if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "Employee deleted successfully.");
+        toastsuccessmsg(
+          response.data?.message || "Employee deleted successfully.",
+        );
         setData((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         toasterrormsg(response.data?.message || "Failed to delete employee.");
@@ -177,8 +197,12 @@ export default function EmployeePage() {
     try {
       await Promise.all(
         rows.map((r) =>
-          Delete("master/employee/delete", { employeeId: Number(r.original.id) }, false)
-        )
+          Delete(
+            "master/employee/delete",
+            { employeeId: Number(r.original.id) },
+            false,
+          ),
+        ),
       );
       const ids = new Set(rows.map((r) => r.original.id));
       setData((prev) => prev.filter((item) => !ids.has(item.id)));
@@ -228,7 +252,9 @@ export default function EmployeePage() {
             setEditing(emptyEmployee());
             setDrawerOpen(true);
           }}
-          onExportExcel={() => exportToExcel(exportRows, exportColumns, "employees")}
+          onExportExcel={() =>
+            exportToExcel(exportRows, exportColumns, "employees")
+          }
           onExportPdf={() =>
             exportToPdf(exportRows, exportColumns, "Employee List", "employees")
           }

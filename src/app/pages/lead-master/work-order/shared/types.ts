@@ -21,6 +21,7 @@ export interface WorkOrder {
   grandTotal: number;
 
   assignedEmployeeId?: string | null;
+  stages?: { stage: string; employeeId: string; employeeName: string; status: string }[];
 }
 
 export interface Category {

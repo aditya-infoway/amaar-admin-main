@@ -35,11 +35,22 @@ interface SalesOrderOption {
   city?: string;
 
   model?: string;
-   modelName?: string;
+  modelName?: string;
   qty?: number;
 
   totalAmount?: number;
   label: string;
+}
+
+interface StageEmployee {
+  id: number;
+  name: string;
+}
+
+interface StageField {
+  key: string;
+  label: string;
+  employees: StageEmployee[];
 }
 
 export default function WorkOrderDrawer({
@@ -56,7 +67,13 @@ export default function WorkOrderDrawer({
   const [salesOrders, setSalesOrders] = useState<SalesOrderOption[]>([]);
   const [selectedSalesOrder, setSelectedSalesOrder] =
     useState<SalesOrderOption | null>(null);
-const [usedSalesOrderIds, setUsedSalesOrderIds] = useState<Set<string>>(new Set());
+  const [usedSalesOrderIds, setUsedSalesOrderIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [stageFields, setStageFields] = useState<StageField[]>([]);
+  const [stageSelection, setStageSelection] = useState<
+    Record<string, StageEmployee | null>
+  >({});
   const [loading, setLoading] = useState(false);
 
   /*
@@ -109,130 +126,121 @@ const [usedSalesOrderIds, setUsedSalesOrderIds] = useState<Set<string>>(new Set(
 
     fetchSalesOrders();
   }, [isOpen]);
-/*
- * Fetch Work Orders to know which Sales Orders are already used
- */
-useEffect(() => {
-  if (!isOpen) return;
+  /*
+   * Fetch Work Orders to know which Sales Orders are already used
+   */
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const fetchUsedSalesOrders = async () => {
-    try {
-      const financialYearId = localStorage.getItem("financialYearId");
+    const fetchUsedSalesOrders = async () => {
+      try {
+        const financialYearId = localStorage.getItem("financialYearId");
 
-      const response = await Get(
-        "workorder/list",
-        financialYearId ? { financialYearId } : {},
-        false,
-      );
-
-      if (response?.data?.success || response?.data?.status === 200) {
-        const list = response?.data?.data || [];
-
-        setUsedSalesOrderIds(
-          new Set(
-            list
-              // don't exclude the sales order belonging to the work order currently being edited
-              .filter(
-                (w: any) => String(w.id) !== String(workOrder?.id || ""),
-              )
-              .map((w: any) => String(w.salesOrderId)),
-          ),
+        const response = await Get(
+          "workorder/list",
+          financialYearId ? { financialYearId } : {},
+          false,
         );
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          const list = response?.data?.data || [];
+
+          setUsedSalesOrderIds(
+            new Set(
+              list
+                // don't exclude the sales order belonging to the work order currently being edited
+                .filter(
+                  (w: any) => String(w.id) !== String(workOrder?.id || ""),
+                )
+                .map((w: any) => String(w.salesOrderId)),
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("Work Order list error (sales order filter):", error);
       }
-    } catch (error) {
-      console.error("Work Order list error (sales order filter):", error);
+    };
+
+    fetchUsedSalesOrders();
+  }, [isOpen, workOrder?.id]);
+  const availableSalesOrders = useMemo(() => {
+    if (isEditing) {
+      // Lock to the sales order this work order was created for
+      return selectedSalesOrder ? [selectedSalesOrder] : [];
     }
-  };
 
-  fetchUsedSalesOrders();
-}, [isOpen, workOrder?.id]);
-const availableSalesOrders = useMemo(() => {
-  if (isEditing) {
-    // Lock to the sales order this work order was created for
-    return selectedSalesOrder ? [selectedSalesOrder] : [];
-  }
-
-  return salesOrders.filter(
-    (so) => !usedSalesOrderIds.has(String(so.id)),
-  );
-}, [salesOrders, usedSalesOrderIds, selectedSalesOrder, isEditing]);
+    return salesOrders.filter((so) => !usedSalesOrderIds.has(String(so.id)));
+  }, [salesOrders, usedSalesOrderIds, selectedSalesOrder, isEditing]);
   /*
    * Generate Work Order Number
    */
   useEffect(() => {
     if (!isOpen || isEditing) return;
 
-const fetchNextWorkOrderNo = async () => {
-  try {
-    const financialYearId = localStorage.getItem("financialYearId");
+    const fetchNextWorkOrderNo = async () => {
+      try {
+        const financialYearId = localStorage.getItem("financialYearId");
 
-    if (!financialYearId) {
-      console.error("Financial Year ID not found");
-      return;
-    }
+        if (!financialYearId) {
+          console.error("Financial Year ID not found");
+          return;
+        }
 
-    console.log(
-      "Generating Work Order Number for Financial Year:",
-      financialYearId,
-    );
-
-    const response = await Get(
-      "workorder/next-number",
-      { financialYearId },
-      false,
-    );
-
-    console.log("Work Order Number API Response:", response);
-
-    const workOrderNumber =
-      response?.data?.data?.workOrderNo;
-
-    console.log("Generated Work Order Number:", workOrderNumber);
-
-    if (
-      response?.data?.success ||
-      response?.data?.status === 200
-    ) {
-      if (workOrderNumber) {
-        setWorkOrderNo(workOrderNumber);
-      } else {
-        console.error(
-          "workOrderNo missing in API response:",
-          response?.data,
+        console.log(
+          "Generating Work Order Number for Financial Year:",
+          financialYearId,
         );
+
+        const response = await Get(
+          "workorder/next-number",
+          { financialYearId },
+          false,
+        );
+
+        console.log("Work Order Number API Response:", response);
+
+        const workOrderNumber = response?.data?.data?.workOrderNo;
+
+        console.log("Generated Work Order Number:", workOrderNumber);
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          if (workOrderNumber) {
+            setWorkOrderNo(workOrderNumber);
+          } else {
+            console.error(
+              "workOrderNo missing in API response:",
+              response?.data,
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Work Order number generation error:", error);
       }
-    }
-  } catch (error) {
-    console.error(
-      "Work Order number generation error:",
-      error,
-    );
-  }
-};
+    };
 
     fetchNextWorkOrderNo();
   }, [isOpen, isEditing]);
 
- /*
- * Edit Prefill
- */
-useEffect(() => {
-  if (!isOpen) return;
+  /*
+   * Edit Prefill
+   */
+  useEffect(() => {
+    if (!isOpen) return;
 
-  if (workOrder?.id) {
-    setWorkOrderNo(workOrder.workOrderNo || "");
+    if (workOrder?.id) {
+      setWorkOrderNo(workOrder.workOrderNo || "");
 
-    const salesOrder = salesOrders.find(
-      (item) => String(item.id) === String(workOrder.salesOrderId),
-    );
+      const salesOrder = salesOrders.find(
+        (item) => String(item.id) === String(workOrder.salesOrderId),
+      );
 
-    setSelectedSalesOrder(salesOrder || null);
-  } else {
-    // Do NOT reset workOrderNo here.
-    // It is generated by the next-number API.
-    setSelectedSalesOrder(null);
-  }
-}, [isOpen, workOrder, salesOrders]);
+      setSelectedSalesOrder(salesOrder || null);
+    } else {
+      // Do NOT reset workOrderNo here.
+      // It is generated by the next-number API.
+      setSelectedSalesOrder(null);
+    }
+  }, [isOpen, workOrder, salesOrders]);
 
   /*
    * Amount calculation
@@ -255,11 +263,78 @@ useEffect(() => {
   }, [selectedSalesOrder]);
 
   /*
+   * Fetch employees for each production stage
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchStageEmployees = async () => {
+      try {
+        const response = await Get("workorder/stage-employees", {}, false);
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          setStageFields(response?.data?.data || []);
+        }
+      } catch (error) {
+        console.error("Stage employees error:", error);
+        toasterrormsg("Unable to load stage employees.");
+      }
+    };
+
+    fetchStageEmployees();
+  }, [isOpen]);
+
+  /*
+   * Stage selection prefill (edit/view) or reset (create)
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (!workOrder?.id) {
+      setStageSelection({});
+      return;
+    }
+
+    const next: Record<string, StageEmployee | null> = {};
+    (workOrder.stages || []).forEach((s) => {
+      const field = stageFields.find((f) => f.key === s.stage);
+      next[s.stage] = field?.employees.find(
+        (e) => String(e.id) === String(s.employeeId),
+      ) || {
+        id: Number(s.employeeId),
+        name: s.employeeName || "",
+      };
+    });
+    setStageSelection(next);
+  }, [isOpen, workOrder, stageFields]);
+
+  const allStagesSelected =
+    stageFields.length > 0 && stageFields.every((f) => stageSelection[f.key]);
+
+  const lockedStages = useMemo(
+    () =>
+      new Set(
+        (workOrder?.stages || [])
+          .filter((s) => s.status && s.status !== "Pending")
+          .map((s) => s.stage),
+      ),
+    [workOrder],
+  );
+
+  /*
    * Submit
    */
   const handleSubmit = async () => {
     if (!selectedSalesOrder) {
       toasterrormsg("Please select a Sales Order.");
+      return;
+    }
+
+    const missing = stageFields.find((f) => !stageSelection[f.key]);
+    if (stageFields.length === 0 || missing) {
+      toasterrormsg(
+        `Please select an employee for ${missing?.label || "all stages"}.`,
+      );
       return;
     }
 
@@ -272,6 +347,10 @@ useEffect(() => {
         toasterrormsg("Financial Year not found.");
         return;
       }
+
+      const stagesPayload = Object.fromEntries(
+        stageFields.map((f) => [f.key, stageSelection[f.key]?.id]),
+      );
 
       const payload = {
         financialYearId,
@@ -299,11 +378,16 @@ useEffect(() => {
         gst: amount.gst,
 
         grandTotal: amount.grandTotal,
+        stages: stagesPayload,
       };
 
       const response =
         isEditing && workOrder?.id
-          ? await Put(`workorder/${workOrder.id}`, payload, false)
+          ? await Put(
+              `workorder/${workOrder.id}/stages`,
+              { stages: stagesPayload },
+              false,
+            )
           : await Post("workorder/create", payload, false);
 
       if (response?.data?.success || response?.data?.status === 200) {
@@ -385,27 +469,27 @@ useEffect(() => {
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   label="Work Order ID"
-                 value={workOrderNo}
-placeholder="Generating..."
+                  value={workOrderNo}
+                  placeholder="Generating..."
                   disabled
                   onChange={() => {}}
                 />
 
                 <div>
-                 <Combobox
-  data={availableSalesOrders}
-  displayField="label"
-  value={selectedSalesOrder}
-  onChange={(value: any) => {
-    setSelectedSalesOrder(
-      Array.isArray(value) ? value[0] || null : value || null,
-    );
-  }}
-  placeholder="Select Sales Order"
-  label="Select Sales Order"
-  searchFields={["soNo", "customerName"]}
-  disabled={readOnly || isEditing}
-/>
+                  <Combobox
+                    data={availableSalesOrders}
+                    displayField="label"
+                    value={selectedSalesOrder}
+                    onChange={(value: any) => {
+                      setSelectedSalesOrder(
+                        Array.isArray(value) ? value[0] || null : value || null,
+                      );
+                    }}
+                    placeholder="Select Sales Order"
+                    label="Select Sales Order"
+                    searchFields={["soNo", "customerName"]}
+                    disabled={readOnly || isEditing}
+                  />
                 </div>
 
                 {/* <Input
@@ -448,7 +532,9 @@ placeholder="Generating..."
 
                   <SummaryItem
                     label="Model"
-                      value={selectedSalesOrder?.modelName || selectedSalesOrder?.model}
+                    value={
+                      selectedSalesOrder?.modelName || selectedSalesOrder?.model
+                    }
                     borderLeft
                   />
 
@@ -478,6 +564,32 @@ placeholder="Generating..."
                   />
                 </div>
               </div>
+
+              {/* PRODUCTION STAGES */}
+              <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
+                  {stageFields.map((field) => (
+                    <Combobox
+                      key={field.key}
+                      data={field.employees}
+                      displayField="name"
+                      value={stageSelection[field.key] ?? null}
+                      onChange={(value: any) =>
+                        setStageSelection((prev) => ({
+                          ...prev,
+                          [field.key]: Array.isArray(value)
+                            ? value[0] || null
+                            : value || null,
+                        }))
+                      }
+                      placeholder={`Select ${field.label} employee`}
+                      label={field.label}
+                      searchFields={["name"]}
+                      disabled={readOnly || lockedStages.has(field.key)}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Footer */}
@@ -491,10 +603,14 @@ placeholder="Generating..."
                   type="button"
                   color="primary"
                   onClick={handleSubmit}
-                  disabled={loading || !selectedSalesOrder}
+                  disabled={
+                    loading || !selectedSalesOrder || !allStagesSelected
+                  }
                 >
                   {loading
-                    ? "Generating..."
+                    ? isEditing
+                      ? "Updating..."
+                      : "Generating..."
                     : isEditing
                       ? "Update"
                       : "Generate To Work Order"}

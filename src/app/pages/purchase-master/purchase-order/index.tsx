@@ -96,6 +96,43 @@ type DraftItem = {
   supplierName: string;
 };
 
+// Add Item section ke dropdown ka common shape (indent + manual dono ke liye)
+type AddCatalogItem = {
+  key: number;
+  itemId: number | null;
+  itemCode: string;
+  itemName: string;
+  hsnCode: string;
+  unit: string;
+  qty: number;
+  rate: number;
+  gstPct: number;
+};
+
+type AddRow = {
+  key: number | null;
+  itemId: number | null;
+  itemCode: string;
+  itemName: string;
+  hsn: string;
+  unit: string;
+  qty: string;
+  rate: string;
+  gstPct: number;
+};
+
+const emptyAddRow: AddRow = {
+  key: null,
+  itemId: null,
+  itemCode: "",
+  itemName: "",
+  hsn: "",
+  unit: "",
+  qty: "",
+  rate: "",
+  gstPct: 0,
+};
+
 const emptyDraft: DraftItem = {
   itemId: null,
   itemCode: "",
@@ -122,26 +159,24 @@ const money = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value || 0);
 
-function SectionCard({
+// Ek hi card ke andar ek section (title + content). Sections ke beech
+// dashed border parent card ke `divide-y divide-dashed` se aata hai.
+function SectionBlock({
   title,
   children,
-  className = "",
 }: {
   title: string;
   children: React.ReactNode;
-  className?: string;
 }) {
   return (
-    <section
-      className={`dark:border-dark-500 dark:bg-dark-700 rounded-xl border border-gray-200 bg-white shadow-sm ${className}`}
-    >
-      <div className="dark:border-dark-500 border-b border-gray-100 px-4 py-3 sm:px-5">
+    <div>
+      <div className="px-4 pt-4 sm:px-5">
         <h2 className="dark:text-dark-50 text-sm font-bold text-gray-800">
           {title}
         </h2>
       </div>
       <div className="p-4 sm:p-5">{children}</div>
-    </section>
+    </div>
   );
 }
 
@@ -361,8 +396,8 @@ type PurchaseOrderRow = {
   totalAmount: string;
   status: string;
   mailStatus: string | null;
-     createdBy?: string;   
-  createdType?: string;  
+  createdBy?: string;
+  createdType?: string;
 };
 
 const purchaseOrderColumns = [
@@ -392,7 +427,7 @@ const purchaseOrderColumns = [
     cell: TextCell,
   },
   { accessorKey: "totalAmount", header: "Total Amount", cell: TextCell },
-  { accessorKey: "createdBy", header: "Created By", cell: TextCell },    
+  { accessorKey: "createdBy", header: "Created By", cell: TextCell },
   { accessorKey: "createdType", header: "Created Type", cell: TextCell },
   {
     accessorKey: "status",
@@ -435,8 +470,8 @@ const purchaseOrderExportColumns = [
   { key: "supplierName" as const, header: "Supplier Name" },
   { key: "deliveryLocation" as const, header: "Delivery Location" },
   { key: "totalAmount" as const, header: "Total Amount" },
-    { key: "createdBy" as const, header: "Created By" },      
-  { key: "createdType" as const, header: "Created Type" }, 
+  { key: "createdBy" as const, header: "Created By" },
+  { key: "createdType" as const, header: "Created Type" },
   { key: "status" as const, header: "Status" },
 ];
 
@@ -636,23 +671,35 @@ export default function PurchaseOrderPage() {
   const [stage, setStage] = useState<"indent" | "suppliers" | "supplierDetail">(
     "indent",
   );
-  // NEW: which supplier's items to show in stage 3
+  // which supplier's items to show in stage 3
   const [activeSupplierId, setActiveSupplierId] = useState<number | null>(null);
 
-  const [indentItems, setIndentItems] = useState<any[]>([]); // items coming from selected indent
+  const [indentItems, setIndentItems] = useState<any[]>([]); // indent ke pending items (abhi confirm nahi hue)
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(
     null,
   );
   const [selectedSupplierName, setSelectedSupplierName] = useState<string>("");
 
-  const [activeIndentItemId, setActiveIndentItemId] = useState<number | null>(
-    null,
-  );
+  // ---- Add Item section state ----
+  const [addRow, setAddRow] = useState<AddRow>(emptyAddRow);
+  const [addTouched, setAddTouched] = useState(false);
 
   const [indentList, setIndentList] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [supplierLoading, setSupplierLoading] = useState(false);
-
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const filteredSuppliers = useMemo(() => {
+    const q = supplierSearch.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter((s) => {
+      const name = s.accountName ?? s.name ?? s.account_name ?? "";
+      const mobile = s.mobileNo ?? "";
+      return (
+        name.toLowerCase().includes(q) ||
+        mobile.toString().toLowerCase().includes(q)
+      );
+    });
+  }, [suppliers, supplierSearch]);
   // Load indents for Combobox
   useEffect(() => {
     if (!isCreateView || poSource !== "indent") return;
@@ -770,7 +817,7 @@ export default function PurchaseOrderPage() {
     }
   };
 
-  /* ---- Item catalog fetch (combobox ke liye) ---- */
+  /* ---- Item catalog fetch (manual mode ke liye) ---- */
   useEffect(() => {
     if (!isCreateView) return;
     (async () => {
@@ -783,7 +830,6 @@ export default function PurchaseOrderPage() {
     })();
   }, [isCreateView]);
 
-  /* ---- Item choose hone par: is item ke suppliers/last-purchase fetch karo ---- */
   const fetchSuppliers = async () => {
     try {
       setSupplierLoading(true);
@@ -835,10 +881,135 @@ export default function PurchaseOrderPage() {
     );
   };
 
+  /* ───────── Add Item section logic ───────── */
+
+  // Dropdown ka catalog: Indent mode me indent ke pending items,
+  // Manual mode me item master (jo already confirm ho chuke wo hata ke)
+  const addCatalog = useMemo<AddCatalogItem[]>(() => {
+    if (poSource === "indent") {
+      return indentItems.map((it: any) => ({
+        key: it.id,
+        itemId: it.itemId ?? null,
+        itemCode: it.itemCode || "",
+        itemName: it.itemName || it.item || "",
+        hsnCode: it.hsn || it.hsnCode || "",
+        unit: it.unit || "",
+        qty: Number(it.qty) || 0,
+        rate: Number(it.rate) || 0,
+        gstPct: Number(it.gstPct) || 0,
+      }));
+    }
+    return itemCatalog
+      .filter((c) => !items.some((i) => i.itemId === c.itemId))
+      .map((c) => ({
+        key: c.itemId,
+        itemId: c.itemId,
+        itemCode: c.itemCode || "",
+        itemName: c.itemName || "",
+        hsnCode: c.hsnCode || "",
+        unit: c.unit || "",
+        qty: 1,
+        rate: Number(c.purchasePrice) || 0,
+        gstPct: parseFloat(c.taxSlab) || 0,
+      }));
+  }, [poSource, indentItems, itemCatalog, items]);
+
+  const addComboValue = useMemo(
+    () => addCatalog.find((c) => c.key === addRow.key) || null,
+    [addCatalog, addRow.key],
+  );
+
+  const resetAddRow = () => {
+    setAddRow(emptyAddRow);
+    setAddTouched(false);
+    setSelectedSupplierId(null);
+    setSelectedSupplierName("");
+    setLastPurchase(null);
+  };
+
+  const handleAddItemSelect = (selected: AddCatalogItem | null) => {
+    if (!selected) {
+      resetAddRow();
+      return;
+    }
+    setAddRow({
+      key: selected.key,
+      itemId: selected.itemId,
+      itemCode: selected.itemCode,
+      itemName: selected.itemName,
+      hsn: selected.hsnCode,
+      unit: selected.unit,
+      qty: String(selected.qty || ""),
+      rate: selected.rate ? String(selected.rate) : "",
+      gstPct: selected.gstPct,
+    });
+    setAddTouched(false);
+    // naya item chuna -> supplier selection reset + last purchase history fetch
+    setSelectedSupplierId(null);
+    setSelectedSupplierName("");
+    fetchSupplierInfo(selected.itemId, selected.rate);
+  };
+
+  const addQtyNum = parseFloat(addRow.qty) || 0;
+  const addRateNum = parseFloat(addRow.rate) || 0;
+  const addTaxable = addQtyNum * addRateNum;
+  const addNet = addTaxable + (addTaxable * addRow.gstPct) / 100;
+  const hasAddItem = addRow.key !== null;
+
+  const handleConfirmAddItem = () => {
+    setAddTouched(true);
+    if (!hasAddItem) return;
+    if (!selectedSupplierId) {
+      toasterrormsg("Please select a supplier first.");
+      return;
+    }
+    if (addQtyNum <= 0) {
+      toasterrormsg("Quantity must be greater than 0.");
+      return;
+    }
+    if (addRateNum <= 0) {
+      toasterrormsg("Please enter rate.");
+      return;
+    }
+
+    const fullSupplier = suppliers.find(
+      (s) => (s.id ?? s.accountId ?? s.account_id) === selectedSupplierId,
+    );
+
+    setItems((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        itemId: Number(addRow.itemId),
+        itemCode: addRow.itemCode,
+        item: addRow.itemName,
+        hsn: addRow.hsn,
+        qty: addQtyNum,
+        unit: addRow.unit,
+        rate: addRateNum,
+        discount: 0,
+        gstPct: addRow.gstPct,
+        supplierId: selectedSupplierId,
+        supplierName: selectedSupplierName,
+        supplierNumber: fullSupplier?.mobileNo || "",
+        supplierEmail: fullSupplier?.email || "",
+        supplierCity: fullSupplier?.cityName || fullSupplier?.stateName || "",
+      },
+    ]);
+
+    // indent mode: confirm hua item dropdown se hata do
+    if (poSource === "indent") {
+      setIndentItems((prev) => prev.filter((r) => r.id !== addRow.key));
+    }
+
+    resetAddRow();
+  };
+
   const removeItem = (id: number) => {
     setItems((current) => {
       const removed = current.find((item) => item.id === id);
-      if (removed) {
+      // indent mode me hi item wapas dropdown me jaayega
+      if (removed && poSource === "indent") {
         setIndentItems((prev) => [
           ...prev,
           {
@@ -861,6 +1032,17 @@ export default function PurchaseOrderPage() {
     });
   };
 
+  // PO Source badalne par pichla saara data clean
+  const changePoSource = (src: "indent" | "manual") => {
+    if (src === poSource) return;
+    setPoSource(src);
+    setSelectedIndent(null);
+    setIndentItems([]);
+    setItems([]);
+    setMailSupplierIds([]);
+    resetAddRow();
+  };
+
   const totals = useMemo(
     () =>
       items.reduce(
@@ -881,7 +1063,7 @@ export default function PurchaseOrderPage() {
   );
   const grandTotal = totals.taxable + totals.tax;
 
-  // NEW: group confirmed items by supplier — used by Stage 2 (supplier summary table)
+  // group confirmed items by supplier — used by Stage 2 (supplier summary table)
   const supplierGroups = useMemo(() => {
     const order: number[] = [];
     const map = new Map<number, any>();
@@ -937,97 +1119,97 @@ export default function PurchaseOrderPage() {
   const toggleAllMail = () =>
     setMailSupplierIds(allMailSelected ? [] : mailableIds);
 
-const handleGenerate = async () => {
-  if (!requiredDate) {
-    setFormErrors({ requiredDate: "Required Date is mandatory." });
-    toasterrormsg("Required Date is mandatory.");
-    return;
-  }
-  setFormErrors({});
-  if (indentItems.length > 0) {
-    toasterrormsg(
-      "Please confirm (✓) a supplier for every item before saving.",
-    );
-    return;
-  }
-  if (items.length === 0) {
-    toasterrormsg("Please add at least one item.");
-    return;
-  }
-  if (items.some((i) => !i.supplierId)) {
-    toasterrormsg("Please select a supplier for all items.");
-    return;
-  }
+  const handleGenerate = async () => {
+    if (!requiredDate) {
+      setFormErrors({ requiredDate: "Required Date is mandatory." });
+      toasterrormsg("Required Date is mandatory.");
+      return;
+    }
+    setFormErrors({});
+    if (indentItems.length > 0) {
+      toasterrormsg(
+        "Please confirm (✓) a supplier for every item before saving.",
+      );
+      return;
+    }
+    if (items.length === 0) {
+      toasterrormsg("Please add at least one item.");
+      return;
+    }
+    if (items.some((i) => !i.supplierId)) {
+      toasterrormsg("Please select a supplier for all items.");
+      return;
+    }
 
-  const financialYearId = localStorage.getItem("financialYearId");
+    const financialYearId = localStorage.getItem("financialYearId");
 
-  // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
-  const companyId = localStorage.getItem("companyId") || "";
+    // companyId localStorage se, createdType default "Super Admin"
+    const companyId = localStorage.getItem("companyId") || "";
 
-  const draftPayload = {
-    emailSupplierIds: mailSupplierIds.filter((id) =>
-      mailableIds.includes(id),
-    ),
+    const draftPayload = {
+      emailSupplierIds: mailSupplierIds.filter((id) =>
+        mailableIds.includes(id),
+      ),
 
-    financialYearId: Number(financialYearId),
-    poDate,
-    requiredDate,
-    branchId: selectedLocation?.id ? Number(selectedLocation.id) : null,
-    narration: remarks,
-    discountAmount: 0,
-    roundAmount: 0,
-    status: "Generated",
-    indentId: selectedIndent?.indentId || selectedIndent?.id || null,
-    createdBy: Number(companyId),   // 👈 add
-    createdType: "Super Admin",     // 👈 add
-    items: items.map((i) => ({
-      itemId: Number(i.itemId),
-      supplierId: i.supplierId ? Number(i.supplierId) : null,
-      supplierName: i.supplierName,
-      supplierNumber: i.supplierNumber || "",
-      supplierEmail: i.supplierEmail || "",
-      supplierCity: i.supplierCity || "",
-      itemCode: i.itemCode || "",
-      itemName: i.item,
-      hsnCode: i.hsn || "",
-      uom: i.unit || "",
-      qty: Number(i.qty),
-      rate: Number(i.rate),
-      discount: Number(i.discount) || 0,
-      gstPct: Number(i.gstPct) || 0,
-    })),
+      financialYearId: Number(financialYearId),
+      poDate,
+      requiredDate,
+      branchId: selectedLocation?.id ? Number(selectedLocation.id) : null,
+      narration: remarks,
+      discountAmount: 0,
+      roundAmount: 0,
+      status: "Generated",
+      indentId: selectedIndent?.indentId || selectedIndent?.id || null,
+      createdBy: Number(companyId),
+      createdType: "Super Admin",
+      items: items.map((i) => ({
+        itemId: Number(i.itemId),
+        supplierId: i.supplierId ? Number(i.supplierId) : null,
+        supplierName: i.supplierName,
+        supplierNumber: i.supplierNumber || "",
+        supplierEmail: i.supplierEmail || "",
+        supplierCity: i.supplierCity || "",
+        itemCode: i.itemCode || "",
+        itemName: i.item,
+        hsnCode: i.hsn || "",
+        uom: i.unit || "",
+        qty: Number(i.qty),
+        rate: Number(i.rate),
+        discount: Number(i.discount) || 0,
+        gstPct: Number(i.gstPct) || 0,
+      })),
+    };
+
+    try {
+      setSubmitting(true);
+      const res = await Post("purchase-order/create", draftPayload, false);
+      if (res.data?.success) {
+        const orders = res.data.data?.orders || [];
+        const sent = orders.filter((o: any) => o.mailStatus === "sent");
+        const failed = orders.filter((o: any) => o.mailStatus === "failed");
+
+        if (sent.length) {
+          toastsuccessmsg(
+            `PO saved. Mail sent to ${sent.map((o: any) => o.supplierName).join(", ")}`,
+          );
+        }
+        if (failed.length) {
+          toasterrormsg(
+            `PO saved, but mail failed for ${failed.map((o: any) => o.supplierName).join(", ")}`,
+          );
+        }
+        navigate("/purchase-master/purchase-order");
+      } else {
+        toasterrormsg(res.data?.message || "Failed to generate PO.");
+      }
+    } catch (err: any) {
+      toasterrormsg(err?.response?.data?.message || "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  try {
-    setSubmitting(true);
-    const res = await Post("purchase-order/create", draftPayload, false);
-    if (res.data?.success) {
-      const orders = res.data.data?.orders || [];
-      const sent = orders.filter((o: any) => o.mailStatus === "sent");
-      const failed = orders.filter((o: any) => o.mailStatus === "failed");
-
-      if (sent.length) {
-        toastsuccessmsg(
-          `PO saved. Mail sent to ${sent.map((o: any) => o.supplierName).join(", ")}`,
-        );
-      }
-      if (failed.length) {
-        toasterrormsg(
-          `PO saved, but mail failed for ${failed.map((o: any) => o.supplierName).join(", ")}`,
-        );
-      }
-      navigate("/purchase-master/purchase-order");
-    } else {
-      toasterrormsg(res.data?.message || "Failed to generate PO.");
-    }
-  } catch (err: any) {
-    toasterrormsg(err?.response?.data?.message || "Something went wrong.");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
-  // NEW: Stage 1 -> Stage 2 (build supplier summary from confirmed items)
+  // Stage 1 -> Stage 2
   const handleNext = () => {
     if (items.length === 0) {
       toasterrormsg("Please confirm at least one item before proceeding.");
@@ -1036,18 +1218,18 @@ const handleGenerate = async () => {
     setStage("suppliers");
   };
 
-  // NEW: Stage 2 -> Stage 1 (go back, keep confirmed items as-is)
+  // Stage 2 -> Stage 1
   const handleBackToIndent = () => {
     setStage("indent");
   };
 
-  // NEW: Stage 2 -> Stage 3 (drill into one supplier's items)
+  // Stage 2 -> Stage 3
   const handleViewSupplier = (supplierId: number) => {
     setActiveSupplierId(supplierId);
     setStage("supplierDetail");
   };
 
-  // NEW: Stage 3 -> Stage 2 (back to supplier summary)
+  // Stage 3 -> Stage 2
   const handleBackToSuppliers = () => {
     setActiveSupplierId(null);
     setStage("suppliers");
@@ -1056,6 +1238,11 @@ const handleGenerate = async () => {
   if (!isCreateView) {
     return <PurchaseOrderList />;
   }
+
+  const roCls =
+    "w-full rounded-lg border border-gray-300 bg-gray-50 px-2.5 py-[8px] text-xs text-gray-700 select-none dark:border-dark-500 dark:bg-dark-800 dark:text-dark-200";
+  const iCls =
+    "focus:ring-primary/40 focus:border-primary w-full rounded-lg border border-gray-300 bg-white px-2.5 py-[8px] text-right text-xs text-gray-800 transition-all placeholder:text-gray-300 focus:ring-2 focus:outline-none dark:border-dark-500 dark:bg-dark-700 dark:text-dark-50";
 
   return (
     <div className="dark:bg-dark-900 min-h-screen bg-gray-50 px-3 py-5 sm:px-4 lg:px-5">
@@ -1109,37 +1296,40 @@ const handleGenerate = async () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="space-y-5">
-            <SectionCard title="PO Details">
-              {/* Indent / Manual Tabs */}
-              <div className="sm:col-span-2 xl:col-span-2">
-                <FieldLabel>PO Source</FieldLabel>
-                <div className="mb-4 flex gap-6">
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <Radio
-                      checked={poSource === "indent"}
-                      onChange={() => setPoSource("indent")}
-                      name="poSource"
-                      color="primary"
-                    />
-                    <span className="text-sm font-medium">Indent</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <Radio
-                      checked={poSource === "manual"}
-                      onChange={() => {
-                        setPoSource("manual");
-                        setSelectedIndent(null);
-                      }}
-                      name="poSource"
-                      color="primary"
-                    />
-                    <span className="text-sm font-medium">Manual</span>
-                  </label>
-                  {/* Show Indent dropdown only when Indent is selected */}
+        {/* ═════════ MAIN CARD — LEFT + RIGHT (Supplier) ═════════ */}
+        <section className="dark:border-dark-500 dark:bg-dark-700 rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-col lg:flex-row">
+            {/* ───────── LEFT SIDE ───────── */}
+            <div className="dark:divide-dark-500 flex-1 divide-y divide-dashed divide-gray-300">
+              {/* PO DETAILS */}
+              <SectionBlock title="PO Details">
+                <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-6">
+                  <div>
+                    <FieldLabel>PO Source</FieldLabel>
+                    <div className="flex h-[38px] items-center gap-5">
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <Radio
+                          checked={poSource === "indent"}
+                          onChange={() => changePoSource("indent")}
+                          name="poSource"
+                          color="primary"
+                        />
+                        <span className="text-sm font-medium">Indent</span>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <Radio
+                          checked={poSource === "manual"}
+                          onChange={() => changePoSource("manual")}
+                          name="poSource"
+                          color="primary"
+                        />
+                        <span className="text-sm font-medium">Manual</span>
+                      </label>
+                    </div>
+                  </div>
+
                   {poSource === "indent" && (
-                    <div className="">
+                    <div className="sm:col-span-2 xl:col-span-2">
                       <FieldLabel required>Select Indent</FieldLabel>
                       <Combobox
                         data={indentList}
@@ -1147,6 +1337,11 @@ const handleGenerate = async () => {
                         value={selectedIndent}
                         onChange={(val: any) => {
                           setSelectedIndent(val);
+                          // indent badla -> pichle confirmed/pending items clean
+                          setItems([]);
+                          setIndentItems([]);
+                          setMailSupplierIds([]);
+                          resetAddRow();
                           if (val) fetchIndentItems(val.indentId || val.id);
                         }}
                         placeholder="Search Indent (e.g. 007)"
@@ -1154,231 +1349,266 @@ const handleGenerate = async () => {
                       />
                     </div>
                   )}
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                <Input
-                  label="Serial No"
-                  classNames={{
-                    labelText: "dark:text-dark-100 font-semibold text-gray-700",
-                  }}
-                  value={serialNo ?? ""}
-                  readOnly
-                  placeholder="Generating..."
-                />
 
-                <div>
-                  <FieldLabel required>Required Date</FieldLabel>
-                  <DatePicker
-                    // label="Required Date"
-                    value={requiredDate}
-                    onChange={(selectedDates: Date[]) => {
-                      const picked = selectedDates?.[0];
-                      const formatted = picked ? formatDateForApi(picked) : "";
-                      setRequiredDate(formatted);
-                      setFormErrors((e) => ({ ...e, requiredDate: undefined }));
+                  <Input
+                    label="Serial No"
+                    classNames={{
+                      labelText:
+                        "dark:text-dark-100 font-semibold text-gray-700",
                     }}
-                    placeholder="Select Date"
+                    value={serialNo ?? ""}
+                    readOnly
+                    placeholder="Generating..."
                   />
-                  {formErrors.requiredDate && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {formErrors.requiredDate}
-                    </p>
-                  )}
-                </div>
 
-                {/* <div>
-    <FieldLabel>PO Date</FieldLabel>
-    <DatePicker
-      // label="PO Date"
-      value={poDate}
-      onChange={(selectedDates: Date[]) => {
-        const picked = selectedDates?.[0];
-        setPoDate(picked ? formatDateForApi(picked) : "");
-      }}
-      placeholder="Select Date"
-    />
-  </div> */}
+                  <div>
+                    <FieldLabel required>Required Date</FieldLabel>
+                    <DatePicker
+                      value={requiredDate}
+                      onChange={(selectedDates: Date[]) => {
+                        const picked = selectedDates?.[0];
+                        const formatted = picked
+                          ? formatDateForApi(picked)
+                          : "";
+                        setRequiredDate(formatted);
+                        setFormErrors((e) => ({
+                          ...e,
+                          requiredDate: undefined,
+                        }));
+                      }}
+                      placeholder="Select Date"
+                    />
+                    {formErrors.requiredDate && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {formErrors.requiredDate}
+                      </p>
+                    )}
+                  </div>
 
-                <div>
-                  <FieldLabel required>Delivery Location</FieldLabel>
-                  <Listbox
-                    data={locations}
-                    displayField="name"
-                    value={selectedLocation}
-                    onChange={setSelectedLocation}
-                    placeholder="Select location"
+                  <div>
+                    <FieldLabel required>Delivery Location</FieldLabel>
+                    <Listbox
+                      data={locations}
+                      displayField="name"
+                      value={selectedLocation}
+                      onChange={setSelectedLocation}
+                      placeholder="Select location"
+                    />
+                  </div>
+
+                  <Input
+                    label="Remarks"
+                    value={remarks}
+                    onChange={(e: any) => setRemarks(e.target.value)}
+                    placeholder="Enter remarks..."
+                    classNames={{
+                      root:
+                        poSource === "indent"
+                          ? "sm:col-span-2 xl:col-span-6"
+                          : "sm:col-span-2 xl:col-span-2",
+                      labelText:
+                        "dark:text-dark-100 font-semibold text-gray-700",
+                    }}
                   />
                 </div>
+              </SectionBlock>
 
-                <Input
-                  label="Remarks"
-                  value={remarks}
-                  onChange={(e: any) => setRemarks(e.target.value)}
-                  placeholder="Enter remarks..."
-                  classNames={{
-                    root: "sm:col-span-2 xl:col-span-2",
-                    labelText: "dark:text-dark-100 font-semibold text-gray-700",
-                  }}
-                />
-              </div>{" "}
-            </SectionCard>
+              {/* ADD ITEM */}
+              {stage === "indent" && (
+                <SectionBlock title="Add Item">
+                  <div className="space-y-4">
+                    {/* Row 1: Item dropdown */}
+                    <div className="w-full sm:w-1/2 sm:min-w-[260px]">
+                      <FieldLabel required>Item Details</FieldLabel>
+                      <Combobox
+                        data={addCatalog}
+                        displayField="itemName"
+                        value={addComboValue}
+                        onChange={(selected: any) =>
+                          handleAddItemSelect(selected || null)
+                        }
+                        placeholder={
+                          poSource === "indent" && !selectedIndent
+                            ? "Select an Indent first"
+                            : "Select item"
+                        }
+                        searchFields={["itemCode", "itemName"]}
+                        renderItem={(item: any) => (
+                          <div className="flex w-full items-center text-inherit">
+                            <span className="w-20 shrink-0 text-xs font-bold">
+                              {item.itemCode}
+                            </span>
+                            <span className="truncate text-sm">
+                              {item.itemName}
+                            </span>
+                          </div>
+                        )}
+                      />
+                    </div>
 
-            <SectionCard title="Item Details">
-              <div className="table-wrapper dark:border-dark-500 overflow-x-auto rounded-lg border border-gray-200">
-                {/* ───────── STAGE 1: Indent items (unchanged from today) ───────── */}
-                {stage === "indent" && (
-                  <Table
-                    hoverable
-                    className="w-full min-w-[1200px] table-fixed text-left"
-                  >
-                    <THead>
-                      <Tr>
-                        <Th className="w-14 text-center">SR No</Th>
-                        <Th className="w-32">Item Code</Th>
-                        <Th className="w-64">Item Name</Th>
-                        <Th className="w-28">HSN</Th>
-                        <Th className="w-20">Unit</Th>
-                        <Th className="w-20 text-right">Qty</Th>
-                        <Th className="w-36 text-right">Rate</Th>
-                        <Th className="w-20 text-center">Tax</Th>
-                        <Th className="w-32 text-right">Net Amount</Th>
-                        <Th className="w-16 text-center">Action</Th>
-                      </Tr>
-                    </THead>
-                    <TBody>
-                      {indentItems.length === 0 && items.length === 0 ? (
+                    {/* Row 2: Read-only item info */}
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-10">
+                      <div className="col-span-2 md:col-span-2">
+                        <FieldLabel>Item Code</FieldLabel>
+                        <div className={roCls + " text-center"}>
+                          {addRow.itemCode || "—"}
+                        </div>
+                      </div>
+                      <div className="col-span-2 md:col-span-6">
+                        <FieldLabel>Item Name</FieldLabel>
+                        <div className={roCls}>{addRow.itemName || "—"}</div>
+                      </div>
+                      <div className="col-span-2 md:col-span-2">
+                        <FieldLabel>HSN Code</FieldLabel>
+                        <div className={roCls + " text-center"}>
+                          {addRow.hsn || "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 3: Unit, Tax, Qty (read-only for indent) + Rate (editable) + Net + ✓ */}
+                    <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-11">
+                      <div className="md:col-span-1">
+                        <FieldLabel>Unit</FieldLabel>
+                        <div className={roCls + " text-center"}>
+                          {addRow.unit || "—"}
+                        </div>
+                      </div>
+                      <div className="md:col-span-1">
+                        <FieldLabel>Tax %</FieldLabel>
+                        <div className={roCls + " text-center"}>
+                          {hasAddItem ? (
+                            <span className="bg-primary/10 text-primary inline-block rounded-full px-1.5 py-0.5 text-xs font-bold">
+                              {addRow.gstPct}%
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <FieldLabel required>Qty</FieldLabel>
+                        {poSource === "indent" ? (
+                          <div className={roCls + " text-right"}>
+                            {hasAddItem ? addRow.qty : "—"}
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            min={0}
+                            value={addRow.qty}
+                            disabled={!hasAddItem}
+                            onChange={(e) =>
+                              setAddRow((r) => ({ ...r, qty: e.target.value }))
+                            }
+                            placeholder="Qty"
+                            className={iCls}
+                          />
+                        )}
+                      </div>
+
+                      <div className="md:col-span-3">
+                        <FieldLabel required>Rate (₹)</FieldLabel>
+                        <input
+                          type="number"
+                          min={0}
+                          value={addRow.rate}
+                          disabled={!hasAddItem}
+                          onChange={(e) => {
+                            setAddRow((r) => ({ ...r, rate: e.target.value }));
+                            setAddTouched(false);
+                          }}
+                          placeholder="0.00"
+                          className={
+                            iCls +
+                            (addTouched && hasAddItem && !addRateNum
+                              ? " !border-red-400 !bg-red-50 dark:!bg-red-900/20"
+                              : "")
+                          }
+                        />
+                      </div>
+
+                      <div className="md:col-span-3">
+                        <FieldLabel>Net Amount (₹)</FieldLabel>
+                        <div
+                          className={
+                            roCls + " text-primary text-right font-semibold"
+                          }
+                        >
+                          {hasAddItem ? money(addNet) : "—"}
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-1">
+                        <button
+                          type="button"
+                          onClick={handleConfirmAddItem}
+                          disabled={!hasAddItem}
+                          title={
+                            !hasAddItem
+                              ? "Select an item first"
+                              : !selectedSupplierId
+                                ? "Select a supplier from Supplier Suggestions"
+                                : "Add item"
+                          }
+                          className={[
+                            "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
+                            hasAddItem
+                              ? "bg-green-500 text-white shadow-md hover:scale-105 hover:bg-green-600 active:scale-95"
+                              : "dark:bg-dark-600 cursor-not-allowed bg-gray-100 text-gray-300",
+                          ].join(" ")}
+                        >
+                          <CheckIcon className="size-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {hasAddItem && selectedSupplierId && (
+                      <p className="text-xs text-gray-400">
+                        {`Supplier: ${selectedSupplierName}`}
+                      </p>
+                    )}
+                  </div>
+                </SectionBlock>
+              )}
+
+              {/* ITEM DETAILS */}
+              <SectionBlock title="Item Details">
+                <div className="table-wrapper dark:border-dark-500 overflow-x-auto rounded-lg border border-gray-200">
+                  {/* STAGE 1: Confirmed items */}
+                  {stage === "indent" && (
+                    <Table
+                      hoverable
+                      className="w-full min-w-[1100px] table-fixed text-left"
+                    >
+                      <THead>
                         <Tr>
-                          <Td
-                            colSpan={10}
-                            className="py-8 text-center text-sm text-gray-400"
-                          >
-                            {poSource === "indent"
-                              ? "Select an Indent above to load items"
-                              : "Switch to Manual or select Indent"}
-                          </Td>
+                          <Th className="w-14 text-center">SR No</Th>
+                          <Th className="w-32">Item Code</Th>
+                          <Th className="w-64">Item Name</Th>
+                          <Th className="w-28">HSN</Th>
+                          <Th className="w-20">Unit</Th>
+                          <Th className="w-20 text-right">Qty</Th>
+                          <Th className="w-32 text-right">Rate</Th>
+                          <Th className="w-20 text-center">Tax</Th>
+                          <Th className="w-32 text-right">Net Amount</Th>
+                          <Th className="w-16 text-center">Action</Th>
                         </Tr>
-                      ) : (
-                        <>
-                          {indentItems.map((item, index) => {
-                            const taxable =
-                              Number(item.qty) * Number(item.rate || 0);
-                            const taxAmt =
-                              (taxable * Number(item.gstPct || 0)) / 100;
-                            const netAmount = taxable + taxAmt;
-                            return (
-                              <Tr
-                                key={item.id}
-                                onClick={() => {
-                                  setActiveIndentItemId(item.id);
-                                  setSelectedSupplierId(null);
-                                  setSelectedSupplierName("");
-                                  fetchSupplierInfo(
-                                    item.itemId,
-                                    Number(item.rate) || 0,
-                                  );
-                                }}
-                                className={`cursor-pointer ${activeIndentItemId === item.id ? "bg-primary/5" : ""}`}
-                              >
-                                <Td className="text-center text-gray-400">
-                                  {index + 1}
-                                </Td>
-                                <Td>{item.itemCode}</Td>
-                                <Td>{item.itemName || item.item}</Td>
-                                <Td>{item.hsn || item.hsnCode}</Td>
-                                <Td>{item.unit}</Td>
-                                <Td className="text-right">{item.qty}</Td>
-                                <Td className="w-48">
-                                  <Input
-                                    className="w-full text-right"
-                                    type="number"
-                                    min="0"
-                                    value={item.rate || ""}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onChange={(e) => {
-                                      const newRate = Number(e.target.value);
-                                      setIndentItems((prev) =>
-                                        prev.map((r) =>
-                                          r.id === item.id
-                                            ? { ...r, rate: newRate }
-                                            : r,
-                                        ),
-                                      );
-                                    }}
-                                  />
-                                </Td>
-                                <Td className="text-center">
-                                  <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
-                                    {item.gstPct || 0}%
-                                  </span>
-                                </Td>
-                                <Td className="text-primary text-right font-semibold">
-                                  {money(netAmount)}
-                                </Td>
-                                <Td className="text-center">
-                                  <Button
-                                    variant="soft"
-                                    color="success"
-                                    className="size-8 rounded-full p-0"
-                                    disabled={!selectedSupplierId}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (!selectedSupplierId) {
-                                        toasterrormsg(
-                                          "Please select a supplier first.",
-                                        );
-                                        return;
-                                      }
-
-                                      // 1. Find the full supplier object FIRST
-                                      const fullSupplier = suppliers.find(
-                                        (s) =>
-                                          (s.id ??
-                                            s.accountId ??
-                                            s.account_id) ===
-                                          selectedSupplierId,
-                                      );
-
-                                      // 3. Add the item with contact details
-                                      setItems((prev) => [
-                                        ...prev,
-                                        {
-                                          id: Date.now(),
-                                          itemId: item.itemId,
-                                          itemCode: item.itemCode || "",
-                                          item: item.itemName || item.item,
-                                          hsn: item.hsn || item.hsnCode,
-                                          qty: item.qty,
-                                          unit: item.unit,
-                                          rate: Number(item.rate) || 0,
-                                          discount: 0,
-                                          gstPct: item.gstPct || 0,
-                                          supplierId: selectedSupplierId,
-                                          supplierName: selectedSupplierName,
-                                          supplierNumber:
-                                            fullSupplier?.mobileNo || "",
-                                          supplierEmail:
-                                            fullSupplier?.email || "",
-                                          supplierCity:
-                                            fullSupplier?.cityName ||
-                                            fullSupplier?.stateName ||
-                                            "",
-                                        },
-                                      ]);
-
-                                      setIndentItems((prev) =>
-                                        prev.filter((r) => r.id !== item.id),
-                                      );
-                                    }}
-                                  >
-                                    <CheckIcon className="size-4.5" />
-                                  </Button>
-                                </Td>
-                              </Tr>
-                            );
-                          })}
-
-                          {items.map((item, index) => {
+                      </THead>
+                      <TBody>
+                        {items.length === 0 ? (
+                          <Tr>
+                            <Td
+                              colSpan={10}
+                              className="py-8 text-center text-sm text-gray-400"
+                            >
+                              {poSource === "indent"
+                                ? "Select an Indent, then add items from the Add Item section above."
+                                : "Select items from the Add Item section above."}
+                            </Td>
+                          </Tr>
+                        ) : (
+                          items.map((item, index) => {
                             const taxable =
                               item.qty *
                               item.rate *
@@ -1388,7 +1618,7 @@ const handleGenerate = async () => {
                             return (
                               <Tr key={item.id} className="bg-success/5">
                                 <Td className="text-center text-gray-400">
-                                  {indentItems.length + index + 1}
+                                  {index + 1}
                                 </Td>
                                 <Td>{item.itemCode || "—"}</Td>
                                 <Td>
@@ -1426,235 +1656,245 @@ const handleGenerate = async () => {
                                 </Td>
                               </Tr>
                             );
-                          })}
-                        </>
+                          })
+                        )}
+                      </TBody>
+                      {items.length > 0 && (
+                        <tfoot>
+                          <Tr className="border-primary/20 bg-primary/5 text-primary border-t-2 font-bold">
+                            <Td colSpan={5}>Total (confirmed)</Td>
+                            <Td className="text-right">
+                              {items.reduce((t, i) => t + Number(i.qty), 0)}
+                            </Td>
+                            <Td colSpan={2} />
+                            <Td className="text-right">{money(grandTotal)}</Td>
+                            <Td />
+                          </Tr>
+                        </tfoot>
                       )}
-                    </TBody>
-                    {items.length > 0 && (
-                      <tfoot>
-                        <Tr className="border-primary/20 bg-primary/5 text-primary border-t-2 font-bold">
-                          <Td colSpan={5}>Total (confirmed)</Td>
-                          <Td className="text-right">
-                            {items.reduce((t, i) => t + Number(i.qty), 0)}
-                          </Td>
-                          <Td colSpan={2} />
-                          <Td className="text-right">{money(grandTotal)}</Td>
-                          <Td />
-                        </Tr>
-                      </tfoot>
-                    )}
-                  </Table>
-                )}
+                    </Table>
+                  )}
 
-                {/* ───────── STAGE 2: Supplier summary ───────── */}
-                {stage === "suppliers" && (
-                  <Table hoverable className="w-full min-w-[900px] text-left">
-                    <THead>
-                      <Tr>
-                        <Th className="w-12 text-center">
-                          <Checkbox
-                            checked={allMailSelected}
-                            onChange={toggleAllMail}
-                          />
-                        </Th>
-                        <Th>Vendor Name</Th>
-                        <Th>Vendor Number</Th>
-                        <Th>Email</Th>
-                        <Th>City</Th>
-                        <Th className="text-center">Serial No</Th>
-                        <Th className="text-right">Total Amount</Th>
-                        <Th className="w-16 text-center">Action</Th>
-                      </Tr>
-                    </THead>
-                    <TBody>
-                      {supplierGroups.length === 0 ? (
+                  {/* STAGE 2: Supplier summary */}
+                  {stage === "suppliers" && (
+                    <Table hoverable className="w-full min-w-[900px] text-left">
+                      <THead>
                         <Tr>
-                          <Td
-                            colSpan={7}
-                            className="py-8 text-center text-sm text-gray-400"
-                          >
-                            No confirmed items yet.
-                          </Td>
+                          <Th className="w-12 text-center">
+                            <Checkbox
+                              checked={allMailSelected}
+                              onChange={toggleAllMail}
+                            />
+                          </Th>
+                          <Th>Vendor Name</Th>
+                          <Th>Vendor Number</Th>
+                          <Th>Email</Th>
+                          <Th>City</Th>
+                          <Th className="text-center">Serial No</Th>
+                          <Th className="text-right">Total Amount</Th>
+                          <Th className="w-16 text-center">Action</Th>
                         </Tr>
-                      ) : (
-                        supplierGroups.map((g) => (
-                          <Tr key={g.supplierId}>
-                            <Td className="text-center">
-                              <Checkbox
-                                checked={mailSupplierIds.includes(g.supplierId)}
-                                disabled={!g.supplierEmail}
-                                onChange={() =>
-                                  toggleMailSupplier(g.supplierId)
-                                }
-                              />
-                            </Td>
-                            <Td className="font-medium">{g.supplierName}</Td>
-                            <Td>{g.supplierNumber || "—"}</Td>
-                            <Td>{g.supplierEmail || "—"}</Td>
-                            <Td>{g.supplierCity || "—"}</Td>
-                            <Td className="text-center font-semibold">
-                              {g.serialNo ?? "—"}
-                            </Td>
-                            <Td className="text-right font-semibold">
-                              {money(g.grandTotal)}
-                            </Td>
-                            <Td className="text-center">
-                              <Button
-                                variant="soft"
-                                color="primary"
-                                className="size-8 rounded-full p-0"
-                                onClick={() => handleViewSupplier(g.supplierId)}
-                              >
-                                <ChevronLeftIcon className="size-4.5 rotate-180" />
-                              </Button>
-                            </Td>
-                          </Tr>
-                        ))
-                      )}
-                    </TBody>
-                  </Table>
-                )}
-
-                {/* ───────── STAGE 3: Single supplier item detail (read-only) ───────── */}
-                {stage === "supplierDetail" &&
-                  (() => {
-                    const activeGroup = supplierGroups.find(
-                      (g) => g.supplierId === activeSupplierId,
-                    );
-                    return (
-                      <Table
-                        hoverable
-                        className="w-full min-w-[800px] text-left"
-                      >
-                        <THead>
+                      </THead>
+                      <TBody>
+                        {supplierGroups.length === 0 ? (
                           <Tr>
-                            <Th>Item Code</Th>
-                            <Th>Item Name</Th>
-                            <Th>Unit</Th>
-                            <Th className="text-right">Qty</Th>
-                            <Th className="text-right">Rate</Th>
-                            <Th className="text-right">Total</Th>
+                            <Td
+                              colSpan={7}
+                              className="py-8 text-center text-sm text-gray-400"
+                            >
+                              No confirmed items yet.
+                            </Td>
                           </Tr>
-                        </THead>
-                        <TBody>
-                          {!activeGroup || activeGroup.items.length === 0 ? (
-                            <Tr>
-                              <Td
-                                colSpan={6}
-                                className="py-8 text-center text-sm text-gray-400"
-                              >
-                                No items found for this supplier.
+                        ) : (
+                          supplierGroups.map((g) => (
+                            <Tr key={g.supplierId}>
+                              <Td className="text-center">
+                                <Checkbox
+                                  checked={mailSupplierIds.includes(
+                                    g.supplierId,
+                                  )}
+                                  disabled={!g.supplierEmail}
+                                  onChange={() =>
+                                    toggleMailSupplier(g.supplierId)
+                                  }
+                                />
+                              </Td>
+                              <Td className="font-medium">{g.supplierName}</Td>
+                              <Td>{g.supplierNumber || "—"}</Td>
+                              <Td>{g.supplierEmail || "—"}</Td>
+                              <Td>{g.supplierCity || "—"}</Td>
+                              <Td className="text-center font-semibold">
+                                {g.serialNo ?? "—"}
+                              </Td>
+                              <Td className="text-right font-semibold">
+                                {money(g.grandTotal)}
+                              </Td>
+                              <Td className="text-center">
+                                <Button
+                                  variant="soft"
+                                  color="primary"
+                                  className="size-8 rounded-full p-0"
+                                  onClick={() =>
+                                    handleViewSupplier(g.supplierId)
+                                  }
+                                >
+                                  <ChevronLeftIcon className="size-4.5 rotate-180" />
+                                </Button>
                               </Td>
                             </Tr>
-                          ) : (
-                            activeGroup.items.map((item: OrderItem) => {
-                              const taxable =
-                                item.qty *
-                                item.rate *
-                                (1 - (item.discount || 0) / 100);
-                              const total =
-                                taxable + (taxable * item.gstPct) / 100;
-                              return (
-                                <Tr key={item.id}>
-                                  <Td>{item.itemCode || "—"}</Td>
-                                  <Td>{item.item}</Td>
-                                  <Td>{item.unit}</Td>
-                                  <Td className="text-right">{item.qty}</Td>
-                                  <Td className="text-right">
-                                    {money(item.rate)}
-                                  </Td>
-                                  <Td className="text-right font-semibold">
-                                    {money(total)}
-                                  </Td>
-                                </Tr>
-                              );
-                            })
-                          )}
-                        </TBody>
-                      </Table>
-                    );
-                  })()}
-              </div>
-            </SectionCard>
+                          ))
+                        )}
+                      </TBody>
+                    </Table>
+                  )}
 
-            {stage !== "indent" && items.length > 0 && (
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-                <div className="xl:col-start-1">
-                  <SectionCard title="Order Summary">
-                    <div className="space-y-3">
-                      <div className="dark:text-dark-200 flex justify-between text-sm text-gray-500">
-                        <span>Sub Total</span>
-                        <strong className="dark:text-dark-50 text-gray-800">
-                          {money(totals.taxable + totals.discount)}
-                        </strong>
-                      </div>
-
-                      <div className="dark:text-dark-200 flex justify-between text-sm text-gray-500">
-                        <span>Taxable Amount</span>
-                        <strong className="dark:text-dark-50 text-gray-800">
-                          {money(totals.taxable)}
-                        </strong>
-                      </div>
-                      <div className="dark:text-dark-200 flex justify-between text-sm text-gray-500">
-                        <span>GST Amount</span>
-                        <strong className="dark:text-dark-50 text-gray-800">
-                          {money(totals.tax)}
-                        </strong>
-                      </div>
-                      <div className="dark:border-dark-500 border-t border-gray-100 pt-3">
-                        <span className="text-xs font-bold tracking-wide text-gray-400 uppercase">
-                          Total Amount
-                        </span>
-                        <p className="text-primary mt-1 text-2xl font-extrabold">
-                          {money(grandTotal)}
-                        </p>
-                      </div>
-                    </div>
-                  </SectionCard>
+                  {/* STAGE 3: Single supplier item detail (read-only) */}
+                  {stage === "supplierDetail" &&
+                    (() => {
+                      const activeGroup = supplierGroups.find(
+                        (g) => g.supplierId === activeSupplierId,
+                      );
+                      return (
+                        <Table
+                          hoverable
+                          className="w-full min-w-[800px] text-left"
+                        >
+                          <THead>
+                            <Tr>
+                              <Th>Item Code</Th>
+                              <Th>Item Name</Th>
+                              <Th>Unit</Th>
+                              <Th className="text-right">Qty</Th>
+                              <Th className="text-right">Rate</Th>
+                              <Th className="text-right">Total</Th>
+                            </Tr>
+                          </THead>
+                          <TBody>
+                            {!activeGroup || activeGroup.items.length === 0 ? (
+                              <Tr>
+                                <Td
+                                  colSpan={6}
+                                  className="py-8 text-center text-sm text-gray-400"
+                                >
+                                  No items found for this supplier.
+                                </Td>
+                              </Tr>
+                            ) : (
+                              activeGroup.items.map((item: OrderItem) => {
+                                const taxable =
+                                  item.qty *
+                                  item.rate *
+                                  (1 - (item.discount || 0) / 100);
+                                const total =
+                                  taxable + (taxable * item.gstPct) / 100;
+                                return (
+                                  <Tr key={item.id}>
+                                    <Td>{item.itemCode || "—"}</Td>
+                                    <Td>{item.item}</Td>
+                                    <Td>{item.unit}</Td>
+                                    <Td className="text-right">{item.qty}</Td>
+                                    <Td className="text-right">
+                                      {money(item.rate)}
+                                    </Td>
+                                    <Td className="text-right font-semibold">
+                                      {money(total)}
+                                    </Td>
+                                  </Tr>
+                                );
+                              })
+                            )}
+                          </TBody>
+                        </Table>
+                      );
+                    })()}
                 </div>
-              </div>
-            )}
+              </SectionBlock>
 
-            <div className="dark:border-dark-500 flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
-              <Link to="/purchase-master/purchase-order">
-                <Button variant="outlined">Cancel</Button>
-              </Link>
+              {/* ORDER SUMMARY (stage 2 / 3 me) */}
+              {stage !== "indent" && items.length > 0 && (
+                <SectionBlock title="Order Summary">
+                  <div className="max-w-md space-y-3">
+                    <div className="dark:text-dark-200 flex justify-between text-sm text-gray-500">
+                      <span>Sub Total</span>
+                      <strong className="dark:text-dark-50 text-gray-800">
+                        {money(totals.taxable + totals.discount)}
+                      </strong>
+                    </div>
 
-              {stage === "indent" && (
-                <Button color="primary" onClick={handleNext}>
-                  Next
-                </Button>
+                    <div className="dark:text-dark-200 flex justify-between text-sm text-gray-500">
+                      <span>Taxable Amount</span>
+                      <strong className="dark:text-dark-50 text-gray-800">
+                        {money(totals.taxable)}
+                      </strong>
+                    </div>
+                    <div className="dark:text-dark-200 flex justify-between text-sm text-gray-500">
+                      <span>GST Amount</span>
+                      <strong className="dark:text-dark-50 text-gray-800">
+                        {money(totals.tax)}
+                      </strong>
+                    </div>
+                    <div className="dark:border-dark-500 border-t border-gray-100 pt-3">
+                      <span className="text-xs font-bold tracking-wide text-gray-400 uppercase">
+                        Total Amount
+                      </span>
+                      <p className="text-primary mt-1 text-2xl font-extrabold">
+                        {money(grandTotal)}
+                      </p>
+                    </div>
+                  </div>
+                </SectionBlock>
               )}
 
-              {stage === "suppliers" && (
-                <>
-                  <Button variant="outlined" onClick={handleBackToIndent}>
+              {/* BOTTOM BUTTONS */}
+              <div className="flex flex-col-reverse gap-3 p-4 sm:flex-row sm:justify-end sm:p-5">
+                <Link to="/purchase-master/purchase-order">
+                  <Button variant="outlined">Cancel</Button>
+                </Link>
+
+                {stage === "indent" && (
+                  <Button color="primary" onClick={handleNext}>
+                    Next
+                  </Button>
+                )}
+
+                {stage === "suppliers" && (
+                  <>
+                    <Button variant="outlined" onClick={handleBackToIndent}>
+                      Back
+                    </Button>
+                    <Button
+                      color="primary"
+                      disabled={submitting}
+                      onClick={() => handleGenerate()}
+                    >
+                      {submitting ? "Generating..." : "Generate"}
+                    </Button>
+                  </>
+                )}
+
+                {stage === "supplierDetail" && (
+                  <Button variant="outlined" onClick={handleBackToSuppliers}>
                     Back
                   </Button>
-                  <Button
-                    color="primary"
-                    disabled={submitting}
-                    onClick={() => handleGenerate()}
-                  >
-                    {submitting ? "Generating..." : "Generate"}
-                  </Button>
-                </>
-              )}
-
-              {stage === "supplierDetail" && (
-                <Button variant="outlined" onClick={handleBackToSuppliers}>
-                  Back
-                </Button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
 
-          <aside className="space-y-5">
-            <SectionCard title="Supplier Suggestions">
-              <div className="p-0">
+            {/* ───────── RIGHT SIDE (Supplier + Last Purchase) ───────── */}
+            <div className="dark:divide-dark-500 dark:lg:border-dark-500 flex-shrink-0 divide-y divide-dashed divide-gray-300 lg:w-[300px] lg:border-l lg:border-gray-200">
+              <SectionBlock title="Supplier Suggestions">
+                <div className="mb-3">
+                  <Input
+                    value={supplierSearch}
+                    onChange={(e: any) => setSupplierSearch(e.target.value)}
+                    placeholder="Search supplier..."
+                  />
+                </div>
+
                 <p className="mb-3 text-xs font-medium text-gray-400">
                   Based on last purchase rate
                 </p>
+
                 {supplierLoading ? (
                   <div className="text-center text-sm text-gray-400">
                     Loading suppliers...
@@ -1663,10 +1903,14 @@ const handleGenerate = async () => {
                   <div className="text-center text-sm text-gray-400">
                     No suppliers found.
                   </div>
+                ) : filteredSuppliers.length === 0 ? (
+                  <div className="text-center text-sm text-gray-400">
+                    No matching suppliers.
+                  </div>
                 ) : (
                   /* Fixed height + scrollbar */
                   <div className="max-h-[420px] space-y-3 overflow-y-auto">
-                    {suppliers.map((supplier, index) => {
+                    {filteredSuppliers.map((supplier, index) => {
                       const supplierId =
                         supplier.id ??
                         supplier.accountId ??
@@ -1716,21 +1960,9 @@ const handleGenerate = async () => {
                           </div>
 
                           <dl className="mt-3 grid grid-cols-2 gap-y-1.5 text-xs">
-                            <dt className="text-gray-500">Last Rate</dt>
+                            <dt className="text-gray-500">Mobile No</dt>
                             <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                              {money(0)}
-                            </dd>
-                            <dt className="text-gray-500">Last Qty</dt>
-                            <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                              —
-                            </dd>
-                            <dt className="text-gray-500">Last Bill No</dt>
-                            <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                              —
-                            </dd>
-                            <dt className="text-gray-500">Last Date</dt>
-                            <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                              —
+                              {supplier.mobileNo || "—"}
                             </dd>
                           </dl>
                         </div>
@@ -1738,41 +1970,41 @@ const handleGenerate = async () => {
                     })}
                   </div>
                 )}
-              </div>
-            </SectionCard>
+              </SectionBlock>
 
-            <SectionCard title="Last Purchase History">
-              {!lastPurchase ? (
-                <p className="py-4 text-center text-xs text-gray-400">
-                  No purchase history for this item yet.
-                </p>
-              ) : (
-                <dl className="grid grid-cols-2 gap-y-2 text-xs">
-                  <dt className="text-gray-500">Last Rate</dt>
-                  <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                    {money(lastPurchase.rate)}
-                  </dd>
-                  <dt className="text-gray-500">Last Qty</dt>
-                  <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                    {lastPurchase.qty}
-                  </dd>
-                  <dt className="text-gray-500">Last Supplier</dt>
-                  <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                    {lastPurchase.supplierName}
-                  </dd>
-                  <dt className="text-gray-500">Last Bill No</dt>
-                  <dd className="text-primary text-right font-semibold">
-                    {lastPurchase.purchaseBillNo}
-                  </dd>
-                  <dt className="text-gray-500">Last Date</dt>
-                  <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
-                    {lastPurchase.purchaseDate}
-                  </dd>
-                </dl>
-              )}
-            </SectionCard>
-          </aside>
-        </div>
+              {/* <SectionBlock title="Last Purchase History">
+                {!lastPurchase ? (
+                  <p className="py-4 text-center text-xs text-gray-400">
+                    No purchase history for this item yet.
+                  </p>
+                ) : (
+                  <dl className="grid grid-cols-2 gap-y-2 text-xs">
+                    <dt className="text-gray-500">Last Rate</dt>
+                    <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
+                      {money(lastPurchase.rate)}
+                    </dd>
+                    <dt className="text-gray-500">Last Qty</dt>
+                    <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
+                      {lastPurchase.qty}
+                    </dd>
+                    <dt className="text-gray-500">Last Supplier</dt>
+                    <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
+                      {lastPurchase.supplierName}
+                    </dd>
+                    <dt className="text-gray-500">Last Bill No</dt>
+                    <dd className="text-primary text-right font-semibold">
+                      {lastPurchase.purchaseBillNo}
+                    </dd>
+                    <dt className="text-gray-500">Last Date</dt>
+                    <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
+                      {lastPurchase.purchaseDate}
+                    </dd>
+                  </dl>
+                )}
+              </SectionBlock> */}
+            </div>
+          </div>
+        </section>
       </div>
 
       <ItemSelectDrawer
