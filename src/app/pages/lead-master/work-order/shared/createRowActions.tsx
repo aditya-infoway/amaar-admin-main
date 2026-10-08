@@ -37,7 +37,7 @@ interface RowActionsOptions<
 
   onAssign?: (row: T) => void;
 
-  extraItems?: (row: T) => RowActionExtraItem[];
+ extraItems?: (row: T, table: Table<T>) => RowActionExtraItem[];
 }
 
 export function createRowActions<
@@ -75,10 +75,10 @@ export function createRowActions<
 
     const state = deleteError ? "error" : deleteSuccess ? "success" : "pending";
 
-    const extraItems =
-      options
-        ?.extraItems?.(row.original)
-        ?.filter((item) => item.show !== false) ?? [];
+  const extraItems =
+  options
+    ?.extraItems?.(row.original, table)
+    ?.filter((item) => item.show !== false) ?? [];
 
     return (
       <>
