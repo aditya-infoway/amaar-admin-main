@@ -262,18 +262,18 @@ function ItemSelectDrawer({
           (open ? "translate-x-0" : "translate-x-full")
         }
       >
-        <div className="bg-primary flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
+        <div className="bg-primary flex shrink-0 items-center justify-between px-5 py-4 text-white">
           <h3 className="text-base font-bold">Select Item</h3>
           <Button
             variant="flat"
             onClick={onClose}
-            className="!text-white hover:!bg-white/20"
+            className="text-white! hover:bg-white/20!"
           >
             <TrashIcon className="hidden" />
             <span className="text-lg leading-none">×</span>
           </Button>
         </div>
-        <div className="dark:border-dark-500 flex-shrink-0 border-b border-gray-100 px-5 py-3">
+        <div className="dark:border-dark-500 shrink-0 border-b border-gray-100 px-5 py-3">
           <Input
             value={search}
             onChange={(e: any) => setSearch(e.target.value)}
@@ -281,7 +281,7 @@ function ItemSelectDrawer({
           />
         </div>
         <div className="flex-1 overflow-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-175">
             <thead className="dark:bg-dark-800 sticky top-0 z-10 bg-gray-50">
               <tr className="dark:border-dark-500 border-b border-gray-200">
                 <th className="w-10 px-3 py-3" />
@@ -363,7 +363,7 @@ function ItemSelectDrawer({
             </tbody>
           </table>
         </div>
-        <div className="dark:border-dark-500 dark:bg-dark-800 flex flex-shrink-0 items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4">
+        <div className="dark:border-dark-500 dark:bg-dark-800 flex shrink-0 items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4">
           <span className="dark:text-dark-200 text-sm font-medium text-gray-500">
             {selectedId ? "1 item selected" : "No item selected"}
           </span>
@@ -683,7 +683,9 @@ export default function PurchaseOrderPage() {
   // ---- Add Item section state ----
   const [addRow, setAddRow] = useState<AddRow>(emptyAddRow);
   const [addTouched, setAddTouched] = useState(false);
-
+  const [supplierInfoMap, setSupplierInfoMap] = useState<Record<number, any>>(
+    {},
+  );
   const [indentList, setIndentList] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [supplierLoading, setSupplierLoading] = useState(false);
@@ -700,6 +702,35 @@ export default function PurchaseOrderPage() {
       );
     });
   }, [suppliers, supplierSearch]);
+  const getSupplierKey = (s: any, index: number) =>
+    Number(s.id ?? s.accountId ?? s.account_id ?? index);
+
+  // history wale (kam rate pehle) -> item supplier -> baaki
+  const sortedSuppliers = useMemo(() => {
+    const rank = (s: any, i: number) => {
+      const info = supplierInfoMap[getSupplierKey(s, i)];
+      if (info?.lastRate) return 0;
+      if (info?.isItemSupplier) return 1;
+      return 2;
+    };
+    return filteredSuppliers
+      .map((s, i) => ({ s, i, r: rank(s, i) }))
+      .sort((a, b) => {
+        if (a.r !== b.r) return a.r - b.r;
+        if (a.r === 0) {
+          return (
+            supplierInfoMap[getSupplierKey(a.s, a.i)].lastRate -
+            supplierInfoMap[getSupplierKey(b.s, b.i)].lastRate
+          );
+        }
+        return a.i - b.i;
+      })
+      .map((x) => x.s);
+  }, [filteredSuppliers, supplierInfoMap]);
+
+  const hasHistory = Object.values(supplierInfoMap).some(
+    (i: any) => i.lastRate,
+  );
   // Load indents for Combobox
   useEffect(() => {
     if (!isCreateView || poSource !== "indent") return;
@@ -799,6 +830,7 @@ export default function PurchaseOrderPage() {
   ) => {
     if (!itemId) {
       setLastPurchase(null);
+      setSupplierInfoMap({});
       return;
     }
     try {
@@ -808,11 +840,19 @@ export default function PurchaseOrderPage() {
         false,
       );
       if (res.data?.success) {
+        const list: any[] = res.data.data?.suppliers || [];
+        const map: Record<number, any> = {};
+        list.forEach((s) => {
+          map[Number(s.supplierId)] = s;
+        });
+        setSupplierInfoMap(map);
         setLastPurchase(res.data.data?.lastPurchase || null);
       } else {
+        setSupplierInfoMap({});
         setLastPurchase(null);
       }
     } catch {
+      setSupplierInfoMap({});
       setLastPurchase(null);
     }
   };
@@ -870,15 +910,20 @@ export default function PurchaseOrderPage() {
   };
 
   const handleSupplierSelect = (supplier: any) => {
-    console.log("Selected Supplier:", supplier);
-
-    setSelectedSupplierId(
+    const sid = Number(
       supplier.id || supplier.accountId || supplier.account_id,
     );
 
+    setSelectedSupplierId(sid);
     setSelectedSupplierName(
       supplier.accountName || supplier.name || supplier.account_name || "",
     );
+
+    // is supplier ka last purchase rate mile to item ka rate wahi
+    const info = supplierInfoMap[sid];
+    if (info?.lastRate) {
+      setAddRow((r) => ({ ...r, rate: String(info.lastRate) }));
+    }
   };
 
   /* ───────── Add Item section logic ───────── */
@@ -925,6 +970,7 @@ export default function PurchaseOrderPage() {
     setSelectedSupplierId(null);
     setSelectedSupplierName("");
     setLastPurchase(null);
+    setSupplierInfoMap({});
   };
 
   const handleAddItemSelect = (selected: AddCatalogItem | null) => {
@@ -967,10 +1013,10 @@ export default function PurchaseOrderPage() {
       toasterrormsg("Quantity must be greater than 0.");
       return;
     }
-    if (addRateNum <= 0) {
-      toasterrormsg("Please enter rate.");
-      return;
-    }
+    // if (addRateNum <= 0) {
+    //   toasterrormsg("Please enter rate.");
+    //   return;
+    // }
 
     const fullSupplier = suppliers.find(
       (s) => (s.id ?? s.accountId ?? s.account_id) === selectedSupplierId,
@@ -1306,7 +1352,7 @@ export default function PurchaseOrderPage() {
                 <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-6">
                   <div>
                     <FieldLabel>PO Source</FieldLabel>
-                    <div className="flex h-[38px] items-center gap-5">
+                    <div className="flex h-9.5 items-center gap-5">
                       <label className="flex cursor-pointer items-center gap-2">
                         <Radio
                           checked={poSource === "indent"}
@@ -1418,7 +1464,7 @@ export default function PurchaseOrderPage() {
                 <SectionBlock title="Add Item">
                   <div className="space-y-4">
                     {/* Row 1: Item dropdown */}
-                    <div className="w-full sm:w-1/2 sm:min-w-[260px]">
+                    <div className="w-full sm:w-1/2 sm:min-w-65">
                       <FieldLabel required>Item Details</FieldLabel>
                       <Combobox
                         data={addCatalog}
@@ -1434,11 +1480,17 @@ export default function PurchaseOrderPage() {
                         }
                         searchFields={["itemCode", "itemName"]}
                         renderItem={(item: any) => (
-                          <div className="flex w-full items-center text-inherit">
-                            <span className="w-20 shrink-0 text-xs font-bold">
+                          <div className="flex w-full items-center gap-3 text-inherit">
+                            <span
+                              className="max-w-35 min-w-24 shrink-0 truncate text-xs font-bold"
+                              title={item.itemCode}
+                            >
                               {item.itemCode}
                             </span>
-                            <span className="truncate text-sm">
+                            <span
+                              className="truncate text-sm"
+                              title={item.itemName}
+                            >
                               {item.itemName}
                             </span>
                           </div>
@@ -1450,9 +1502,7 @@ export default function PurchaseOrderPage() {
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-10">
                       <div className="col-span-2 md:col-span-2">
                         <FieldLabel>Item Code</FieldLabel>
-                        <div className={roCls + " text-center"}>
-                          {addRow.itemCode || "—"}
-                        </div>
+                        <div className={roCls}>{addRow.itemCode || "—"}</div>
                       </div>
                       <div className="col-span-2 md:col-span-6">
                         <FieldLabel>Item Name</FieldLabel>
@@ -1460,13 +1510,12 @@ export default function PurchaseOrderPage() {
                       </div>
                       <div className="col-span-2 md:col-span-2">
                         <FieldLabel>HSN Code</FieldLabel>
-                        <div className={roCls + " text-center"}>
-                          {addRow.hsn || "—"}
-                        </div>
+                        <div className={roCls}>{addRow.hsn || "—"}</div>
                       </div>
                     </div>
 
                     {/* Row 3: Unit, Tax, Qty (read-only for indent) + Rate (editable) + Net + ✓ */}
+                    {/* Row 3: Unit, Tax, Qty (read-only) + ✓ */}
                     <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-11">
                       <div className="md:col-span-1">
                         <FieldLabel>Unit</FieldLabel>
@@ -1488,54 +1537,8 @@ export default function PurchaseOrderPage() {
                       </div>
                       <div className="md:col-span-2">
                         <FieldLabel required>Qty</FieldLabel>
-                        {poSource === "indent" ? (
-                          <div className={roCls + " text-right"}>
-                            {hasAddItem ? addRow.qty : "—"}
-                          </div>
-                        ) : (
-                          <input
-                            type="number"
-                            min={0}
-                            value={addRow.qty}
-                            disabled={!hasAddItem}
-                            onChange={(e) =>
-                              setAddRow((r) => ({ ...r, qty: e.target.value }))
-                            }
-                            placeholder="Qty"
-                            className={iCls}
-                          />
-                        )}
-                      </div>
-
-                      <div className="md:col-span-3">
-                        <FieldLabel required>Rate (₹)</FieldLabel>
-                        <input
-                          type="number"
-                          min={0}
-                          value={addRow.rate}
-                          disabled={!hasAddItem}
-                          onChange={(e) => {
-                            setAddRow((r) => ({ ...r, rate: e.target.value }));
-                            setAddTouched(false);
-                          }}
-                          placeholder="0.00"
-                          className={
-                            iCls +
-                            (addTouched && hasAddItem && !addRateNum
-                              ? " !border-red-400 !bg-red-50 dark:!bg-red-900/20"
-                              : "")
-                          }
-                        />
-                      </div>
-
-                      <div className="md:col-span-3">
-                        <FieldLabel>Net Amount (₹)</FieldLabel>
-                        <div
-                          className={
-                            roCls + " text-primary text-right font-semibold"
-                          }
-                        >
-                          {hasAddItem ? money(addNet) : "—"}
+                        <div className={roCls + " text-right"}>
+                          {hasAddItem ? addRow.qty : "—"}
                         </div>
                       </div>
 
@@ -1579,7 +1582,7 @@ export default function PurchaseOrderPage() {
                   {stage === "indent" && (
                     <Table
                       hoverable
-                      className="w-full min-w-[1100px] table-fixed text-left"
+                      className="w-full min-w-225 table-fixed text-left"
                     >
                       <THead>
                         <Tr>
@@ -1589,17 +1592,15 @@ export default function PurchaseOrderPage() {
                           <Th className="w-28">HSN</Th>
                           <Th className="w-20">Unit</Th>
                           <Th className="w-20 text-right">Qty</Th>
-                          <Th className="w-32 text-right">Rate</Th>
-                          <Th className="w-20 text-center">Tax</Th>
-                          <Th className="w-32 text-right">Net Amount</Th>
-                          <Th className="w-16 text-center">Action</Th>
+                          <Th className="w-16 text-center">Tax</Th>
+                          <Th className="w-20 text-center">Action</Th>
                         </Tr>
                       </THead>
                       <TBody>
                         {items.length === 0 ? (
                           <Tr>
                             <Td
-                              colSpan={10}
+                              colSpan={8}
                               className="py-8 text-center text-sm text-gray-400"
                             >
                               {poSource === "indent"
@@ -1608,55 +1609,41 @@ export default function PurchaseOrderPage() {
                             </Td>
                           </Tr>
                         ) : (
-                          items.map((item, index) => {
-                            const taxable =
-                              item.qty *
-                              item.rate *
-                              (1 - (item.discount || 0) / 100);
-                            const gstAmt = (taxable * item.gstPct) / 100;
-                            const amount = taxable + gstAmt;
-                            return (
-                              <Tr key={item.id} className="bg-success/5">
-                                <Td className="text-center text-gray-400">
-                                  {index + 1}
-                                </Td>
-                                <Td>{item.itemCode || "—"}</Td>
-                                <Td>
-                                  {item.item}
-                                  <span className="text-success block text-[10px]">
-                                    ✓ Supplier: {item.supplierName}
-                                  </span>
-                                </Td>
-                                <Td>{item.hsn}</Td>
-                                <Td>{item.unit}</Td>
-                                <Td className="text-right">{item.qty}</Td>
-                                <Td className="text-right">
-                                  {money(item.rate)}
-                                </Td>
-                                <Td className="text-center">
-                                  <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
-                                    {item.gstPct}%
-                                  </span>
-                                </Td>
-                                <Td className="text-right font-semibold">
-                                  {money(amount)}
-                                </Td>
-                                <Td className="text-center">
-                                  <Button
-                                    variant="flat"
-                                    color="error"
-                                    className="size-8 p-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeItem(item.id);
-                                    }}
-                                  >
-                                    <TrashIcon className="size-4.5" />
-                                  </Button>
-                                </Td>
-                              </Tr>
-                            );
-                          })
+                          items.map((item, index) => (
+                            <Tr key={item.id} className="bg-success/5">
+                              <Td className="text-center text-gray-400">
+                                {index + 1}
+                              </Td>
+                              <Td>{item.itemCode || "—"}</Td>
+                              <Td>
+                                {item.item}
+                                <span className="text-success block text-[10px]">
+                                  ✓ Supplier: {item.supplierName}
+                                </span>
+                              </Td>
+                              <Td>{item.hsn}</Td>
+                              <Td>{item.unit}</Td>
+                              <Td className="text-right">{item.qty}</Td>
+                              <Td className="text-center">
+                                <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
+                                  {item.gstPct}%
+                                </span>
+                              </Td>
+                              <Td className="text-center">
+                                <Button
+                                  variant="flat"
+                                  color="error"
+                                  className="size-8 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeItem(item.id);
+                                  }}
+                                >
+                                  <TrashIcon className="size-4.5" />
+                                </Button>
+                              </Td>
+                            </Tr>
+                          ))
                         )}
                       </TBody>
                       {items.length > 0 && (
@@ -1667,8 +1654,6 @@ export default function PurchaseOrderPage() {
                               {items.reduce((t, i) => t + Number(i.qty), 0)}
                             </Td>
                             <Td colSpan={2} />
-                            <Td className="text-right">{money(grandTotal)}</Td>
-                            <Td />
                           </Tr>
                         </tfoot>
                       )}
@@ -1677,7 +1662,7 @@ export default function PurchaseOrderPage() {
 
                   {/* STAGE 2: Supplier summary */}
                   {stage === "suppliers" && (
-                    <Table hoverable className="w-full min-w-[900px] text-left">
+                    <Table hoverable className="w-full min-w-225 text-left">
                       <THead>
                         <Tr>
                           <Th className="w-12 text-center">
@@ -1755,10 +1740,7 @@ export default function PurchaseOrderPage() {
                         (g) => g.supplierId === activeSupplierId,
                       );
                       return (
-                        <Table
-                          hoverable
-                          className="w-full min-w-[800px] text-left"
-                        >
+                        <Table hoverable className="w-full min-w-200 text-left">
                           <THead>
                             <Tr>
                               <Th>Item Code</Th>
@@ -1881,7 +1863,7 @@ export default function PurchaseOrderPage() {
             </div>
 
             {/* ───────── RIGHT SIDE (Supplier + Last Purchase) ───────── */}
-            <div className="dark:divide-dark-500 dark:lg:border-dark-500 flex-shrink-0 divide-y divide-dashed divide-gray-300 lg:w-[300px] lg:border-l lg:border-gray-200">
+            <div className="dark:divide-dark-500 dark:lg:border-dark-500 shrink-0 divide-y divide-dashed divide-gray-300 lg:w-75 lg:border-l lg:border-gray-200">
               <SectionBlock title="Supplier Suggestions">
                 <div className="mb-3">
                   <Input
@@ -1909,13 +1891,9 @@ export default function PurchaseOrderPage() {
                   </div>
                 ) : (
                   /* Fixed height + scrollbar */
-                  <div className="max-h-[420px] space-y-3 overflow-y-auto">
-                    {filteredSuppliers.map((supplier, index) => {
-                      const supplierId =
-                        supplier.id ??
-                        supplier.accountId ??
-                        supplier.account_id ??
-                        index;
+                  <div className="max-h-105 space-y-3 overflow-y-auto">
+                    {sortedSuppliers.map((supplier, index) => {
+                      const supplierId = getSupplierKey(supplier, index);
 
                       const supplierName =
                         supplier.accountName ??
@@ -1923,8 +1901,14 @@ export default function PurchaseOrderPage() {
                         supplier.account_name ??
                         "Unnamed Supplier";
 
+                      const info = supplierInfoMap[supplierId];
                       const isSelected = selectedSupplierId === supplierId;
-                      const isRecommended = index === 0;
+                      // history me sabse kam last rate wala = list me pehla (sorted)
+                      const isRecommended =
+                        hasAddItem &&
+                        hasHistory &&
+                        index === 0 &&
+                        !!info?.lastRate;
 
                       return (
                         <div
@@ -1936,7 +1920,7 @@ export default function PurchaseOrderPage() {
                           }`}
                           onClick={() => handleSupplierSelect(supplier)}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <Radio
                                 checked={isSelected}
@@ -1948,15 +1932,26 @@ export default function PurchaseOrderPage() {
                                 {supplierName}
                               </span>
                             </div>
-                            {isRecommended && (
-                              <Badge
-                                variant="soft"
-                                color="success"
-                                className="rounded-full text-[10px]"
-                              >
-                                Recommended
-                              </Badge>
-                            )}
+                            <div className="flex flex-col items-end gap-1">
+                              {isRecommended && (
+                                <Badge
+                                  variant="soft"
+                                  color="success"
+                                  className="rounded-full text-[10px]"
+                                >
+                                  Recommended
+                                </Badge>
+                              )}
+                              {info?.isItemSupplier && (
+                                <Badge
+                                  variant="soft"
+                                  color="info"
+                                  className="rounded-full text-[10px]"
+                                >
+                                  Item Supplier
+                                </Badge>
+                              )}
+                            </div>
                           </div>
 
                           <dl className="mt-3 grid grid-cols-2 gap-y-1.5 text-xs">
@@ -1964,6 +1959,32 @@ export default function PurchaseOrderPage() {
                             <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
                               {supplier.mobileNo || "—"}
                             </dd>
+
+                            {info?.lastRate ? (
+                              <>
+                                <dt className="text-gray-500">Last Rate</dt>
+                                <dd className="text-primary text-right font-semibold">
+                                  {money(info.lastRate)}
+                                </dd>
+                                <dt className="text-gray-500">Last Bill</dt>
+                                <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
+                                  {info.lastBillNo || "—"}
+                                </dd>
+                                <dt className="text-gray-500">Last Date</dt>
+                                <dd className="dark:text-dark-50 text-right font-semibold text-gray-700">
+                                  {formatDateForDisplay(info.lastDate)}
+                                </dd>
+                              </>
+                            ) : (
+                              hasAddItem && (
+                                <>
+                                  <dt className="text-gray-500">Last Rate</dt>
+                                  <dd className="text-right text-gray-400">
+                                    No history
+                                  </dd>
+                                </>
+                              )
+                            )}
                           </dl>
                         </div>
                       );
