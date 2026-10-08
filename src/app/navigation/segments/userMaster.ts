@@ -11,6 +11,7 @@ export const userMaster: NavigationTree = {
       title: "Accounts",
       icon: "user_master.createAccount",
     },
+
     {
       id: "user_master.accountgroups",
       type: "item",
@@ -24,6 +25,13 @@ export const userMaster: NavigationTree = {
       path: "/user-master/create-employee",
       title: "Create Employee",
       icon: "user_master.createEmployee",
+    },
+    {
+      id: "user_master.contractorType",
+      type: "item",
+      path: "/user-master/contractor-type",
+      title: "Contractor Type",
+      icon: "user_master.createAccount",
     },
     {
       id: "user_master.contractorEmployee",

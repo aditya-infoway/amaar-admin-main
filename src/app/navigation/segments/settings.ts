@@ -39,5 +39,13 @@ export const settings: NavigationTree = {
       // transKey: "nav.settings.appearance",
       icon: "settings.appearance",
     },
+    {
+      id: "itemCategory",
+      type: "item",
+      path: "/settings/itemcategory",
+      title: "item Category",
+      // transKey: "nav.settings.appearance",
+      icon: "settings.appearance",
+    },
   ],
 };

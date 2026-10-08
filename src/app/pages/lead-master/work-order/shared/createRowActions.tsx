@@ -1,10 +1,4 @@
-import {
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuItems,
- 
-} from "@headlessui/react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import {
   EllipsisHorizontalIcon,
   PencilIcon,
@@ -13,7 +7,7 @@ import {
   ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
-import {  useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { Row, Table } from "@tanstack/react-table";
 
 import {
@@ -176,7 +170,7 @@ export function createRowActions<
                 </button>
               )}
             </MenuItem>
-            {withAssign && !row.original.assignedEmployeeId && (
+            {/* {withAssign && !row.original.assignedEmployeeId && (
               <MenuItem>
                 {({ focus }) => (
                   <button
@@ -193,7 +187,7 @@ export function createRowActions<
                   </button>
                 )}
               </MenuItem>
-            )}
+            )} */}
           </MenuItems>
         </Menu>
 
