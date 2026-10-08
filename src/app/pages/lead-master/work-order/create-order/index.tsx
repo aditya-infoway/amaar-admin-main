@@ -22,7 +22,7 @@ import { Combobox } from "@/components/shared/form/StyledCombobox";
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
-
+import WorkOrderItemsDrawer from "./WorkOrderItemsDrawer";
 import {
   Get,
   Post,
@@ -84,7 +84,8 @@ export default function CreateOrderPage() {
   const [filterWorkOrderNo, setFilterWorkOrderNo] = useState("");
 
   const [filterSalesOrderId, setFilterSalesOrderId] = useState("");
-
+const [itemsDrawerOpen, setItemsDrawerOpen] = useState(false);
+const [itemsDrawerRow, setItemsDrawerRow] = useState<WorkOrder | null>(null);
   const fetchWorkOrders = async () => {
     try {
       setLoading(true);
@@ -245,7 +246,10 @@ export default function CreateOrderPage() {
         setViewOnly(false);
         setDrawerOpen(true);
       },
-
+viewItems: (row: WorkOrder) => {
+  setItemsDrawerRow(row);
+  setItemsDrawerOpen(true);
+},
       deleteRow: async (row: any) => {
         try {
           const response = await Delete(
@@ -385,7 +389,14 @@ export default function CreateOrderPage() {
           setViewOnly(false);
         }}
       />
-
+<WorkOrderItemsDrawer
+  isOpen={itemsDrawerOpen}
+  workOrder={itemsDrawerRow}
+  close={() => {
+    setItemsDrawerOpen(false);
+    setItemsDrawerRow(null);
+  }}
+/>
       <Transition appear show={assignModalOpen} as={Fragment}>
         <Dialog
           as="div"

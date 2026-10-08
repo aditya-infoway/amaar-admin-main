@@ -8,7 +8,7 @@ import {
 import { createRowActions } from "../shared/createRowActions";
 import type { WorkOrder } from "../shared/types";
 import type { ExportColumn } from "../shared/export";
-
+import { ListBulletIcon } from "@heroicons/react/24/outline";
 const columnHelper = createColumnHelper<WorkOrder>();
 
 export const createColumns = (onAssign: (row: WorkOrder) => void) => {
@@ -16,6 +16,14 @@ export const createColumns = (onAssign: (row: WorkOrder) => void) => {
     withView: true,
     withAssign: true,
     onAssign,
+    extraItems: (row, table) => [
+      {
+        key: "item-view",
+        label: "Item View",
+        icon: ListBulletIcon,
+        onClick: () => (table.options.meta as any)?.viewItems?.(row),
+      },
+    ],
   });
 
   return [

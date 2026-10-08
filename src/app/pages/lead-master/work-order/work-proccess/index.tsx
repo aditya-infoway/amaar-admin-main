@@ -59,15 +59,16 @@ export default function WorkProccess() {
         if (response?.data?.success || response?.data?.status === 200) {
           const list = response?.data?.data || [];
 
-          setWorkOrders(
-            list.map((item: any) => ({
-              id: Number(item.id),
-              workOrderNo: item.workOrderNo || "",
-              customerName: item.customerName || "",
-              model: item.modelName || item.model || "",
-              label: `${item.workOrderNo || "-"} | ${item.customerName || "-"} | ${item.modelName || item.model || "-"}`,
-            })),
-          );
+        setWorkOrders(
+  list.map((item: any) => ({
+    id: Number(item.id),
+    workOrderNo: item.workOrderNo || "",
+    customerName: item.customerName || "",
+    model: item.modelName || item.model || "",
+    label: `${item.workOrderNo || "-"} | ${item.customerName || "-"} | ${item.modelName || item.model || "-"}`,
+    stages: item.stages || [],
+  })),
+);
         }
       } catch (error) {
         console.error("Work Order list error:", error);
@@ -87,11 +88,22 @@ const currentSteps: WorkProcessStep[] = useMemo(() => {
     processMap[selectedOrder.workOrderNo] ??
     defaultProcessSteps.map((step) => ({ ...step }));
 
-  return base.map((step) =>
-    step.label === "Material Availability"
-      ? { ...step, status: hasIndent ? "Completed" : step.status }
-      : step,
+  const stages = [...(selectedOrder.stages || [])].sort(
+    (a, b) => a.order - b.order,
   );
+
+  return base.map((step, i) => {
+    if (step.label === "Material Availability") {
+      return { ...step, status: hasIndent ? "Completed" : step.status };
+    }
+    // step 2..7 = stage 1..6 (order ke hisaab se)
+    const stage = stages[i - 1] || null;
+    return {
+      ...step,
+      stage,
+      status: stage?.status || step.status,
+    };
+  });
 }, [selectedOrder, processMap, hasIndent]);
 
   const handleSelectOrder = (value: any) => {
