@@ -563,7 +563,7 @@ function AddItemSelector({
             className={[
               "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
               hasItem && parseFloat(row.qty) > 0
-                ? "bg-green-500 text-white shadow-md hover:scale-105 hover:bg-green-600 active:scale-95"
+                ? "bg-primary-500 text-white shadow-md hover:scale-105 hover:bg-primary-500 active:scale-95"
                 : "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-600",
             ].join(" ")}
           >
@@ -1510,20 +1510,27 @@ export default function SalesInvoice() {
               />
             </div>
           </div>
-        </Card>
 
-        {/* ADD ITEM */}
-        <Card title="Add Item" className="mb-5">
-          <AddItemSelector
-            itemCatalog={availableItemCatalog}
-            onAdd={addItemFromPreview}
-            lockFields={isFromSo}
-          />
-        </Card>
+          {/* ── Add Item section ── */}
+          <div className="mt-6 border-t border-dashed border-gray-300 pt-5 dark:border-gray-600">
+            <h3 className="mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+              Add Item
+            </h3>
+            <AddItemSelector
+              itemCatalog={availableItemCatalog}
+              onAdd={addItemFromPreview}
+              lockFields={isFromSo}
+            />
+          </div>
 
-        {/* ITEM DETAILS TABLE */}
-        <Card title="Item Details" className="mb-5">
-          {formErrors.items && <p className="mb-2 text-xs text-red-500">{formErrors.items}</p>}
+          {/* ── Item Details section ── */}
+          <div className="mt-6 border-t border-dashed border-gray-300 pt-5 dark:border-gray-600">
+            <h3 className="mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+              Item Details
+            </h3>
+            {formErrors.items && (
+              <p className="mb-2 text-xs text-red-500">{formErrors.items}</p>
+            )}
 
           <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table className="w-full min-w-[1000px]">
@@ -1635,6 +1642,7 @@ export default function SalesInvoice() {
                 </tr>
               </tfoot>
             </table>
+            </div>
           </div>
         </Card>
 
@@ -1651,12 +1659,12 @@ export default function SalesInvoice() {
                 >
                   <Icon.Save /> {submitting ? "Saving..." : "Save"}
                 </button>
-                <button
+                {/* <button
                   type="button"
                   className="bg-primary hover:bg-primary/90 active:bg-primary/80 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
                 >
                   <Icon.Print /> Save & Print
-                </button>
+                </button> */}
                 <button
                   type="button"
                   className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-600 transition-all hover:border-red-400 hover:text-red-500 dark:border-gray-600 dark:bg-transparent dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
