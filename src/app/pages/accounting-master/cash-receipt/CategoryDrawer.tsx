@@ -21,8 +21,9 @@ import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 
 // 1. Create a local type to align React Hook Form with the new state fields
 type FormCashReceipt = Omit<CashReceipt, "receiptMode"> & {
-  receiptMode: "manual" | "workorder";
+  receiptMode: "manual" | "workorder" | "salesorder";
   workOrderNo?: any[];
+  salesOrderNo?: any[];
 };
 
 interface CashReceiptDrawerProps {
@@ -40,6 +41,12 @@ interface AccountListItem {
 // ✅ NEW — work order API helper
 const workOrderApi = {
   list: () => Get("workorder/list", {}, false),
+};
+
+// ✅ NEW — sales order API helper
+const salesOrderApi = {
+  list: (financialYearId: string) =>
+    Get("salesorder/list", { financialYearId }, false),
 };
 
 // ✅ NEW — payment API helpers
@@ -75,6 +82,7 @@ export function CashReceiptDrawer({
     defaultValues: {
       receiptMode: "manual",
       workOrderNo: [],
+      salesOrderNo: [],
     },
     values: (cashReceipt as unknown as FormCashReceipt) || undefined,
   });
@@ -96,6 +104,13 @@ export function CashReceiptDrawer({
     [],
   );
   const [workOrderLoading, setWorkOrderLoading] = useState(false);
+
+  // ✅ NEW — Sales Order options
+  const [salesOrderOptions, setSalesOrderOptions] = useState<
+    AccountListItem[]
+  >([]);
+  const [salesOrderLoading, setSalesOrderLoading] = useState(false);
+
   // Drawer open hote hi current date + voucher no set (naya add karte waqt)
   useEffect(() => {
     if (!isOpen) return;
@@ -122,6 +137,8 @@ export function CashReceiptDrawer({
     fetchVoucherNo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Work Order list — sirf jab "Work Order" mode select ho
   useEffect(() => {
     if (!isOpen) return;
     if (receiptMode !== "workorder") return;
@@ -156,6 +173,44 @@ export function CashReceiptDrawer({
 
     fetchWorkOrders();
   }, [isOpen, receiptMode]);
+
+  // ✅ NEW — Sales Order list — sirf jab "Sales Order" mode select ho
+  useEffect(() => {
+    if (!isOpen) return;
+    if (receiptMode !== "salesorder") return;
+    if (salesOrderOptions.length > 0) return; // already loaded, dobara call na ho
+
+    const fetchSalesOrders = async () => {
+      setSalesOrderLoading(true);
+      try {
+        const financialYearId = localStorage.getItem("financialYearId") || "";
+        const res = await salesOrderApi.list(financialYearId);
+        if (res.data?.success) {
+          const mapped: AccountListItem[] = (res.data.data || []).map(
+            (item: any) => ({
+              id: String(item.id),
+              label: item.soNo || "",
+            }),
+          );
+          setSalesOrderOptions(mapped);
+        } else {
+          setSalesOrderOptions([]);
+          toasterrormsg(res.data?.message || "Failed to load sales orders.");
+        }
+      } catch (err: any) {
+        setSalesOrderOptions([]);
+        toasterrormsg(
+          err?.response?.data?.message ||
+            "Something went wrong while loading sales orders.",
+        );
+      } finally {
+        setSalesOrderLoading(false);
+      }
+    };
+
+    fetchSalesOrders();
+  }, [isOpen, receiptMode]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -235,6 +290,11 @@ export function CashReceiptDrawer({
   const onSubmit = async (data: FormCashReceipt) => {
     if (data.receiptMode === "workorder") {
       toasterrormsg("BOM cash receipt is not available yet.");
+      return;
+    }
+
+    if (data.receiptMode === "salesorder") {
+      toasterrormsg("Sales Order cash receipt is not available yet.");
       return;
     }
 
@@ -339,12 +399,19 @@ export function CashReceiptDrawer({
                       />
                       Work Order
                     </label>
+
+                    {/* ✅ NEW — Sales Order */}
+                    <label className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                      <Radio
+                        checked={field.value === "salesorder"}
+                        onChange={() => field.onChange("salesorder")}
+                      />
+                      Sales Order
+                    </label>
                   </div>
                 )}
               />
 
-              {/* BOM No — only shown when BOM is selected */}
-              {/* Work Order No — only shown when Work Order is selected */}
               {/* Work Order No — only shown when Work Order is selected */}
               {receiptMode === "workorder" && (
                 <Controller
@@ -365,6 +432,31 @@ export function CashReceiptDrawer({
                       label="Work Order No."
                       searchFields={["label"]}
                       error={errors.workOrderNo?.message}
+                    />
+                  )}
+                />
+              )}
+
+              {/* ✅ NEW — Sales Order No — only shown when Sales Order is selected */}
+              {receiptMode === "salesorder" && (
+                <Controller
+                  control={control}
+                  name="salesOrderNo"
+                  rules={{ required: "Sales Order No is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <Combobox
+                      data={salesOrderOptions}
+                      displayField="label"
+                      value={value}
+                      onChange={onChange}
+                      placeholder={
+                        salesOrderLoading
+                          ? "Loading..."
+                          : "Select Sales Order No."
+                      }
+                      label="Sales Order No."
+                      searchFields={["label"]}
+                      error={errors.salesOrderNo?.message}
                     />
                   )}
                 />
