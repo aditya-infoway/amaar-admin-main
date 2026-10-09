@@ -1464,66 +1464,70 @@ export default function PurchaseOrderPage() {
                 <SectionBlock title="Add Item">
                   <div className="space-y-4">
                     {/* Row 1: Item dropdown */}
-                    <div className="w-full sm:w-1/2 sm:min-w-65">
-                      <FieldLabel required>Item Details</FieldLabel>
-                      <Combobox
-                        data={addCatalog}
-                        displayField="itemName"
-                        value={addComboValue}
-                        onChange={(selected: any) =>
-                          handleAddItemSelect(selected || null)
-                        }
-                        placeholder={
-                          poSource === "indent" && !selectedIndent
-                            ? "Select an Indent first"
-                            : "Select item"
-                        }
-                        searchFields={["itemCode", "itemName"]}
-                        renderItem={(item: any) => (
-                          <div className="flex w-full items-center gap-3 text-inherit">
-                            <span
-                              className="max-w-35 min-w-24 shrink-0 truncate text-xs font-bold"
-                              title={item.itemCode}
-                            >
-                              {item.itemCode}
-                            </span>
-                            <span
-                              className="truncate text-sm"
-                              title={item.itemName}
-                            >
-                              {item.itemName}
-                            </span>
-                          </div>
-                        )}
-                      />
-                    </div>
-
-                    {/* Row 2: Read-only item info */}
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-10">
-                      <div className="col-span-2 md:col-span-2">
+                    <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-12">
+                      <div className="md:col-span-6">
+                        <Combobox
+                          data={addCatalog}
+                          displayField="itemName"
+                          value={addComboValue}
+                          onChange={(selected: any) =>
+                            handleAddItemSelect(selected || null)
+                          }
+                          placeholder={
+                            poSource === "indent" && !selectedIndent
+                              ? "Select an Indent first"
+                              : "Select item"
+                          }
+                          searchFields={["itemCode", "itemName"]}
+                          renderItem={(item: any) => (
+                            <div className="flex w-full items-center gap-3 text-inherit">
+                              <span
+                                className="max-w-35 min-w-24 shrink-0 truncate text-xs font-bold"
+                                title={item.itemCode}
+                              >
+                                {item.itemCode}
+                              </span>
+                              <span
+                                className="truncate text-sm"
+                                title={item.itemName}
+                              >
+                                {item.itemName}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      </div>
+                      <div className="md:col-span-3">
                         <FieldLabel>Item Code</FieldLabel>
                         <div className={roCls}>{addRow.itemCode || "—"}</div>
                       </div>
-                      <div className="col-span-2 md:col-span-6">
-                        <FieldLabel>Item Name</FieldLabel>
-                        <div className={roCls}>{addRow.itemName || "—"}</div>
-                      </div>
-                      <div className="col-span-2 md:col-span-2">
+                      <div className="md:col-span-3">
                         <FieldLabel>HSN Code</FieldLabel>
                         <div className={roCls}>{addRow.hsn || "—"}</div>
                       </div>
                     </div>
 
-                    {/* Row 3: Unit, Tax, Qty (read-only for indent) + Rate (editable) + Net + ✓ */}
-                    {/* Row 3: Unit, Tax, Qty (read-only) + ✓ */}
-                    <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-11">
+                    {/* Row 2: Read-only item info */}
+                    {/* <div className="grid grid-cols-2 gap-3 md:grid-cols-10">
+                      <div className="col-span-2 md:col-span-6">
+                        <FieldLabel>Item Name</FieldLabel>
+                        <div className={roCls}>{addRow.itemName || "—"}</div>
+                      </div>
+                    </div> */}
+
+                    {/* Row 2: Item Name | Unit | Tax % | Qty | ✓ */}
+                    <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-12">
+                      <div className="col-span-3 md:col-span-8">
+                        <FieldLabel>Item Name</FieldLabel>
+                        <div className={roCls}>{addRow.itemName || "—"}</div>
+                      </div>
                       <div className="md:col-span-1">
                         <FieldLabel>Unit</FieldLabel>
                         <div className={roCls + " text-center"}>
                           {addRow.unit || "—"}
                         </div>
                       </div>
-                      <div className="md:col-span-1">
+                     <div className="md:col-span-1">
                         <FieldLabel>Tax %</FieldLabel>
                         <div className={roCls + " text-center"}>
                           {hasAddItem ? (
@@ -1535,7 +1539,7 @@ export default function PurchaseOrderPage() {
                           )}
                         </div>
                       </div>
-                      <div className="md:col-span-2">
+                      <div className="md:col-span-1">
                         <FieldLabel required>Qty</FieldLabel>
                         <div className={roCls + " text-right"}>
                           {hasAddItem ? addRow.qty : "—"}
@@ -1555,9 +1559,9 @@ export default function PurchaseOrderPage() {
                                 : "Add item"
                           }
                           className={[
-                            "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
+                            "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 cursor-pointer",
                             hasAddItem
-                              ? "bg-green-500 text-white shadow-md hover:scale-105 hover:bg-green-600 active:scale-95"
+                              ? "bg-primary-600 hover:bg-primary/90 text-white shadow-md hover:scale-105 active:scale-95"
                               : "dark:bg-dark-600 cursor-not-allowed bg-gray-100 text-gray-300",
                           ].join(" ")}
                         >
