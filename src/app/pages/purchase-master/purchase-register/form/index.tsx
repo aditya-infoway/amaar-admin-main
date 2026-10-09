@@ -1856,7 +1856,7 @@ export default function VehiclePurchaseBill() {
           </Link>
         </div>
 
-        {/* HEADER FORM */}
+        {/* ─── SINGLE BIG CARD: Header + Add Item + Item Details ─── */}
         <Card className="mb-5 shadow-none">
           <div className="mb-5 flex gap-8">
             {[
@@ -2198,150 +2198,157 @@ export default function VehiclePurchaseBill() {
               />
             </div>
           </div>
-        </Card>
 
-        <Card title="Add Item" className="mb-5">
-          <AddItemSelector
-            itemCatalog={availableItemCatalog}
-            onAdd={addItemFromPreview}
-            receivedQty={grrQtyMap}
-          />
-        </Card>
+          {/* ── Add Item section ── */}
+          <div className="mt-6 border-t border-dashed border-gray-300 pt-5 dark:border-gray-600">
+            <h3 className="mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+              Add Item
+            </h3>
+            <AddItemSelector
+              itemCatalog={availableItemCatalog}
+              onAdd={addItemFromPreview}
+              receivedQty={grrQtyMap}
+            />
+          </div>
 
-        {/* ITEM DETAILS */}
-        <Card title="Item Details" className="mb-5">
-          {formErrors.items && (
-            <p className="mb-2 text-xs text-red-500">{formErrors.items}</p>
-          )}
+          {/* ── Item Details section ── */}
+          <div className="mt-6 border-t border-dashed border-gray-300 pt-5 dark:border-gray-600">
+            <h3 className="mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+              Item Details
+            </h3>
+            {formErrors.items && (
+              <p className="mb-2 text-xs text-red-500">{formErrors.items}</p>
+            )}
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="w-full min-w-[1100px]">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
-                  {[
-                    "#",
-                    "Item Code",
-                    "Item Name",
-                    "HSN Code",
-                    "UOM",
-                    "Qty",
-                    "Rate (₹)",
-                    "Disc (%)",
-                    "Taxable (₹)",
-                    "GST %",
-                    "GST Amt (₹)",
-                    "Total (₹)",
-                    "Action",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-3 py-3 text-left text-xs font-bold tracking-wide whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item: any, idx: number) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-primary/5 border-b border-gray-100 transition-colors dark:border-gray-700"
-                  >
-                    <td className="px-3 py-2.5 text-sm font-medium text-gray-400">
-                      {idx + 1}
-                    </td>
-                    <td className="text-primary px-3 py-2.5 text-sm font-bold">
-                      {item.itemCode}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm font-medium whitespace-nowrap text-gray-800 dark:text-gray-100">
-                      {item.itemName}
-                      {item.colour && (
-                        <span className="block text-[10px] text-gray-400">
-                          {item.colour}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
-                      {item.hsnCode}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm">
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium dark:bg-gray-700 dark:text-gray-200">
-                        {item.uom}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {FMT3(item.qty)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
-                      {FMT2(item.rate)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-600 dark:text-gray-300">
-                      {FMT2(item.discount)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {FMT2(item.taxable)}
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
-                        {item.gstPct}%
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
-                      {FMT2(item.gstAmt)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-extrabold text-gray-900 dark:text-white">
-                      {FMT2(item.total)}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30"
+            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+              <table className="w-full min-w-[1100px]">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
+                    {[
+                      "#",
+                      "Item Code",
+                      "Item Name",
+                      "HSN Code",
+                      "UOM",
+                      "Qty",
+                      "Rate (₹)",
+                      "Disc (%)",
+                      "Taxable (₹)",
+                      "GST %",
+                      "GST Amt (₹)",
+                      "Total (₹)",
+                      "Action",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-3 py-3 text-left text-xs font-bold tracking-wide whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
                       >
-                        <Icon.Trash />
-                      </button>
-                    </td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-                {items.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={13}
-                      className="px-4 py-10 text-center text-sm text-gray-400"
+                </thead>
+                <tbody>
+                  {items.map((item: any, idx: number) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-primary/5 border-b border-gray-100 transition-colors dark:border-gray-700"
                     >
-                      No items added yet. Select items from the Add Item section
-                      above.
+                      <td className="px-3 py-2.5 text-sm font-medium text-gray-400">
+                        {idx + 1}
+                      </td>
+                      <td className="text-primary px-3 py-2.5 text-sm font-bold">
+                        {item.itemCode}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm font-medium whitespace-nowrap text-gray-800 dark:text-gray-100">
+                        {item.itemName}
+                        {item.colour && (
+                          <span className="block text-[10px] text-gray-400">
+                            {item.colour}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
+                        {item.hsnCode}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm">
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium dark:bg-gray-700 dark:text-gray-200">
+                          {item.uom}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
+                        {FMT3(item.qty)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
+                        {FMT2(item.rate)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-600 dark:text-gray-300">
+                        {FMT2(item.discount)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
+                        {FMT2(item.taxable)}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
+                          {item.gstPct}%
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
+                        {FMT2(item.gstAmt)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-extrabold text-gray-900 dark:text-white">
+                        {FMT2(item.total)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.id)}
+                          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30"
+                        >
+                          <Icon.Trash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={13}
+                        className="px-4 py-10 text-center text-sm text-gray-400"
+                      >
+                        No items added yet. Select items from the Add Item
+                        section above.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-primary/5 border-primary/20 border-t-2">
+                    <td
+                      className="text-primary px-3 py-3 text-sm font-extrabold"
+                      colSpan={5}
+                    >
+                      Total
                     </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT3(items.reduce((s: number, i: any) => s + i.qty, 0))}
+                    </td>
+                    <td colSpan={2} />
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(totTaxable)}
+                    </td>
+                    <td />
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(totGST)}
+                    </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(totTaxable + totGST)}
+                    </td>
+                    <td />
                   </tr>
-                )}
-              </tbody>
-              <tfoot>
-                <tr className="bg-primary/5 border-primary/20 border-t-2">
-                  <td
-                    className="text-primary px-3 py-3 text-sm font-extrabold"
-                    colSpan={5}
-                  >
-                    Total
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT3(items.reduce((s: number, i: any) => s + i.qty, 0))}
-                  </td>
-                  <td colSpan={2} />
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(totTaxable)}
-                  </td>
-                  <td />
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(totGST)}
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(totTaxable + totGST)}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
+                </tfoot>
+              </table>
+            </div>
           </div>
         </Card>
 

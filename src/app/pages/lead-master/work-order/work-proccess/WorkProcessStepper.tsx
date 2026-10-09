@@ -9,6 +9,10 @@ import {
   Truck,
   Wind,
   Check,
+  User as UserIcon,
+  Phone as PhoneIcon,
+  CalendarDays as CalendarIcon,
+  Clock as ClockIcon,
 } from "lucide-react";
 
 import type { WorkProcessStep } from "./types";
@@ -27,28 +31,62 @@ const stepIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   ready_for_dispatch: Truck,
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
+const splitDateTime = (value?: string | null) => {
+  if (!value) return { date: "-", time: "-" };
   const d = new Date(value);
-  if (isNaN(d.getTime())) return "-";
-  return `${d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })} ${d.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  })}`;
+  if (isNaN(d.getTime())) return { date: "-", time: "-" };
+  return {
+    date: d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }),
+    time: d.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }),
+  };
 };
 
 const formatDuration = (ms: number) => {
   const total = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(total / 3600);
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
+  return [d, h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 };
+
+function TimeChip({ v, label }: { v: number; label: string }) {
+  return (
+    <div className="flex flex-col items-center">
+      <div className="border-primary-500/70 bg-primary-500/10 text-primary-600 dark:text-primary-400 flex size-9 items-center justify-center rounded-full border-2 text-xs font-semibold">
+        {String(v).padStart(2, "0")}
+      </div>
+      <span className="mt-0.5 text-[10px] text-gray-400">{label}</span>
+    </div>
+  );
+}
+
+function TimeChips({ value }: { value?: string | null }) {
+  if (!value || value === "-") {
+    return <span className="text-sm text-gray-400">-</span>;
+  }
+
+  const [d = 0, h = 0, m = 0, s = 0] = String(value)
+    .split(":")
+    .map((n) => parseInt(n, 10) || 0);
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {d > 0 && <TimeChip v={d} label="d" />}
+      <TimeChip v={h} label="h" />
+      <TimeChip v={m} label="m" />
+      <TimeChip v={s} label="s" />
+    </div>
+  );
+}
 
 export default function WorkProcessStepper({ steps }: WorkProcessStepperProps) {
   // running work ka live timer
@@ -76,6 +114,10 @@ export default function WorkProcessStepper({ steps }: WorkProcessStepperProps) {
             )
           : "-";
 
+        const { date: assignedDate, time: assignedTime } = splitDateTime(
+          stage?.assignedAt,
+        );
+
         return (
           <li
             key={step.id}
@@ -102,13 +144,13 @@ export default function WorkProcessStepper({ steps }: WorkProcessStepperProps) {
               )}
             </span>
 
-          <div
-  className={clsx(
-    "w-full min-w-0 flex-1 text-start ltr:ml-4 rtl:mr-4",
-    showDetails &&
-      "dark:border-dark-500 -mt-2 border-y border-gray-200 py-3",
-  )}
->
+            <div
+              className={clsx(
+                "w-full min-w-0 flex-1 text-start ltr:ml-4 rtl:mr-4",
+                showDetails &&
+                  "dark:border-dark-500 -mt-2 border-y border-gray-200 py-3",
+              )}
+            >
               <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
                 {/* Number + Title + Status (pehle jaisa) */}
                 <div className="flex w-full shrink-0 gap-6 lg:w-96">
@@ -155,35 +197,47 @@ export default function WorkProcessStepper({ steps }: WorkProcessStepperProps) {
 
                 {/* 3 columns: Manager (name+mobile) | Assign Date & Time | Work Time */}
                 {showDetails && (
-         <div className="grid w-full flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="grid w-full flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
+                    {/* MANAGER */}
                     <div>
-                      <p className="text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                      <p className="mb-1 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
                         Manager
                       </p>
-                      <p className="dark:text-dark-50 text-sm font-semibold text-gray-800">
-                        {stage?.employeeName || "-"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {stage?.employeeMobile   || "-"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="size-4 text-gray-400" />
+                        <span className="dark:text-dark-50 text-sm font-semibold text-gray-800">
+                          {stage?.employeeName || "-"}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <PhoneIcon className="size-4 text-gray-400" />
+                        <span className="text-xs text-gray-500">
+                          {stage?.employeeMobile || "-"}
+                        </span>
+                      </div>
                     </div>
 
+                    {/* ASSIGN DATE & TIME */}
                     <div>
-                      <p className="text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
-                        Assign Date &amp; Time
+                      <p className="mb-1 gap-1.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                        <span>Assign Date &amp; Time</span>
                       </p>
-                      <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
-                        {formatDateTime(stage?.assignedAt)}
+                      <p className="dark:text-dark-100 flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <CalendarIcon className="size-3.5" />
+                        {assignedDate}
                       </p>
+                      <div className="mt-1 flex items-center gap-1.5 gap-2 text-xs text-gray-500">
+                        <ClockIcon className="size-3.5" />
+                        <span>{assignedTime}</span>
+                      </div>
                     </div>
 
+                    {/* WORK TIME — circular chips */}
                     <div>
-                      <p className="text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                      <p className="mb-1 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
                         Work Time
                       </p>
-                      <p className="dark:text-dark-50 text-sm font-semibold text-gray-800 tabular-nums">
-                        {workTime}
-                      </p>
+                      <TimeChips value={workTime} />
                     </div>
                   </div>
                 )}

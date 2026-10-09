@@ -728,8 +728,39 @@ const protectedRoutes: RouteObject = {
                 },
               ],
             },
+              {
+              path: "sales-register",
+              children: [
+                {
+                  index: true,
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/sales-register")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "create",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/sales-register/form")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "edit/:id",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/sales-register/form")
+                    ).default,
+                  }),
+                },
+              ],
+            },
           ],
+          
         },
+         
         {
           path: "stock-report",
           children: [
