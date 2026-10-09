@@ -76,6 +76,10 @@ export default function WorkOrderDrawer({
   >({});
   const [loading, setLoading] = useState(false);
 
+  const [salesOrdersLoaded, setSalesOrdersLoaded] = useState(false);
+  const [stageFieldsLoaded, setStageFieldsLoaded] = useState(false);
+  const dataReady = salesOrdersLoaded && stageFieldsLoaded;
+
   /*
    * Fetch Sales Orders
    */
@@ -121,6 +125,8 @@ export default function WorkOrderDrawer({
       } catch (error) {
         console.error("Sales Order list error:", error);
         toasterrormsg("Unable to load sales orders.");
+      } finally {
+        setSalesOrdersLoaded(true);
       }
     };
 
@@ -278,6 +284,8 @@ export default function WorkOrderDrawer({
       } catch (error) {
         console.error("Stage employees error:", error);
         toasterrormsg("Unable to load stage employees.");
+      } finally {
+        setStageFieldsLoaded(true);
       }
     };
 
@@ -464,7 +472,16 @@ export default function WorkOrderDrawer({
 
           {/* Body */}
           <div className="flex grow flex-col overflow-hidden">
-            <div className="hide-scrollbar grow space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
+            {!dataReady && (
+              <div className="flex grow items-center justify-center text-sm text-gray-500">
+                Loading...
+              </div>
+            )}
+            <div
+              className={`hide-scrollbar grow space-y-5 overflow-y-auto px-4 py-5 sm:px-6 ${
+                dataReady ? "" : "hidden"
+              }`}
+            >
               {/* TOP */}
               <div className="grid grid-cols-2 gap-4">
                 <Input
@@ -604,7 +621,10 @@ export default function WorkOrderDrawer({
                   color="primary"
                   onClick={handleSubmit}
                   disabled={
-                    loading || !selectedSalesOrder || !allStagesSelected
+                    loading ||
+                    !dataReady ||
+                    !selectedSalesOrder ||
+                    !allStagesSelected
                   }
                 >
                   {loading

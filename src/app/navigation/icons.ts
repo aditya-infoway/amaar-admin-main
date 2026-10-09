@@ -73,7 +73,7 @@ export const navigationIcons: Record<string, ElementType> = {
   "user_master.createEmployee": UsersIcon,
 
   // Purchase Master
-  purchaseMaster: ShoppingCartIcon,
+  purchaseMaster: ArrowsRightLeftIcon,
   "purchase_master.purchaseRegister": ClipboardDocumentListIcon,
 
   stockReport: CircleStackIcon,
