@@ -12,17 +12,35 @@ import { Get, Post, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 ───────────────────────────────────────────── */
 const Icon = {
   Back: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
     </svg>
   ),
   Plus: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      viewBox="0 0 24 24"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
     </svg>
   ),
   Trash: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -31,12 +49,28 @@ const Icon = {
     </svg>
   ),
   Close: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+      />
     </svg>
   ),
   Save: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -45,7 +79,13 @@ const Icon = {
     </svg>
   ),
   Print: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -54,12 +94,24 @@ const Icon = {
     </svg>
   ),
   Check: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      viewBox="0 0 24 24"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
   ),
   Bank: () => (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -93,18 +145,48 @@ const FMT2 = (n: number) =>
 
 function numInWords(amount: number): string {
   const a = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-    "Seventeen", "Eighteen", "Nineteen",
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
   ];
-  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const b = [
+    "",
+    "",
+    "Twenty",
+    "Thirty",
+    "Forty",
+    "Fifty",
+    "Sixty",
+    "Seventy",
+    "Eighty",
+    "Ninety",
+  ];
   const words = (n: number): string => {
     if (n === 0) return "";
     if (n < 20) return a[n] + " ";
     if (n < 100) return b[Math.floor(n / 10)] + " " + a[n % 10] + " ";
     if (n < 1000) return a[Math.floor(n / 100)] + " Hundred " + words(n % 100);
-    if (n < 100000) return words(Math.floor(n / 1000)) + "Thousand " + words(n % 1000);
-    if (n < 10000000) return words(Math.floor(n / 100000)) + "Lakh " + words(n % 100000);
+    if (n < 100000)
+      return words(Math.floor(n / 1000)) + "Thousand " + words(n % 1000);
+    if (n < 10000000)
+      return words(Math.floor(n / 100000)) + "Lakh " + words(n % 100000);
     return words(Math.floor(n / 10000000)) + "Crore " + words(n % 10000000);
   };
   return (words(Math.round(amount)) + "Only").replace(/\s+/g, " ").trim();
@@ -224,8 +306,14 @@ const EMPTY_ROW = {
 /* ─────────────────────────────────────────────
    BANK DETAILS DRAWER
 ───────────────────────────────────────────── */
-function BankDetailsDrawer({ open, onClose, bankDetails, setBankDetails }: any) {
-  const sf = (k: string, v: any) => setBankDetails((b: any) => ({ ...b, [k]: v }));
+function BankDetailsDrawer({
+  open,
+  onClose,
+  bankDetails,
+  setBankDetails,
+}: any) {
+  const sf = (k: string, v: any) =>
+    setBankDetails((b: any) => ({ ...b, [k]: v }));
   const PAYMENT_MODES = ["UPI", "NEFT", "RTGS", "IMPS", "CHEQUE", "CARD"];
   const [touched, setTouched] = useState(false);
 
@@ -243,7 +331,9 @@ function BankDetailsDrawer({ open, onClose, bankDetails, setBankDetails }: any) 
 
   return (
     <>
-      {open && <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />}
+      {open && (
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      )}
       <div
         className={
           "fixed top-0 right-0 z-50 flex h-full flex-col bg-white shadow-2xl transition-transform duration-300 lg:w-[40%] dark:bg-gray-800 " +
@@ -252,7 +342,11 @@ function BankDetailsDrawer({ open, onClose, bankDetails, setBankDetails }: any) 
       >
         <div className="bg-primary-600 flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
           <h3 className="text-base font-bold">Bank Details</h3>
-          <Button variant="flat" onClick={onClose} className="!text-white hover:!bg-white/20">
+          <Button
+            variant="flat"
+            onClick={onClose}
+            className="!text-white hover:!bg-white/20"
+          >
             <Icon.Close />
           </Button>
         </div>
@@ -276,7 +370,9 @@ function BankDetailsDrawer({ open, onClose, bankDetails, setBankDetails }: any) 
               ))}
             </div>
             {touched && !bankDetails.paymentMode && (
-              <p className="mt-1 text-xs text-red-500">Please select a payment mode.</p>
+              <p className="mt-1 text-xs text-red-500">
+                Please select a payment mode.
+              </p>
             )}
           </div>
 
@@ -453,7 +549,9 @@ function AddItemSelector({
             searchFields={["itemCode", "itemName"]}
             renderItem={(item: any) => (
               <div className="flex w-full items-center text-inherit">
-                <span className="w-16 shrink-0 text-xs font-bold">{item.itemCode}</span>
+                <span className="w-16 shrink-0 text-xs font-bold">
+                  {item.itemCode}
+                </span>
                 <span className="truncate text-sm">{item.itemName}</span>
               </div>
             )}
@@ -513,7 +611,10 @@ function AddItemSelector({
               setRow((r) => ({ ...r, basicPrice: e.target.value }));
             }}
             placeholder="0.00"
-            className={(lockFields ? roCls + " cursor-not-allowed" : iCls) + " text-right"}
+            className={
+              (lockFields ? roCls + " cursor-not-allowed" : iCls) +
+              " text-right"
+            }
           />
         </div>
 
@@ -536,13 +637,21 @@ function AddItemSelector({
               setRow((r) => ({ ...r, discount: e.target.value }));
             }}
             placeholder="0"
-            className={(lockFields ? roCls + " cursor-not-allowed" : iCls) + " text-right"}
+            className={
+              (lockFields ? roCls + " cursor-not-allowed" : iCls) +
+              " text-right"
+            }
           />
         </div>
 
         <div className="col-span-6 md:col-span-3">
           <FieldLabel>Net Amount (₹)</FieldLabel>
-          <div className={roCls + " text-right font-semibold text-gray-800 dark:text-gray-100"}>
+          <div
+            className={
+              roCls +
+              " text-right font-semibold text-gray-800 dark:text-gray-100"
+            }
+          >
             {row._filled ? FMT2(preview.net) : "—"}
           </div>
         </div>
@@ -563,7 +672,7 @@ function AddItemSelector({
             className={[
               "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
               hasItem && parseFloat(row.qty) > 0
-                ? "bg-primary-500 text-white shadow-md hover:scale-105 hover:bg-primary-500 active:scale-95"
+                ? "bg-primary-500 hover:bg-primary-500 text-white shadow-md hover:scale-105 active:scale-95"
                 : "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-600",
             ].join(" ")}
           >
@@ -607,7 +716,9 @@ function CreateAccountDrawer({ open, onClose }: any) {
   ];
   return (
     <>
-      {open && <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />}
+      {open && (
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      )}
       <div
         className={
           "fixed top-0 right-0 z-50 flex h-full flex-col bg-white shadow-2xl transition-transform duration-300 lg:w-[50%] dark:bg-gray-800 " +
@@ -877,7 +988,9 @@ export default function SalesInvoice() {
           toasterrormsg(res.data?.message || "Failed to load Sales Orders.");
         }
       } catch (err: any) {
-        toasterrormsg(err?.response?.data?.message || "Failed to load Sales Orders.");
+        toasterrormsg(
+          err?.response?.data?.message || "Failed to load Sales Orders.",
+        );
       } finally {
         setLoadingSo(false);
       }
@@ -901,15 +1014,25 @@ export default function SalesInvoice() {
     (async () => {
       try {
         const financialYearId = localStorage.getItem("financialYearId");
-        const res = await Get("sales/next-invoice-no", { financialYearId }, false);
+        const res = await Get(
+          "sales/next-invoice-no",
+          { financialYearId },
+          false,
+        );
         if (res.data?.success) {
-          setHdr((h) => ({ ...h, salesInvoiceNo: res.data.data?.invoiceNo || "" }));
+          setHdr((h) => ({
+            ...h,
+            salesInvoiceNo: res.data.data?.invoiceNo || "",
+          }));
         } else {
-          toasterrormsg(res.data?.message || "Failed to generate Sales Invoice No.");
+          toasterrormsg(
+            res.data?.message || "Failed to generate Sales Invoice No.",
+          );
         }
       } catch (err: any) {
         toasterrormsg(
-          err?.response?.data?.message || "Failed to generate Sales Invoice No.",
+          err?.response?.data?.message ||
+            "Failed to generate Sales Invoice No.",
         );
       }
     })();
@@ -936,7 +1059,9 @@ export default function SalesInvoice() {
           toasterrormsg(res.data?.message || "Failed to load party list.");
         }
       } catch (err: any) {
-        toasterrormsg(err?.response?.data?.message || "Failed to load party list.");
+        toasterrormsg(
+          err?.response?.data?.message || "Failed to load party list.",
+        );
       } finally {
         setLoadingParty(false);
       }
@@ -984,7 +1109,11 @@ export default function SalesInvoice() {
     (async () => {
       try {
         const companyDetailsId = localStorage.getItem("companyDetailsId");
-        const res = await Get("superadmin/company-details", { companyDetailsId }, false);
+        const res = await Get(
+          "superadmin/company-details",
+          { companyDetailsId },
+          false,
+        );
         if (res.data?.success) {
           setCompanyState(res.data.data?.state || "");
         }
@@ -1004,9 +1133,15 @@ export default function SalesInvoice() {
     setHdr((h) => ({ ...h, soNo: [selected] }));
 
     try {
-      const res = await Get(`salesorder/${selected.salesOrderId || selected.id}`, {}, false);
+      const res = await Get(
+        `salesorder/${selected.salesOrderId || selected.id}`,
+        {},
+        false,
+      );
       if (!res.data?.success) {
-        toasterrormsg(res.data?.message || "Failed to load Sales Order details.");
+        toasterrormsg(
+          res.data?.message || "Failed to load Sales Order details.",
+        );
         return;
       }
       const so = res.data.data;
@@ -1051,7 +1186,9 @@ export default function SalesInvoice() {
       } else {
         // Sales Order me single model hota hai (lead ka model) + qty + unitPrice
         const modelId = so.modelId ?? so.model;
-        const modelName = String(so.modelName || "").trim().toLowerCase();
+        const modelName = String(so.modelName || "")
+          .trim()
+          .toLowerCase();
         const found = itemCatalog.find(
           (m) =>
             (modelId && String(m.itemId) === String(modelId)) ||
@@ -1075,7 +1212,9 @@ export default function SalesInvoice() {
       clearError("items");
       clearError("partyName");
     } catch (err: any) {
-      toasterrormsg(err?.response?.data?.message || "Failed to load Sales Order items.");
+      toasterrormsg(
+        err?.response?.data?.message || "Failed to load Sales Order items.",
+      );
     }
   };
 
@@ -1103,7 +1242,9 @@ export default function SalesInvoice() {
   const companyStateClean = companyState?.trim().toLowerCase() || "";
   const partyStateClean = selectedParty?.stateName?.trim().toLowerCase() || "";
   const isSameState =
-    !!companyStateClean && !!partyStateClean && companyStateClean === partyStateClean;
+    !!companyStateClean &&
+    !!partyStateClean &&
+    companyStateClean === partyStateClean;
 
   // Summary (sketch): Sub Total, Taxable Amt, CGST, SGST, IGST, Discount, Grand Total
   const subTotal = items.reduce((s: number, i: any) => s + i.taxable, 0);
@@ -1117,7 +1258,9 @@ export default function SalesInvoice() {
 
   const availableItemCatalog = useMemo(() => {
     const base = isFromSo ? soItemCatalog : itemCatalog;
-    return base.filter((cat) => !items.some((it: any) => it.itemId === cat.itemId));
+    return base.filter(
+      (cat) => !items.some((it: any) => it.itemId === cat.itemId),
+    );
   }, [isFromSo, soItemCatalog, itemCatalog, items]);
 
   /* ───────── Item actions ───────── */
@@ -1130,7 +1273,8 @@ export default function SalesInvoice() {
         const merged = calcItem({
           ...existing,
           qty: (Number(existing.qty) || 0) + (Number(item.qty) || 0),
-          discount: (Number(existing.discount) || 0) + (Number(item.discount) || 0),
+          discount:
+            (Number(existing.discount) || 0) + (Number(item.discount) || 0),
         });
         const next = [...prev];
         next[idx] = merged;
@@ -1141,7 +1285,8 @@ export default function SalesInvoice() {
     clearError("items");
   };
 
-  const removeItem = (id: any) => setItems((prev) => prev.filter((i: any) => i.id !== id));
+  const removeItem = (id: any) =>
+    setItems((prev) => prev.filter((i: any) => i.id !== id));
 
   /* ───────── Validation + Save ───────── */
   const validateBeforeSave = (): Record<string, string> => {
@@ -1150,17 +1295,20 @@ export default function SalesInvoice() {
     if (saleType === "so" && hdr.soNo.length === 0)
       errors.soNo = "Please select Sales Order No.";
     if (!selectedParty) errors.partyName = "Please select Party.";
-    if (!hdr.salesInvoiceNo?.trim()) errors.salesInvoiceNo = "Sales Invoice No is required.";
+    if (!hdr.salesInvoiceNo?.trim())
+      errors.salesInvoiceNo = "Sales Invoice No is required.";
     if (!hdr.salesDate) errors.salesDate = "Sales Date is required.";
     if (items.length === 0) errors.items = "Please add at least one item.";
     else if (items.some((i: any) => !i.itemId))
-      errors.items = "One or more items are missing item reference. Please re-add them.";
+      errors.items =
+        "One or more items are missing item reference. Please re-add them.";
     if (termsValue === "Credit" && !hdr.dueDate)
       errors.dueDate = "Due Date is required for Credit terms.";
     if (termsValue === "Cash" && cashAccount.length === 0)
       errors.cashAccount = "Please select a Cash Account.";
     if (termsValue === "Bank") {
-      if (bankAccount.length === 0) errors.bankAccount = "Please select a Bank Account.";
+      if (bankAccount.length === 0)
+        errors.bankAccount = "Please select a Bank Account.";
       if (!bankDetails.paymentMode)
         errors.bankDetails = "Please add Bank Details (Payment Mode).";
       if (
@@ -1189,7 +1337,9 @@ export default function SalesInvoice() {
       const payload = {
         financialYearId,
         terms: termsValue,
-        salesOrderId: isFromSo ? hdr.soNo[0]?.salesOrderId || hdr.soNo[0]?.id || null : null,
+        salesOrderId: isFromSo
+          ? hdr.soNo[0]?.salesOrderId || hdr.soNo[0]?.id || null
+          : null,
         accountId: selectedParty.id,
         salesInvoiceNo: hdr.salesInvoiceNo,
         salesDate: hdr.salesDate,
@@ -1211,9 +1361,12 @@ export default function SalesInvoice() {
         cashAccountId: termsValue === "Cash" ? cashAccount[0]?.id : null,
         bankAccountId: termsValue === "Bank" ? bankAccount[0]?.id : null,
         paymentMode: termsValue === "Bank" ? bankDetails.paymentMode : null,
-        chequeNo: bankDetails.paymentMode === "CHEQUE" ? bankDetails.chequeNo : null,
-        chequeDate: bankDetails.paymentMode === "CHEQUE" ? bankDetails.chequeDate : null,
-        chequeClearDate: bankDetails.paymentMode === "CHEQUE" ? bankDetails.clearDate : null,
+        chequeNo:
+          bankDetails.paymentMode === "CHEQUE" ? bankDetails.chequeNo : null,
+        chequeDate:
+          bankDetails.paymentMode === "CHEQUE" ? bankDetails.chequeDate : null,
+        chequeClearDate:
+          bankDetails.paymentMode === "CHEQUE" ? bankDetails.clearDate : null,
         bankNarration: termsValue === "Bank" ? bankDetails.narration : null,
 
         items: items.map((i: any) => ({
@@ -1235,13 +1388,17 @@ export default function SalesInvoice() {
 
       const res = await Post("sales/create", payload, false);
       if (res.data?.success) {
-        toastsuccessmsg(res.data?.message || "Sales invoice saved successfully.");
+        toastsuccessmsg(
+          res.data?.message || "Sales invoice saved successfully.",
+        );
         navigate("/purchase-master/sales-register");
       } else {
         toasterrormsg(res.data?.message || "Failed to save sales invoice.");
       }
     } catch (err: any) {
-      toasterrormsg(err?.response?.data?.message || "Something went wrong while saving.");
+      toasterrormsg(
+        err?.response?.data?.message || "Something went wrong while saving.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1256,7 +1413,10 @@ export default function SalesInvoice() {
           <h1 className="text-primary border-primary border-b-4 pb-1 text-xl font-extrabold">
             Sales Register
           </h1>
-          <Link to="/purchase-master/sales-register" className="text-primary text-sm hover:underline">
+          <Link
+            to="/purchase-master/sales-register"
+            className="text-primary text-sm hover:underline"
+          >
             <Button variant="outlined" className="gap-2">
               <Icon.Back /> Back
             </Button>
@@ -1270,7 +1430,10 @@ export default function SalesInvoice() {
               { val: "so", label: "Sales Order" },
               { val: "manual", label: "Manual" },
             ].map(({ val, label }) => (
-              <label key={val} className="group flex cursor-pointer items-center gap-2.5">
+              <label
+                key={val}
+                className="group flex cursor-pointer items-center gap-2.5"
+              >
                 <div className="relative flex items-center">
                   <input
                     type="radio"
@@ -1280,7 +1443,12 @@ export default function SalesInvoice() {
                     onChange={() => {
                       setSaleType(val);
                       // mode badalne par SO se aaya data reset
-                      setHdr((h) => ({ ...h, soNo: [], partyName: [], branchId: null }));
+                      setHdr((h) => ({
+                        ...h,
+                        soNo: [],
+                        partyName: [],
+                        branchId: null,
+                      }));
                       setItems([]);
                       setSoItemCatalog([]);
                       clearError("soNo");
@@ -1295,7 +1463,9 @@ export default function SalesInvoice() {
                         : "group-hover:border-primary/60 border-gray-400 bg-white dark:bg-gray-700")
                     }
                   >
-                    {saleType === val && <div className="h-2 w-2 rounded-full bg-white" />}
+                    {saleType === val && (
+                      <div className="h-2 w-2 rounded-full bg-white" />
+                    )}
                   </div>
                 </div>
                 <span
@@ -1324,10 +1494,14 @@ export default function SalesInvoice() {
                     handleSoSelect(sel);
                     clearError("soNo");
                   }}
-                  placeholder={loadingSo ? "Loading Sales Orders..." : "Select Sales Order"}
+                  placeholder={
+                    loadingSo ? "Loading Sales Orders..." : "Select Sales Order"
+                  }
                   searchFields={["name", "soNumber", "qNo", "partyName"]}
                 />
-                {formErrors.soNo && <p className="mt-1 text-xs text-red-500">{formErrors.soNo}</p>}
+                {formErrors.soNo && (
+                  <p className="mt-1 text-xs text-red-500">{formErrors.soNo}</p>
+                )}
               </div>
             </div>
           )}
@@ -1345,7 +1519,9 @@ export default function SalesInvoice() {
                 placeholder="Select Date"
               />
               {formErrors.salesDate && (
-                <p className="mt-1 text-xs text-red-500">{formErrors.salesDate}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {formErrors.salesDate}
+                </p>
               )}
             </div>
 
@@ -1354,7 +1530,9 @@ export default function SalesInvoice() {
               <Listbox
                 data={TERMS_OPTIONS}
                 value={TERMS_OPTIONS.find((t) => t.id === hdr.terms) || null}
-                onChange={(val: any) => setHdr((h) => ({ ...h, terms: val?.id || "" }))}
+                onChange={(val: any) =>
+                  setHdr((h) => ({ ...h, terms: val?.id || "" }))
+                }
                 displayField="name"
                 placeholder="Terms"
               />
@@ -1375,7 +1553,9 @@ export default function SalesInvoice() {
                   searchFields={["name"]}
                 />
                 {formErrors.cashAccount && (
-                  <p className="mt-1 text-xs text-red-500">{formErrors.cashAccount}</p>
+                  <p className="mt-1 text-xs text-red-500">
+                    {formErrors.cashAccount}
+                  </p>
                 )}
               </div>
             )}
@@ -1427,7 +1607,9 @@ export default function SalesInvoice() {
                   placeholder="Select Date"
                 />
                 {formErrors.dueDate && (
-                  <p className="mt-1 text-xs text-red-500">{formErrors.dueDate}</p>
+                  <p className="mt-1 text-xs text-red-500">
+                    {formErrors.dueDate}
+                  </p>
                 )}
               </div>
             )}
@@ -1438,7 +1620,8 @@ export default function SalesInvoice() {
                 <FieldLabel required>Select Party</FieldLabel>
                 {selectedParty && (
                   <span className="text-primary bg-primary/10 border-primary/20 flex-shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">
-                    Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"} {selectedParty.drOrCr}
+                    Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"}{" "}
+                    {selectedParty.drOrCr}
                   </span>
                 )}
               </div>
@@ -1450,17 +1633,28 @@ export default function SalesInvoice() {
                     value={partyComboValue}
                     onChange={(selected: any) => {
                       if (isFromSo) return; // 🔒 SO se locked
-                      setHdr((h) => ({ ...h, partyName: selected ? [selected] : [] }));
+                      setHdr((h) => ({
+                        ...h,
+                        partyName: selected ? [selected] : [],
+                      }));
                       clearError("partyName");
                     }}
-                    placeholder={loadingParty ? "Loading parties..." : "Select or search party"}
+                    placeholder={
+                      loadingParty
+                        ? "Loading parties..."
+                        : "Select or search party"
+                    }
                     searchFields={["name"]}
                     disabled={isFromSo}
                     renderItem={(item: any) => (
                       <div className="flex items-center justify-between gap-3">
                         <div className="truncate">
-                          <span className="text-sm text-gray-600 dark:text-gray-300">{item.name}</span>
-                          <span className="ml-2 text-sm font-medium">({item.mobile})</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-300">
+                            {item.name}
+                          </span>
+                          <span className="ml-2 text-sm font-medium">
+                            ({item.mobile})
+                          </span>
                         </div>
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                           ₹{item.balance?.toLocaleString() ?? "0"} {item.drOrCr}
@@ -1469,7 +1663,9 @@ export default function SalesInvoice() {
                     )}
                   />
                   {formErrors.partyName && (
-                    <p className="mt-1 text-xs text-red-500">{formErrors.partyName}</p>
+                    <p className="mt-1 text-xs text-red-500">
+                      {formErrors.partyName}
+                    </p>
                   )}
                 </div>
 
@@ -1497,7 +1693,9 @@ export default function SalesInvoice() {
                 }}
               />
               {formErrors.salesInvoiceNo && (
-                <p className="mt-1 text-xs text-red-500">{formErrors.salesInvoiceNo}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {formErrors.salesInvoiceNo}
+                </p>
               )}
             </div>
 
@@ -1532,116 +1730,127 @@ export default function SalesInvoice() {
               <p className="mb-2 text-xs text-red-500">{formErrors.items}</p>
             )}
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="w-full min-w-[1000px]">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
-                  {[
-                    "#",
-                    "Item Description / Model",
-                    "HSN Code",
-                    "Qty",
-                    "Basic Price (₹)",
-                    "Taxable Amount (₹)",
-                    "Discount (₹)",
-                    "Tax %",
-                    "Tax Amt (₹)",
-                    "Net Amount (₹)",
-                    "Action",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-3 py-3 text-left text-xs font-bold tracking-wide whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item: any, idx: number) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-primary/5 border-b border-gray-100 transition-colors dark:border-gray-700"
-                  >
-                    <td className="px-3 py-2.5 text-sm font-medium text-gray-400">{idx + 1}</td>
-                    <td className="px-3 py-2.5 text-sm font-medium whitespace-nowrap text-gray-800 dark:text-gray-100">
-                      {item.itemName}
-                      {item.itemCode && (
-                        <span className="block text-[10px] text-gray-400">{item.itemCode}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
-                      {item.hsnCode}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {FMT3(item.qty)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
-                      {FMT2(item.basicPrice)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {FMT2(item.taxable)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-600 dark:text-gray-300">
-                      {FMT2(item.discount)}
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
-                        {item.taxPct}%
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
-                      {FMT2(item.taxAmt)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-extrabold text-gray-900 dark:text-white">
-                      {FMT2(item.net)}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30"
+            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+              <table className="w-full min-w-[1000px]">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
+                    {[
+                      "#",
+                      "Item Description / Model",
+                      "HSN Code",
+                      "Qty",
+                      "Basic Price (₹)",
+                      "Taxable Amount (₹)",
+                      "Discount (₹)",
+                      "Tax %",
+                      "Tax Amt (₹)",
+                      "Net Amount (₹)",
+                      "Action",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-3 py-3 text-left text-xs font-bold tracking-wide whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
                       >
-                        <Icon.Trash />
-                      </button>
-                    </td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={11} className="px-4 py-10 text-center text-sm text-gray-400">
-                      No items added yet. Select items from the Add Item section above.
+                </thead>
+                <tbody>
+                  {items.map((item: any, idx: number) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-primary/5 border-b border-gray-100 transition-colors dark:border-gray-700"
+                    >
+                      <td className="px-3 py-2.5 text-sm font-medium text-gray-400">
+                        {idx + 1}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm font-medium whitespace-nowrap text-gray-800 dark:text-gray-100">
+                        {item.itemName}
+                        {item.itemCode && (
+                          <span className="block text-[10px] text-gray-400">
+                            {item.itemCode}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
+                        {item.hsnCode}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
+                        {FMT3(item.qty)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
+                        {FMT2(item.basicPrice)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
+                        {FMT2(item.taxable)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-600 dark:text-gray-300">
+                        {FMT2(item.discount)}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
+                          {item.taxPct}%
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
+                        {FMT2(item.taxAmt)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-extrabold text-gray-900 dark:text-white">
+                        {FMT2(item.net)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.id)}
+                          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30"
+                        >
+                          <Icon.Trash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={11}
+                        className="px-4 py-10 text-center text-sm text-gray-400"
+                      >
+                        No items added yet. Select items from the Add Item
+                        section above.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-primary/5 border-primary/20 border-t-2">
+                    <td
+                      className="text-primary px-3 py-3 text-sm font-extrabold"
+                      colSpan={3}
+                    >
+                      Total
                     </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT3(items.reduce((s: number, i: any) => s + i.qty, 0))}
+                    </td>
+                    <td />
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(subTotal)}
+                    </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(totDiscount)}
+                    </td>
+                    <td />
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(totTax)}
+                    </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(grandTotal)}
+                    </td>
+                    <td />
                   </tr>
-                )}
-              </tbody>
-              <tfoot>
-                <tr className="bg-primary/5 border-primary/20 border-t-2">
-                  <td className="text-primary px-3 py-3 text-sm font-extrabold" colSpan={3}>
-                    Total
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT3(items.reduce((s: number, i: any) => s + i.qty, 0))}
-                  </td>
-                  <td />
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(subTotal)}
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(totDiscount)}
-                  </td>
-                  <td />
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(totTax)}
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(grandTotal)}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
+                </tfoot>
+              </table>
             </div>
           </div>
         </Card>
@@ -1682,16 +1891,23 @@ export default function SalesInvoice() {
                 {[
                   ["Sub Total", subTotal],
                   ["Taxable Amt", taxableAmt],
-                  ["CGST", cgstTotal],
-                  ["SGST", sgstTotal],
-                  ["IGST", igstTotal],
+                  ...(!selectedParty
+                    ? []
+                    : isSameState
+                      ? [
+                          ["CGST", cgstTotal],
+                          ["SGST", sgstTotal],
+                        ]
+                      : [["IGST", igstTotal]]),
                   ["Discount", totDiscount],
                 ].map(([lbl, val]) => (
                   <div
                     key={lbl as string}
                     className="flex justify-between border-b border-gray-100 py-2.5 last:border-0 dark:border-gray-700"
                   >
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{lbl as string}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {lbl as string}
+                    </span>
                     <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                       {INR(val as number)}
                     </span>
@@ -1706,7 +1922,8 @@ export default function SalesInvoice() {
                   {INR(grandTotal)}
                 </p>
                 <p className="mt-1.5 text-[10px] leading-relaxed text-blue-500/70 dark:text-blue-400/60">
-                  <span className="font-semibold">In Words:</span> {numInWords(grandTotal)}
+                  <span className="font-semibold">In Words:</span>{" "}
+                  {numInWords(grandTotal)}
                 </p>
               </div>
             </Card>
@@ -1714,7 +1931,10 @@ export default function SalesInvoice() {
         </div>
       </div>
 
-      <CreateAccountDrawer open={accountDrawerOpen} onClose={() => setAccountDrawerOpen(false)} />
+      <CreateAccountDrawer
+        open={accountDrawerOpen}
+        onClose={() => setAccountDrawerOpen(false)}
+      />
       <BankDetailsDrawer
         open={bankDetailsOpen}
         onClose={() => setBankDetailsOpen(false)}

@@ -4,7 +4,13 @@ const optionalString = Yup.string().trim().default("");
 
 export const companyInfoSchema = Yup.object().shape({
   companyName: Yup.string().trim().required("Company name is required"),
-  natureOfBusiness: Yup.string().trim().required("Nature of business is required"),
+  companyCode: Yup.string()
+    .trim()
+    .matches(/^[A-Za-z0-9]{2,10}$/, "Use 2-10 letters or numbers")
+    .required("Company code is required"),
+  natureOfBusiness: Yup.string()
+    .trim()
+    .required("Nature of business is required"),
   taxSystem: Yup.string().required("Please select tax system"),
 });
 
@@ -25,7 +31,10 @@ export const basicDetailsSchema = Yup.object().shape({
     .matches(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number")
     .required("Mobile is required"),
   phone: optionalString,
-  email: Yup.string().trim().email("Enter a valid email").required("Email is required"),
+  email: Yup.string()
+    .trim()
+    .email("Enter a valid email")
+    .required("Email is required"),
   website: optionalString,
   dateFormat: Yup.string().required("Please select date format"),
 });
@@ -96,7 +105,9 @@ export const bankDetailsSchema = Yup.object().shape({
 
 export type CompanyInfoType = Yup.InferType<typeof companyInfoSchema>;
 export type BasicDetailsType = Yup.InferType<typeof basicDetailsSchema>;
-export type RegistrationDetailsType = Yup.InferType<typeof registrationDetailsSchema>;
+export type RegistrationDetailsType = Yup.InferType<
+  typeof registrationDetailsSchema
+>;
 export type LicensingType = Yup.InferType<typeof licensingSchema>;
 export type FinancialYearType = Yup.InferType<typeof financialYearSchema>;
 export type BankDetailsType = Yup.InferType<typeof bankDetailsSchema>;

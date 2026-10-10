@@ -83,6 +83,7 @@ export function Profile() {
 
   const [companyName, setCompanyName] = useState("Company Name");
   const [companyLogo, setCompanyLogo] = useState("");
+  const [companyIcon, setCompanyIcon] = useState("");
 
   useEffect(() => {
     const fetchCompanyName = async () => {
@@ -103,6 +104,7 @@ export function Profile() {
           const d = response.data.data;
           setCompanyName(d?.companyName || "Company Name");
           setCompanyLogo(d?.logo || "");
+          setCompanyIcon(d?.icon || "");
         }
       } catch (error) {
         console.error("Failed to fetch company name:", error);
@@ -122,7 +124,7 @@ export function Profile() {
     }
   };
 
-  const logoSrc = companyLogo || APP_FAVICON;
+  const logoSrc = companyIcon || companyLogo || APP_FAVICON;
 
   return (
     <Popover className="relative">

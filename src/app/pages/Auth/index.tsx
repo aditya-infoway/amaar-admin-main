@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { Button, Card, Checkbox, Input, InputErrorMsg } from "@/components/ui";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { APP_LOGO } from "@/constants/app";
+import { useState } from "react";
 import { AuthFormValues, schema } from "./schema";
 import { Page } from "@/components/shared/Page";
 
@@ -16,6 +17,9 @@ import { Page } from "@/components/shared/Page";
 export default function SignIn() {
   const { login, errorMessage } = useAuthContext();
   const navigate = useNavigate();
+  const [logoSrc, setLogoSrc] = useState(
+    localStorage.getItem("companyLogo") || APP_LOGO,
+  );
   const {
     register,
     handleSubmit,
@@ -48,11 +52,12 @@ export default function SignIn() {
                 className="w-full rounded-lg bg-transparent p-5 lg:p-7"
                 style={{ overflow: "visible" }}
               >
-                <div className="mb-8 flex justify-start">
+                <div className="mb-8 flex justify-center">
                   <img
-                    src={APP_LOGO}
+                    src={logoSrc}
+                    onError={() => setLogoSrc(APP_LOGO)}
                     alt="Autobook ERP"
-                    className="h-12 w-auto object-contain sm:h-14"
+                    className="h-14 w-auto object-contain sm:h-28"
                   />
                 </div>
                 <div

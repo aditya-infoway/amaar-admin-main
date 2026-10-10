@@ -52,6 +52,12 @@ export function CompanyInformation({
           error={errors.companyName?.message}
         />
         <Input
+          {...register("companyCode")}
+          label="Company Code"
+          placeholder="Enter company code"
+          error={errors.companyCode?.message}
+        />
+        <Input
           {...register("natureOfBusiness")}
           label="Nature of Business"
           placeholder="Enter nature of business"

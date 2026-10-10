@@ -4,12 +4,13 @@ import clsx from "clsx";
 import { SetStateAction, Dispatch } from "react";
 
 // Local Imports
-import { APP_LOGO } from "@/constants/app";
+// import { APP_LOGO } from "@/constants/app";
+import { useCompanyIcon } from "@/hooks/useCompanyIcon";
 import { Menu } from "./Menu";
 import { Item } from "./Menu/item";
 import { Profile } from "../../Profile";
 import { useThemeContext } from "@/app/contexts/theme/context";
-import { useSidebarContext } from "@/app/contexts/sidebar/context";   // ✅ add kiya
+import { useSidebarContext } from "@/app/contexts/sidebar/context"; // ✅ add kiya
 import { settings } from "@/app/navigation/segments/settings";
 import { NavigationTree } from "@/@types/navigation";
 import { SegmentPath } from "..";
@@ -28,7 +29,8 @@ export function MainPanel({
   activeSegmentPath,
 }: MainPanelProps) {
   const { cardSkin } = useThemeContext();
-  const { isExpanded, open } = useSidebarContext();   // ✅ add kiya
+  const { isExpanded, open } = useSidebarContext(); // ✅ add kiya
+  const appLogo = useCompanyIcon();
 
   const handleSettingsClick = () => {
     setActiveSegmentPath?.(settings.path);
@@ -49,7 +51,7 @@ export function MainPanel({
         <div className="flex pt-3.5">
           <Link to="/">
             <img
-              src={APP_LOGO}
+              src={appLogo}
               alt="Autobook ERP"
               className="size-10 object-contain"
             />
@@ -68,7 +70,7 @@ export function MainPanel({
             id={settings.id}
             component={Link}
             to="/settings/appearance"
-            onClick={handleSettingsClick}   // ✅ ye add kiya
+            onClick={handleSettingsClick} // ✅ ye add kiya
             title="Settings"
             isActive={activeSegmentPath === settings.path}
             icon={settings.icon}

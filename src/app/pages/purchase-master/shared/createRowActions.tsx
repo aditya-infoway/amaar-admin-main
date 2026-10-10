@@ -7,8 +7,9 @@ import {
 } from "@headlessui/react";
 import {
   EllipsisHorizontalIcon,
-  EyeIcon,        // 👈 add karo
+  EyeIcon,
   PencilIcon,
+  PrinterIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
@@ -21,9 +22,17 @@ import {
 } from "@/components/shared/ConfirmModal";
 import { Button } from "@/components/ui";
 
+type RowActionOptions = {
+  edit?: boolean;
+  delete?: boolean;
+};
+
 export function createRowActions<T extends { id: string }>(
   entityName: string,
+  options: RowActionOptions = {},
 ) {
+  const { edit: showEdit = true, delete: showDelete = true } = options;
+
   const confirmMessages: ConfirmMessages = {
     pending: {
       description: `Are you sure you want to delete this ${entityName}? Once deleted, it cannot be restored.`,
@@ -56,8 +65,15 @@ export function createRowActions<T extends { id: string }>(
 
     const state = deleteError ? "error" : deleteSuccess ? "success" : "pending";
 
-    // 👇 add: agar page ne viewRow meta function diya hai tabhi "View" option dikhega
     const hasViewAction = Boolean(table.options.meta?.viewRow);
+    const hasPrintAction = Boolean(table.options.meta?.printRow);
+
+    const itemCls = (focus: boolean) =>
+      clsx(
+        "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
+        focus &&
+          "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
+      );
 
     return (
       <>
@@ -78,7 +94,6 @@ export function createRowActions<T extends { id: string }>(
               anchor={{ to: "bottom end", gap: 8 }}
               className="dark:border-dark-500 dark:bg-dark-750 absolute z-100 w-[9rem] rounded-lg border border-gray-300 bg-white py-1 shadow-lg shadow-gray-200/50 outline-hidden dark:shadow-none"
             >
-              {/* 👇 add — View menu item, sirf tab dikhega jab page ne viewRow diya ho */}
               {hasViewAction && (
                 <MenuItem>
                   {({ focus }) => (
@@ -87,11 +102,7 @@ export function createRowActions<T extends { id: string }>(
                       onClick={() =>
                         table.options.meta?.viewRow?.(row.original)
                       }
-                      className={clsx(
-                        "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
-                        focus &&
-                          "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
-                      )}
+                      className={itemCls(focus)}
                     >
                       <EyeIcon className="size-4.5 stroke-1" />
                       <span>View</span>
@@ -100,55 +111,75 @@ export function createRowActions<T extends { id: string }>(
                 </MenuItem>
               )}
 
-              <MenuItem>
-                {({ focus }) => (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      table.options.meta?.openEditDrawer?.(row.original)
-                    }
-                    className={clsx(
-                      "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
-                      focus &&
-                        "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
-                    )}
-                  >
-                    <PencilIcon className="size-4.5 stroke-1" />
-                    <span>Edit</span>
-                  </button>
-                )}
-              </MenuItem>
-              <MenuItem>
-                {({ focus }) => (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteError(false);
-                      setDeleteSuccess(false);
-                      setDeleteModalOpen(true);
-                    }}
-                    className={clsx(
-                      "text-this dark:text-this-light flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
-                      focus && "bg-this/10 dark:bg-this-light/10",
-                    )}
-                  >
-                    <TrashIcon className="size-4.5 stroke-1" />
-                    <span>Delete</span>
-                  </button>
-                )}
-              </MenuItem>
+              {hasPrintAction && (
+                <MenuItem>
+                  {({ focus }) => (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        table.options.meta?.printRow?.(row.original)
+                      }
+                      className={itemCls(focus)}
+                    >
+                      <PrinterIcon className="size-4.5 stroke-1" />
+                      <span>Print</span>
+                    </button>
+                  )}
+                </MenuItem>
+              )}
+
+              {showEdit && (
+                <MenuItem>
+                  {({ focus }) => (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        table.options.meta?.openEditDrawer?.(row.original)
+                      }
+                      className={itemCls(focus)}
+                    >
+                      <PencilIcon className="size-4.5 stroke-1" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                </MenuItem>
+              )}
+
+              {showDelete && (
+                <MenuItem>
+                  {({ focus }) => (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(false);
+                        setDeleteSuccess(false);
+                        setDeleteModalOpen(true);
+                      }}
+                      className={clsx(
+                        "text-this dark:text-this-light flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
+                        focus && "bg-this/10 dark:bg-this-light/10",
+                      )}
+                    >
+                      <TrashIcon className="size-4.5 stroke-1" />
+                      <span>Delete</span>
+                    </button>
+                  )}
+                </MenuItem>
+              )}
             </MenuItems>
           </Transition>
         </Menu>
 
-        <ConfirmModal
-          show={deleteModalOpen}
-          onClose={() => setDeleteModalOpen(false)}
-          messages={confirmMessages}
-          onOk={handleDelete}
-          confirmLoading={confirmDeleteLoading}
-          state={state}
-        />
+        {showDelete && (
+          <ConfirmModal
+            show={deleteModalOpen}
+            onClose={() => setDeleteModalOpen(false)}
+            messages={confirmMessages}
+            onOk={handleDelete}
+            confirmLoading={confirmDeleteLoading}
+            state={state}
+          />
+        )}
       </>
     );
   };
