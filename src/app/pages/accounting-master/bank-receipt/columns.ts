@@ -10,7 +10,24 @@ import { ExportColumn } from "../shared/export";
 import { BankReceipt } from "../shared/types";
 
 // const RowActions = createRowActions<BankReceipt>("bankReceipt");
+import { createElement } from "react";
+import { CellContext } from "@tanstack/react-table";
+const TYPE_BADGE_STYLES: Record<string, string> = {
+  BR: "bg-indigo-100 text-indigo-700",
+  SIBR: "bg-amber-100 text-amber-700",
+  // naya code aaye to yahin ek line add karo
+};
 
+const TypeCell = (info: CellContext<BankReceipt, unknown>) => {
+  const type = info.getValue<string>() || "—";
+  const style = TYPE_BADGE_STYLES[type] || "bg-slate-100 text-slate-700";
+
+  return createElement(
+    "span",
+    { className: `rounded-full px-2 py-0.5 text-xs font-medium ${style}` },
+    type
+  );
+};
 export const columns: ColumnDef<BankReceipt>[] = [
   {
     id: "select",
@@ -23,6 +40,13 @@ export const columns: ColumnDef<BankReceipt>[] = [
     accessorKey: "voucherNo",
     header: "Voucher No",
     cell: TextCell,
+  },
+    {
+    id: "type",
+    accessorKey: "type",
+    header: "Type",
+    cell: TypeCell,
+    enableSorting: false,
   },
   {
     id: "bankAccount",
@@ -73,6 +97,7 @@ export const columns: ColumnDef<BankReceipt>[] = [
 
 export const exportColumns: ExportColumn<BankReceipt>[] = [
   { key: "voucherNo", header: "Voucher No" },
+  { key: "type", header: "Type" },
   { key: "bankAccount", header: "Bank Account" },
   { key: "oppAccount", header: "Opp. Account" },
   { key: "amount", header: "Amount" },

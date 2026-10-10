@@ -22,8 +22,8 @@ interface MasterToolbarProps<T> {
   onExportExcel: () => void;
   onExportPdf: () => void;
   filterPanel?: ReactNode;
-    filterTypeButtons?: ReactNode;
-    importButton?: ReactNode;
+  filterTypeButtons?: ReactNode;
+  importButton?: ReactNode;
 }
 
 export function MasterToolbar<T>({
@@ -37,8 +37,8 @@ export function MasterToolbar<T>({
   onExportExcel,
   onExportPdf,
   filterPanel,
-   filterTypeButtons,
-     importButton,
+  filterTypeButtons,
+  importButton,
 }: MasterToolbarProps<T>) {
   return (
     <div className="table-toolbar px-(--margin-x) pt-4">
@@ -57,13 +57,13 @@ export function MasterToolbar<T>({
             />
             <span>Filter</span>
           </Button>
-         {importButton}
+          {importButton}
           <Button
             variant="outlined"
             className="h-9 gap-2 rounded-md px-3 text-sm"
             onClick={onExportExcel}
           >
-            <ArrowDownTrayIcon className="size-4 text-success-600" />
+            <ArrowDownTrayIcon className="text-success-600 size-4" />
             <span>Excel</span>
           </Button>
           <Button
@@ -71,11 +71,9 @@ export function MasterToolbar<T>({
             className="h-9 gap-2 rounded-md px-3 text-sm"
             onClick={onExportPdf}
           >
-            <DocumentArrowDownIcon className="size-4 text-error-600" />
+            <DocumentArrowDownIcon className="text-error-600 size-4" />
             <span>PDF</span>
           </Button>
-
-
 
           <Button
             color="primary"
@@ -100,16 +98,14 @@ export function MasterToolbar<T>({
         />
       </div>
 
-        {filterTypeButtons && (
-    <div className="mt-4 flex w-full justify-end pr-1">
-      <div className="flex items-center gap-2">
-        {filterTypeButtons}
-      </div>
-    </div>
-  )}
+      {filterTypeButtons && (
+        <div className="mt-4 flex w-full justify-end pr-1">
+          <div className="flex items-center gap-2">{filterTypeButtons}</div>
+        </div>
+      )}
 
       {showFilters && filterPanel && (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-500 dark:bg-dark-600">
+        <div className="dark:border-dark-500 dark:bg-dark-600 mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
           {filterPanel}
         </div>
       )}

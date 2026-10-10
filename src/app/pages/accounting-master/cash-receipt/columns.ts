@@ -1,4 +1,5 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { createElement } from "react";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
 
 import {
   SelectCell,
@@ -10,7 +11,22 @@ import { ExportColumn } from "../shared/export";
 import { CashReceipt } from "../shared/types";
 
 // const RowActions = createRowActions<CashReceipt>("cashReceipt");
+const TYPE_BADGE_STYLES: Record<string, string> = {
+  CR:"bg-indigo-100 text-indigo-700",
+  SICR: "bg-amber-100 text-amber-700",
+  // naya code aaye to yahin ek line add karo
+};
 
+const TypeCell = (info: CellContext<CashReceipt, unknown>) => {
+  const type = info.getValue<string>() || "—";
+  const style = TYPE_BADGE_STYLES[type] || "bg-slate-100 text-slate-700";
+
+  return createElement(
+    "span",
+    { className: `rounded-full px-2 py-0.5 text-xs font-medium ${style}` },
+    type
+  );
+};
 export const columns: ColumnDef<CashReceipt>[] = [
   {
     id: "select",
@@ -24,6 +40,7 @@ export const columns: ColumnDef<CashReceipt>[] = [
     header: "Voucher No",
     cell: TextCell,
   },
+  { id: "type", accessorKey: "type", header: "Type", cell: TypeCell, enableSorting: false },
   {
     id: "cashAccount",
     accessorKey: "cashAccount",
@@ -73,6 +90,7 @@ export const columns: ColumnDef<CashReceipt>[] = [
 
 export const exportColumns: ExportColumn<CashReceipt>[] = [
   { key: "voucherNo", header: "Voucher No" },
+    { key: "type", header: "Type" },
   { key: "cashAccount", header: "Cash Account" },
   { key: "oppAccount", header: "Opp. Account" },
   { key: "amount", header: "Amount" },
