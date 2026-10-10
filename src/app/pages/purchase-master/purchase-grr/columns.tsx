@@ -7,14 +7,18 @@ export const columns: ColumnDef<GrrItem>[] = [
   {
     id: "srNo",
     header: "SR No",
-    cell: ({ row }) => <span className="text-center text-gray-400">{row.index + 1}</span>,
+    cell: ({ row }) => (
+      <span className="text-center text-gray-400">{row.index + 1}</span>
+    ),
     size: 60,
   },
   {
     id: "itemCode",
     accessorKey: "itemCode",
     header: "Item Code",
-    cell: ({ getValue }) => <span className="font-medium">{String(getValue())}</span>,
+    cell: ({ getValue }) => (
+      <span className="font-medium">{String(getValue())}</span>
+    ),
   },
   {
     id: "itemName",
@@ -25,7 +29,9 @@ export const columns: ColumnDef<GrrItem>[] = [
     id: "orderQty",
     accessorKey: "orderQty",
     header: "Order Qty",
-    cell: ({ getValue }) => <span className="text-right font-medium">{String(getValue())}</span>,
+    cell: ({ getValue }) => (
+      <span className="text-right font-medium">{String(getValue())}</span>
+    ),
   },
   {
     id: "inQty",
@@ -38,8 +44,7 @@ export const columns: ColumnDef<GrrItem>[] = [
     accessorKey: "hsnCode",
     header: "HSN Code",
   },
- 
- 
+
   {
     id: "action",
     header: "Action",
@@ -57,11 +62,11 @@ export const differenceColumns: ColumnDef<GrrItem>[] = [
     id: "inQty",
     accessorKey: "inQty",
     header: "In Qty",
-   cell: ({ getValue }) => {
+    cell: ({ getValue }) => {
       const v = getValue() as number | null;
       return <span className="text-right font-medium">{v ?? ""}</span>;
     },
-   },
+  },
 
   columns[5], // hsnCode
   {
@@ -77,8 +82,8 @@ export const differenceColumns: ColumnDef<GrrItem>[] = [
             isShort
               ? "text-error font-semibold"
               : isExcess
-              ? "text-warning-600 dark:text-warning-400 font-semibold"
-              : "text-success font-semibold"
+                ? "text-warning-600 dark:text-warning-400 font-semibold"
+                : "text-success font-semibold"
           }
         >
           {diff === 0 ? "0" : isShort ? `${diff}` : `+${Math.abs(diff)}`}

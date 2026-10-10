@@ -728,7 +728,20 @@ const protectedRoutes: RouteObject = {
                 },
               ],
             },
-              {
+            {
+              path: "body-register",
+              children: [
+                {
+                  index: true,
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/purchase-master/body-register")
+                    ).default,
+                  }),
+                },
+              ],
+            },
+            {
               path: "sales-register",
               children: [
                 {
@@ -758,9 +771,8 @@ const protectedRoutes: RouteObject = {
               ],
             },
           ],
-          
         },
-         
+
         {
           path: "stock-report",
           children: [
@@ -828,7 +840,7 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
-             {
+            {
               path: "contractor-type",
               lazy: async () => ({
                 Component: (
@@ -1014,7 +1026,7 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
-               {
+            {
               path: "itemcategory",
               lazy: async () => ({
                 Component: (

@@ -102,55 +102,55 @@ export default function ItemCategoryPage() {
   }, [data, filterName, filterStatus, filterType]);
 
   // ---- Save (create or update) via API ----
- const handleSave = async (item: ItemCategory) => {
-  const payload: any = {
-    categoryName: item.categoryName,
-    status: item.status,
-  };
+  const handleSave = async (item: ItemCategory) => {
+    const payload: any = {
+      categoryName: item.categoryName,
+      status: item.status,
+    };
 
-  try {
-    if (item.id) {
-      const response = await Put(
-        "master/itemcategory/update",
-        { itemCategoryId: Number(item.id), ...payload },
-        false,
-      );
-      if (response.data?.success) {
-        toastsuccessmsg(
-          response.data?.message || "Item category updated successfully.",
+    try {
+      if (item.id) {
+        const response = await Put(
+          "master/itemcategory/update",
+          { itemCategoryId: Number(item.id), ...payload },
+          false,
         );
-        fetchAll();
+        if (response.data?.success) {
+          toastsuccessmsg(
+            response.data?.message || "Item category updated successfully.",
+          );
+          fetchAll();
+        } else {
+          toasterrormsg(
+            response.data?.message || "Failed to update item category.",
+          );
+        }
       } else {
-        toasterrormsg(
-          response.data?.message || "Failed to update item category.",
-        );
-      }
-    } else {
-      // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
-      const companyId = localStorage.getItem("companyId") || "";
-      payload.createdBy = Number(companyId);
-      payload.createdType = "Super Admin";
+        // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+        const companyId = localStorage.getItem("companyId") || "";
+        payload.createdBy = Number(companyId);
+        payload.createdType = "Super Admin";
 
-      const response = await Post(
-        "master/itemcategory/create",
-        payload,
-        false,
-      );
-      if (response.data?.success) {
-        toastsuccessmsg(
-          response.data?.message || "Item category created successfully.",
+        const response = await Post(
+          "master/itemcategory/create",
+          payload,
+          false,
         );
-        fetchAll();
-      } else {
-        toasterrormsg(
-          response.data?.message || "Failed to create item category.",
-        );
+        if (response.data?.success) {
+          toastsuccessmsg(
+            response.data?.message || "Item category created successfully.",
+          );
+          fetchAll();
+        } else {
+          toasterrormsg(
+            response.data?.message || "Failed to create item category.",
+          );
+        }
       }
+    } catch (error) {
+      toasterrormsg("Something went wrong while saving the item category.");
     }
-  } catch (error) {
-    toasterrormsg("Something went wrong while saving the item category.");
-  }
-};
+  };
 
   const handleDeleteOne = async (row: ItemCategory) => {
     try {
@@ -289,7 +289,7 @@ export default function ItemCategoryPage() {
                 <Tab
                   className={({ selected }) =>
                     clsx(
-                      "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                      "shrink-0 cursor-pointer space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
                       selected
                         ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
                         : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
@@ -303,7 +303,7 @@ export default function ItemCategoryPage() {
                 <Tab
                   className={({ selected }) =>
                     clsx(
-                      "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                      "shrink-0 cursor-pointer space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
                       selected
                         ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
                         : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
@@ -317,7 +317,7 @@ export default function ItemCategoryPage() {
                 <Tab
                   className={({ selected }) =>
                     clsx(
-                      "shrink-0 space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+                      "shrink-0 cursor-pointer space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
                       selected
                         ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
                         : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",

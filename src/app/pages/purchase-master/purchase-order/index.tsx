@@ -1527,7 +1527,7 @@ export default function PurchaseOrderPage() {
                           {addRow.unit || "—"}
                         </div>
                       </div>
-                     <div className="md:col-span-1">
+                      <div className="md:col-span-1">
                         <FieldLabel>Tax %</FieldLabel>
                         <div className={roCls + " text-center"}>
                           {hasAddItem ? (
@@ -1559,7 +1559,7 @@ export default function PurchaseOrderPage() {
                                 : "Add item"
                           }
                           className={[
-                            "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 cursor-pointer",
+                            "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-200",
                             hasAddItem
                               ? "bg-primary-600 hover:bg-primary/90 text-white shadow-md hover:scale-105 active:scale-95"
                               : "dark:bg-dark-600 cursor-not-allowed bg-gray-100 text-gray-300",

@@ -18,6 +18,7 @@ const initialState: FormState = {
   formData: {
     companyInfo: {
       companyName: "",
+       companyCode: "",
       natureOfBusiness: "",
       taxSystem: "",
     },

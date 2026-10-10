@@ -33,7 +33,14 @@ export const purchaseMaster: NavigationTree = {
       title: "Purchase QC",
       icon: "purchase_master.purchaseGrr",
     },
-      {
+    {
+      id: "purchase_master.bodyregister",
+      type: "item",
+      path: "/purchase-master/body-register",
+      title: "Body Register",
+      icon: "purchase_master.purchaseGrr",
+    },
+    {
       id: "purchase_master.sales-register",
       type: "item",
       path: "/purchase-master/sales-register",

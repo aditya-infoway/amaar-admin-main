@@ -2488,26 +2488,26 @@ export default function VehiclePurchaseBill() {
 
         {/* ── Attachments + Actions — same as before, unchanged ── */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-3">
             <Card title="Actions">
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-row gap-3">
                 <button
                   type="button"
                   onClick={handleSaveBill}
                   disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md active:bg-green-700 disabled:opacity-50"
+                  className="flex w-full flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md active:bg-green-700 disabled:opacity-50"
                 >
                   <Icon.Save /> {submitting ? "Saving..." : "Save Bill"}
                 </button>
                 <button
                   type="button"
-                  className="bg-primary hover:bg-primary/90 active:bg-primary/80 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
+                  className="bg-primary hover:bg-primary/90 active:bg-primary/80 flex w-full flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
                 >
                   <Icon.Print /> Save & Print
                 </button>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-600 transition-all hover:border-red-400 hover:text-red-500 dark:border-gray-600 dark:bg-transparent dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
+                  className="flex w-full flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-600 transition-all hover:border-red-400 hover:text-red-500 dark:border-gray-600 dark:bg-transparent dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
                   onClick={() => navigate("/purchase-master/purchase-register")}
                 >
                   <Icon.Close /> Cancel
