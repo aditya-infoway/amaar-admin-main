@@ -15,12 +15,14 @@ import { PreviewImg } from "@/components/shared/PreviewImg";
 import { Avatar, Button, Input, Upload } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
-import { dateFormats, taxSystems } from "@/app/pages/Auth/CreateCompany/constants";
+import {
+  dateFormats,
+  taxSystems,
+} from "@/app/pages/Auth/CreateCompany/constants";
 import {
   companyProfileSchema,
   CompanyProfileType,
 } from "@/app/pages/Auth/CreateCompany/schema";
-
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +31,8 @@ export default function General() {
   const [existingLogoUrl, setExistingLogoUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [icon, setIcon] = useState<File | null>(null);
+  const [existingIconUrl, setExistingIconUrl] = useState<string>("");
 
   const {
     register,
@@ -54,7 +58,7 @@ export default function General() {
   }, []);
 
   const selectedCountryObj = Country.getAllCountries().find(
-    (country) => country.name === selectedCountry
+    (country) => country.name === selectedCountry,
   );
 
   const stateList = useMemo(() => {
@@ -67,14 +71,14 @@ export default function General() {
   }, [selectedCountry]);
 
   const selectedStateObj = State.getStatesOfCountry(
-    selectedCountryObj?.isoCode || ""
+    selectedCountryObj?.isoCode || "",
   ).find((s) => s.name === selectedState);
 
   const districtList = useMemo(() => {
     if (!selectedCountryObj || !selectedStateObj) return [];
     return City.getCitiesOfState(
       selectedCountryObj.isoCode,
-      selectedStateObj.isoCode
+      selectedStateObj.isoCode,
     ).map((city) => ({ id: city.name, label: city.name }));
   }, [selectedCountry, selectedState]);
 
@@ -94,13 +98,14 @@ export default function General() {
         const response = await Get(
           "superadmin/company-details",
           { companyDetailsId },
-          false
+          false,
         );
 
         if (response.data?.success) {
           const d = response.data.data;
           reset({
             companyName: d.companyName || "",
+            companyCode: d.companyCode || "",
             natureOfBusiness: d.natureOfBusiness || "",
             taxSystem: d.taxSystem || "",
             addressLine1: d.addressLine1 || "",
@@ -128,12 +133,16 @@ export default function General() {
             branchName: d.branchName || "",
             ifscCode: d.ifscCode || "",
           });
-
           if (d.logo) {
             setExistingLogoUrl(d.logo);
           }
+          if (d.icon) {
+            setExistingIconUrl(d.icon);
+          }
         } else {
-          toasterrormsg(response.data?.message || "Failed to fetch company details.");
+          toasterrormsg(
+            response.data?.message || "Failed to fetch company details.",
+          );
         }
       } catch (error) {
         toasterrormsg("Something went wrong while fetching company details.");
@@ -159,17 +168,24 @@ export default function General() {
       if (logo) {
         formPayload.append("logo", logo);
       }
+      if (icon) {
+        formPayload.append("icon", icon);
+      }
 
       const response = await Post(
         "superadmin/company-details/update",
         formPayload,
-        true
+        true,
       );
 
       if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "Company details updated successfully.");
+        toastsuccessmsg(
+          response.data?.message || "Company details updated successfully.",
+        );
       } else {
-        toasterrormsg(response.data?.message || "Failed to update company details.");
+        toasterrormsg(
+          response.data?.message || "Failed to update company details.",
+        );
       }
     } catch (error) {
       toasterrormsg("Something went wrong while updating company details.");
@@ -181,13 +197,15 @@ export default function General() {
   if (fetching) {
     return (
       <div className="w-full max-w-3xl 2xl:max-w-5xl">
-        <p className="dark:text-dark-200 text-sm text-gray-500">Loading company details...</p>
+        <p className="dark:text-dark-200 text-sm text-gray-500">
+          Loading company details...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-3xl 2xl:max-w-5xl ">
+    <div className="w-full max-w-3xl 2xl:max-w-5xl">
       <h5 className="dark:text-dark-50 text-lg font-medium text-gray-800">
         General
       </h5>
@@ -197,52 +215,100 @@ export default function General() {
       <div className="dark:bg-dark-500 my-5 h-px bg-gray-200" />
 
       <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-        {/* Logo */}
-        <div className="mt-4 flex flex-col space-y-1.5">
-          <span className="dark:text-dark-100 text-base font-medium text-gray-800">
-            Company Logo
-          </span>
-          <Avatar
-            size={20}
-            imgComponent={PreviewImg}
-            imgProps={{ file: logo } as any}
-            src={existingLogoUrl || "/images/logos/company-placeholder.svg"}
-            classNames={{
-              root: "ring-primary-600 dark:ring-primary-500 dark:ring-offset-dark-700 rounded-xl ring-offset-[3px] ring-offset-white transition-all hover:ring-3",
-              display: "rounded-xl",
-            }}
-            indicator={
-              <div className="dark:bg-dark-700 absolute right-0 bottom-0 -m-1 flex items-center justify-center rounded-full bg-white">
-                {logo ? (
-                  <Button
-                    type="button"
-                    onClick={() => setLogo(null)}
-                    isIcon
-                    className="size-6 rounded-full"
-                  >
-                    <XMarkIcon className="size-4" />
-                  </Button>
-                ) : (
-                  <Upload
-                    name="logo"
-                    onChange={(files) => setLogo(files[0])}
-                    accept="image/*"
-                  >
-                    {({ ...props }) => (
-                      <Button
-                        type="button"
-                        isIcon
-                        className="size-6 rounded-full"
-                        {...props}
-                      >
-                        <HiPencil className="size-3.5" />
-                      </Button>
-                    )}
-                  </Upload>
-                )}
-              </div>
-            }
-          />
+        {/* Logo + Icon */}
+        <div className="mt-4 flex flex-wrap gap-10">
+          <div className="flex flex-col space-y-1.5">
+            <span className="dark:text-dark-100 text-base font-medium text-gray-800">
+              Company Logo
+            </span>
+            <Avatar
+              size={20}
+              imgComponent={PreviewImg}
+              imgProps={{ file: logo } as any}
+              src={existingLogoUrl || "/images/logos/company-placeholder.svg"}
+              classNames={{
+                root: "ring-primary-600 dark:ring-primary-500 dark:ring-offset-dark-700 rounded-xl ring-offset-[3px] ring-offset-white transition-all hover:ring-3",
+                display: "rounded-xl",
+              }}
+              indicator={
+                <div className="dark:bg-dark-700 absolute right-0 bottom-0 -m-1 flex items-center justify-center rounded-full bg-white">
+                  {logo ? (
+                    <Button
+                      type="button"
+                      onClick={() => setLogo(null)}
+                      isIcon
+                      className="size-6 rounded-full"
+                    >
+                      <XMarkIcon className="size-4" />
+                    </Button>
+                  ) : (
+                    <Upload
+                      name="logo"
+                      onChange={(files) => setLogo(files[0])}
+                      accept="image/*"
+                    >
+                      {({ ...props }) => (
+                        <Button
+                          type="button"
+                          isIcon
+                          className="size-6 rounded-full"
+                          {...props}
+                        >
+                          <HiPencil className="size-3.5" />
+                        </Button>
+                      )}
+                    </Upload>
+                  )}
+                </div>
+              }
+            />
+          </div>
+          <div className="flex flex-col space-y-1.5">
+            <span className="dark:text-dark-100 text-base font-medium text-gray-800">
+              Company Icon
+            </span>
+            <Avatar
+              size={20}
+              imgComponent={PreviewImg}
+              imgProps={{ file: icon } as any}
+              src={existingIconUrl || "/images/logos/company-placeholder.svg"}
+              classNames={{
+                root: "ring-primary-600 dark:ring-primary-500 dark:ring-offset-dark-700 rounded-xl ring-offset-[3px] ring-offset-white transition-all hover:ring-3",
+                display: "rounded-xl",
+              }}
+              indicator={
+                <div className="dark:bg-dark-700 absolute right-0 bottom-0 -m-1 flex items-center justify-center rounded-full bg-white">
+                  {icon ? (
+                    <Button
+                      type="button"
+                      onClick={() => setIcon(null)}
+                      isIcon
+                      className="size-6 rounded-full"
+                    >
+                      <XMarkIcon className="size-4" />
+                    </Button>
+                  ) : (
+                    <Upload
+                      name="icon"
+                      onChange={(files) => setIcon(files[0])}
+                      accept="image/*"
+                    >
+                      {({ ...props }) => (
+                        <Button
+                          type="button"
+                          isIcon
+                          className="size-6 rounded-full"
+                          {...props}
+                        >
+                          <HiPencil className="size-3.5" />
+                        </Button>
+                      )}
+                    </Upload>
+                  )}
+                </div>
+              }
+            />
+          </div>
         </div>
 
         <div className="dark:bg-dark-500 my-7 h-px bg-gray-200" />
@@ -284,6 +350,28 @@ export default function General() {
                 />
               )}
             />
+            <div>
+              <label className="dark:text-dark-100 mb-1.5 block text-sm font-semibold text-gray-800">
+                Company Code
+              </label>
+              <div className="flex">
+                <div className="min-w-0 flex-1">
+                  <Input
+                    {...register("companyCode")}
+                    placeholder="Enter company code"
+                    className="rounded-xl rounded-r-none"
+                  />
+                </div>
+                <span className="dark:border-dark-500 dark:bg-dark-700 flex items-center rounded-r-xl border border-l-0 border-gray-300 bg-gray-100 px-3 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                  {`${new Date().getFullYear()}-001`}
+                </span>
+              </div>
+              {errors.companyCode?.message && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.companyCode.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
