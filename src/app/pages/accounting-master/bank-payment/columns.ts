@@ -1,5 +1,5 @@
-// import { createElement } from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { createElement } from "react";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
 // import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatDateDDMMYYYY } from "@/ApiHelper";
 
@@ -28,10 +28,25 @@ import { BankPayment } from "../shared/types";
 //       createElement(TrashIcon, { className: "size-4" }),
 //     ),
 //   );
+const TYPE_BADGE_STYLES: Record<string, string> = {
+  BP: "bg-sky-100 text-sky-700",
+  PBP: "bg-violet-100 text-violet-700",
+};
 
+const TypeCell = (info: CellContext<BankPayment, unknown>) => {
+  const type = info.getValue<string>() || "—";
+  const style = TYPE_BADGE_STYLES[type] || "bg-slate-100 text-slate-700";
+
+  return createElement(
+    "span",
+    { className: `rounded-full px-2 py-0.5 text-xs font-medium ${style}` },
+    type
+  );
+};
 export const columns: ColumnDef<BankPayment>[] = [
   { id: "select", header: SelectHeader, cell: SelectCell, enableSorting: false },
   { id: "voucherNo", accessorKey: "voucherNo", header: "Voucher No", cell: TextCell },
+   { id: "type", accessorKey: "type", header: "Type", cell: TypeCell, enableSorting: false },
   { id: "bankAccount", accessorKey: "bankAccount", header: "Bank Account", cell: TextCell },
   { id: "oppAccount", accessorKey: "oppAccount", header: "Opp. Account", cell: TextCell },
   { id: "amount", accessorKey: "amount", header: "Amount", cell: TextCell },
@@ -64,6 +79,7 @@ export const columns: ColumnDef<BankPayment>[] = [
 
 export const exportColumns: ExportColumn<BankPayment>[] = [
   { key: "voucherNo", header: "Voucher No" },
+    { key: "type", header: "Type" },
   { key: "bankAccount", header: "Bank Account" },
   { key: "oppAccount", header: "Opp. Account" },
   { key: "amount", header: "Amount" },

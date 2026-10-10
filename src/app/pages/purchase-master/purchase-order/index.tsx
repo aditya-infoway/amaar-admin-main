@@ -1924,37 +1924,44 @@ export default function PurchaseOrderPage() {
                           }`}
                           onClick={() => handleSupplierSelect(supplier)}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
+                                                    <div className="flex items-start gap-2">
+                            <div className="mt-0.5 shrink-0">
                               <Radio
                                 checked={isSelected}
                                 onChange={() => handleSupplierSelect(supplier)}
                                 name="supplier"
                                 color="primary"
                               />
-                              <span className="dark:text-dark-50 text-sm font-semibold text-gray-800">
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              {(isRecommended || info?.isItemSupplier) && (
+                                <div className="mb-1.5 flex flex-wrap gap-1">
+                                  {isRecommended && (
+                                    <Badge
+                                      variant="soft"
+                                      color="success"
+                                      className="rounded-full text-[10px]"
+                                    >
+                                      Recommended
+                                    </Badge>
+                                  )}
+                                  {info?.isItemSupplier && (
+                                    <Badge
+                                      variant="soft"
+                                      color="info"
+                                      className="rounded-full text-[10px]"
+                                    >
+                                      Item Supplier
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                              <span
+                                className="dark:text-dark-50 block text-sm leading-snug font-semibold break-words text-gray-800"
+                                title={supplierName}
+                              >
                                 {supplierName}
                               </span>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              {isRecommended && (
-                                <Badge
-                                  variant="soft"
-                                  color="success"
-                                  className="rounded-full text-[10px]"
-                                >
-                                  Recommended
-                                </Badge>
-                              )}
-                              {info?.isItemSupplier && (
-                                <Badge
-                                  variant="soft"
-                                  color="info"
-                                  className="rounded-full text-[10px]"
-                                >
-                                  Item Supplier
-                                </Badge>
-                              )}
                             </div>
                           </div>
 
