@@ -44,16 +44,7 @@ export function MasterToolbar<T>({
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           {/* ✅ NEW — sirf tab render hoga jab onCreate diya gaya ho */}
-          {onCreate && (
-            <Button
-              color="primary"
-              className="h-9 gap-2 rounded-md px-3 text-sm"
-              onClick={onCreate}
-            >
-              <PlusIcon className="size-4" />
-              <span>{createLabel || "Create"}</span>
-            </Button>
-          )}
+          
           <Button
             variant="outlined"
             className="h-9 gap-2 rounded-md px-3 text-sm"
@@ -80,6 +71,16 @@ export function MasterToolbar<T>({
             <DocumentArrowDownIcon className="text-error-600 size-4" />
             <span>PDF</span>
           </Button>
+          {onCreate && (
+            <Button
+              color="primary"
+              className="h-9 gap-2 rounded-md px-3 text-sm"
+              onClick={onCreate}
+            >
+              <PlusIcon className="size-4" />
+              <span>{createLabel || "Create"}</span>
+            </Button>
+          )}
         </div>
       </div>
 
