@@ -1541,9 +1541,34 @@ export default function PurchaseOrderPage() {
                       </div>
                       <div className="md:col-span-1">
                         <FieldLabel required>Qty</FieldLabel>
-                        <div className={roCls + " text-right"}>
-                          {hasAddItem ? addRow.qty : "—"}
-                        </div>
+                        {poSource === "manual" ? (
+                          <input
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={addRow.qty}
+                            disabled={!hasAddItem}
+                            onChange={(e) => {
+                              setAddRow((r) => ({ ...r, qty: e.target.value }));
+                              setAddTouched(false);
+                            }}
+                            placeholder="Qty"
+                            className={
+                              iCls +
+                              (!hasAddItem
+                                ? " dark:bg-dark-800 cursor-not-allowed bg-gray-50"
+                                : addTouched && addQtyNum <= 0
+                                  ? " border-red-400 focus:border-red-400 focus:ring-red-300"
+                                  : "")
+                            }
+                          />
+                        ) : (
+                          <div
+                            className={roCls + " cursor-not-allowed text-right"}
+                          >
+                            {hasAddItem ? addRow.qty : "—"}
+                          </div>
+                        )}
                       </div>
 
                       <div className="md:col-span-1">
@@ -1924,7 +1949,7 @@ export default function PurchaseOrderPage() {
                           }`}
                           onClick={() => handleSupplierSelect(supplier)}
                         >
-                                                    <div className="flex items-start gap-2">
+                          <div className="flex items-start gap-2">
                             <div className="mt-0.5 shrink-0">
                               <Radio
                                 checked={isSelected}
