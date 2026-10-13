@@ -47,5 +47,30 @@ export const settings: NavigationTree = {
       // transKey: "nav.settings.appearance",
       icon: "settings.appearance",
     },
+         {
+      id: "productionSettings",
+      type: "collapse",
+      path: "/settings/production",
+      title: "Production Settings",
+      transKey: "Production Settings",
+      icon: "settings.appearance",
+      childs: [
+        {
+          id: "productionSettings.main-process",
+          type: "item",
+          path: "/settings/production/main-process",
+          title: "Process",
+          transKey: "Process",
+        },
+        {
+          id: "productionSettings.sub-process",
+          type: "item",
+          path: "/settings/production/sub-process",
+          title: "Sub Process",
+          transKey: "Sub Process",
+        },
+      ],
+    },
+    
   ],
 };
