@@ -25,11 +25,19 @@ interface RoleOption {
 interface AccountGroupOption {
   id: string;
   label: string;
+  mobile?: string;
+}
+
+interface Option {
+  id: string;
+  label: string;
 }
 
 interface EmployeeFormValues extends Employee {
   confirmPassword: string;
   accountGroup?: string;
+  processId?: string;
+  subProcessId?: string;
 }
 
 interface EmployeeDrawerProps {
@@ -50,11 +58,19 @@ export function EmployeeDrawer({
   const [checking, setChecking] = useState(false);
   const isEditing = Boolean(employee?.id);
 
-  // Sundry Creditor account list - ab static nahi, API se dynamically aayegi
+  // Party (Sundry Creditor) list
   const [accountGroupOptions, setAccountGroupOptions] = useState<
     AccountGroupOption[]
   >([]);
   const [loadingAccountGroups, setLoadingAccountGroups] = useState(false);
+
+  // Production: process list (Active main process ke processes)
+  const [processOptions, setProcessOptions] = useState<Option[]>([]);
+  const [loadingProcesses, setLoadingProcesses] = useState(false);
+
+  // Production: selected process ke sub process
+  const [subProcessOptions, setSubProcessOptions] = useState<Option[]>([]);
+  const [loadingSubProcesses, setLoadingSubProcesses] = useState(false);
 
   const {
     register,
@@ -72,18 +88,120 @@ export function EmployeeDrawer({
 
   const selectedDepartment = watch("department");
   const selectedRoleId = watch("roleId");
+  const selectedProcessId = watch("processId");
+
+  // Production department select hua hai?
+  const isProduction =
+    String(selectedDepartment || "").toLowerCase() === "production";
 
   const roleOptions = roles
     .filter((item) => item.department === selectedDepartment)
     .map((item) => ({ id: item.id, label: item.label }));
 
-  // Selected role ka poora object nikal ke uska label check karna hai
   const selectedRole = roles.find((item) => item.id === selectedRoleId);
-  const isContractorManager = selectedRole?.label === "Contractor Manager";
+  const isContractorManager =
+    !isProduction && selectedRole?.label === "Contractor Manager";
 
-  // Jab role "Contractor Manager" ho tabhi Sundry Creditor accounts API se fetch karo
+  // Party: Contractor Manager ya Production
+  const needsParty = isContractorManager || isProduction;
+
+  // 1) Production: Active main process ke processes fetch karo
   useEffect(() => {
-    if (!isContractorManager) {
+    if (!isProduction) {
+      setProcessOptions([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchProcesses = async () => {
+      setLoadingProcesses(true);
+      try {
+        const financialYearId = localStorage.getItem("financialYearId");
+        const response = await Get(
+          "main-process/list",
+          financialYearId ? { financialYearId } : {},
+          false,
+        );
+
+        if (isMounted && response?.data?.success) {
+          const list: any[] = response.data.data || [];
+          setProcessOptions(
+            list
+              .filter((m) => m.status === "Active")
+              .flatMap((m) =>
+                (m.processes || []).map((p: any) => ({
+                  id: String(p.id),
+                  label: p.processName,
+                })),
+              ),
+          );
+        }
+      } catch (error) {
+        if (isMounted) setProcessOptions([]);
+      } finally {
+        if (isMounted) setLoadingProcesses(false);
+      }
+    };
+
+    fetchProcesses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isProduction]);
+
+  // 2) Process select hone par uske Active sub process fetch karo
+  useEffect(() => {
+    if (!isProduction || !selectedProcessId) {
+      setSubProcessOptions([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchSubProcesses = async () => {
+      setLoadingSubProcesses(true);
+      try {
+        const financialYearId = localStorage.getItem("financialYearId");
+        const response = await Get(
+          "sub-process/list",
+          financialYearId ? { financialYearId } : {},
+          false,
+        );
+
+        if (isMounted && response?.data?.success) {
+          const list: any[] = response.data.data || [];
+          setSubProcessOptions(
+            list
+              .filter(
+                (s) =>
+                  String(s.processId) === String(selectedProcessId) &&
+                  s.status === "Active",
+              )
+              .map((s) => ({
+                id: String(s.id),
+                label: s.subProcessName,
+              })),
+          );
+        }
+      } catch (error) {
+        if (isMounted) setSubProcessOptions([]);
+      } finally {
+        if (isMounted) setLoadingSubProcesses(false);
+      }
+    };
+
+    fetchSubProcesses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isProduction, selectedProcessId]);
+
+  // 3) Party list (Contractor Manager ya Production)
+  useEffect(() => {
+    if (!needsParty) {
       setAccountGroupOptions([]);
       return;
     }
@@ -104,6 +222,7 @@ export function EmployeeDrawer({
             list.map((item) => ({
               id: String(item.id),
               label: item.accountName,
+              mobile: item.mobileNo || item.mobileNumber || "",
             })),
           );
         }
@@ -119,7 +238,7 @@ export function EmployeeDrawer({
     return () => {
       isMounted = false;
     };
-  }, [isContractorManager]);
+  }, [needsParty]);
 
   const handleClose = () => {
     reset();
@@ -135,11 +254,13 @@ export function EmployeeDrawer({
       const response = await Get("master/employee/list", {}, false);
       if (response.data?.success) {
         const allEmployees: any[] = response.data.data || [];
-        const mobileTaken = allEmployees.some(
-          (e) =>
-            e.mobileNumber?.trim() === mobileNumber.trim() &&
-            String(e.employeeId) !== String(employee?.id || ""),
-        );
+        const mobileTaken =
+          !!mobileNumber &&
+          allEmployees.some(
+            (e) =>
+              e.mobileNumber?.trim() === mobileNumber.trim() &&
+              String(e.employeeId) !== String(employee?.id || ""),
+          );
         const emailTaken = allEmployees.some(
           (e) =>
             e.email?.trim().toLowerCase() === email.trim().toLowerCase() &&
@@ -156,18 +277,42 @@ export function EmployeeDrawer({
   };
 
   const onSubmit = async (data: EmployeeFormValues) => {
+    // Production me name / mobile party se aate hain, role khali, process jaata hai
+    const party = accountGroupOptions.find(
+      (p) => p.id === String((data as any).accountId),
+    );
+
+    const finalData: EmployeeFormValues = isProduction
+      ? {
+          ...data,
+          roleId: "",
+          employeeName: party?.label || data.employeeName || "",
+          mobileNumber: party?.mobile || "",
+          alternateNumber: "",
+        }
+      : { ...data, processId: "", subProcessId: "" };
+
     const { mobileTaken, emailTaken } = await checkUnique(
-      data.mobileNumber,
-      data.email,
+      finalData.mobileNumber,
+      finalData.email,
     );
 
     let hasError = false;
+
     if (mobileTaken) {
-      setError("mobileNumber", {
-        type: "manual",
-        message:
-          "Mobile number already exists. Please enter a different number.",
-      });
+      if (isProduction) {
+        // mobile field hidden hai, isliye party field pe error dikhao
+        setError("accountId" as any, {
+          type: "manual",
+          message: "This party's mobile number is already used by an employee.",
+        });
+      } else {
+        setError("mobileNumber", {
+          type: "manual",
+          message:
+            "Mobile number already exists. Please enter a different number.",
+        });
+      }
       hasError = true;
     }
     if (emailTaken) {
@@ -186,8 +331,8 @@ export function EmployeeDrawer({
     }
     if (hasError) return;
 
-    const { confirmPassword, ...rest } = data;
-    onSave({ ...rest, id: employee?.id || "" });
+    const { confirmPassword, ...rest } = finalData;
+    onSave({ ...rest, id: employee?.id || "" } as Employee);
     handleClose();
   };
 
@@ -233,6 +378,7 @@ export function EmployeeDrawer({
             className="flex grow flex-col overflow-hidden"
           >
             <div className="hide-scrollbar grow space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+              {/* Department */}
               <Controller
                 control={control}
                 name="department"
@@ -247,6 +393,9 @@ export function EmployeeDrawer({
                     onChange={(item) => {
                       onChange(item.id);
                       setValue("roleId", "");
+                      setValue("processId", "");
+                      setValue("subProcessId", "");
+                      setValue("accountId" as any, "");
                     }}
                     label="Department"
                     placeholder="Select department"
@@ -257,6 +406,7 @@ export function EmployeeDrawer({
                 )}
               />
 
+              {/* Branch */}
               <Controller
                 control={control}
                 name="branch"
@@ -278,37 +428,99 @@ export function EmployeeDrawer({
                 )}
               />
 
-              <Controller
-                control={control}
-                name="roleId"
-                rules={{ required: "Role is required" }}
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Listbox
-                    data={roleOptions}
-                    value={
-                      roleOptions.find((item) => item.id === value) || null
-                    }
-                    onChange={(item) => {
-                      onChange(item.id);
-                      // Role badalne par account group reset karo,
-                      // taaki purana selection carry na ho
-                      setValue("accountGroup", "");
-                    }}
-                    label="Role"
-                    placeholder="Select role"
-                    displayField="label"
-                    error={errors.roleId?.message}
-                    inputProps={{ disabled: !selectedDepartment }}
-                    {...rest}
-                  />
-                )}
-              />
-
-              {isContractorManager && (
+              {/* Role: Production me options = processes, baaki me roles */}
+              {isProduction ? (
                 <Controller
                   control={control}
-                  name="accountId" // 👈 accountGroup se accountId
-                  rules={{ required: "Account group is required" }}
+                  name="processId"
+                  rules={{ required: "Role is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <Combobox
+                      data={processOptions}
+                      value={
+                        processOptions.find((item) => item.id === value) ||
+                        null
+                      }
+                      onChange={(item: Option) => {
+                        onChange(item?.id || "");
+                        // process badalne par sub process reset
+                        setValue("subProcessId", "");
+                      }}
+                      label="Role"
+                      placeholder={
+                        loadingProcesses ? "Loading..." : "Select role"
+                      }
+                      displayField="label"
+                      searchFields={["label"]}
+                      error={errors.processId?.message}
+                      inputProps={{ disabled: loadingProcesses }}
+                    />
+                  )}
+                />
+              ) : (
+                <Controller
+                  control={control}
+                  name="roleId"
+                  rules={{ required: "Role is required" }}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Listbox
+                      data={roleOptions}
+                      value={
+                        roleOptions.find((item) => item.id === value) || null
+                      }
+                      onChange={(item) => {
+                        onChange(item.id);
+                        // Role badalne par party reset karo
+                        setValue("accountGroup", "");
+                      }}
+                      label="Role"
+                      placeholder="Select role"
+                      displayField="label"
+                      error={errors.roleId?.message}
+                      inputProps={{ disabled: !selectedDepartment }}
+                      {...rest}
+                    />
+                  )}
+                />
+              )}
+
+              {/* Sub Process: sirf jab selected process ke sub process bane ho */}
+              {isProduction &&
+                selectedProcessId &&
+                (loadingSubProcesses || subProcessOptions.length > 0) && (
+                  <Controller
+                    control={control}
+                    name="subProcessId"
+                    rules={{ required: "Sub Process is required" }}
+                    render={({ field: { value, onChange } }) => (
+                      <Combobox
+                        data={subProcessOptions}
+                        value={
+                          subProcessOptions.find((item) => item.id === value) ||
+                          null
+                        }
+                        onChange={(item: Option) => onChange(item?.id || "")}
+                        label="Sub Process"
+                        placeholder={
+                          loadingSubProcesses
+                            ? "Loading..."
+                            : "Select sub process"
+                        }
+                        displayField="label"
+                        searchFields={["label"]}
+                        error={errors.subProcessId?.message}
+                        inputProps={{ disabled: loadingSubProcesses }}
+                      />
+                    )}
+                  />
+                )}
+
+              {/* Select Party: Contractor Manager ya Production */}
+              {needsParty && (
+                <Controller
+                  control={control}
+                  name="accountId"
+                  rules={{ required: "Party is required" }}
                   render={({ field: { value, onChange } }) => (
                     <Combobox
                       data={accountGroupOptions}
@@ -316,56 +528,62 @@ export function EmployeeDrawer({
                         accountGroupOptions.find((item) => item.id === value) ||
                         null
                       }
-                      onChange={(item: AccountGroupOption) => onChange(item.id)}
+                      onChange={(item: AccountGroupOption) =>
+                        onChange(item?.id || "")
+                      }
                       label="Select Party"
                       placeholder={
-                        loadingAccountGroups
-                          ? "Loading..."
-                          : "Select account group"
+                        loadingAccountGroups ? "Loading..." : "Select party"
                       }
                       displayField="label"
-                      error={errors.accountId?.message} // 👈
+                      searchFields={["label"]}
+                      error={errors.accountId?.message}
                       inputProps={{ disabled: loadingAccountGroups }}
                     />
                   )}
                 />
               )}
 
-              <Input
-                {...register("employeeName", {
-                  required: "Employee name is required",
-                })}
-                label="Employee Name"
-                placeholder="Enter employee name"
-                error={errors.employeeName?.message}
-              />
+              {/* Production me Employee Name / Mobile / Alternate hide */}
+              {!isProduction && (
+                <>
+                  <Input
+                    {...register("employeeName", {
+                      required: "Employee name is required",
+                    })}
+                    label="Employee Name"
+                    placeholder="Enter employee name"
+                    error={errors.employeeName?.message}
+                  />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  {...register("mobileNumber", {
-                    required: "Mobile number is required",
-                    pattern: {
-                      value: /^[0-9]{10}$/,
-                      message: "Mobile number must be 10 digits",
-                    },
-                    onChange: () => clearErrors("mobileNumber"),
-                  })}
-                  label="Mobile Number"
-                  placeholder="Enter mobile number"
-                  error={errors.mobileNumber?.message}
-                />
-                <Input
-                  {...register("alternateNumber", {
-                    pattern: {
-                      value: /^[0-9]{10}$/,
-                      message: "Alternate number must be 10 digits",
-                    },
-                  })}
-                  label="Alternate Number"
-                  placeholder="Enter alternate number"
-                  error={errors.alternateNumber?.message}
-                />
-              </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      {...register("mobileNumber", {
+                        required: "Mobile number is required",
+                        pattern: {
+                          value: /^[0-9]{10}$/,
+                          message: "Mobile number must be 10 digits",
+                        },
+                        onChange: () => clearErrors("mobileNumber"),
+                      })}
+                      label="Mobile Number"
+                      placeholder="Enter mobile number"
+                      error={errors.mobileNumber?.message}
+                    />
+                    <Input
+                      {...register("alternateNumber", {
+                        pattern: {
+                          value: /^[0-9]{10}$/,
+                          message: "Alternate number must be 10 digits",
+                        },
+                      })}
+                      label="Alternate Number"
+                      placeholder="Enter alternate number"
+                      error={errors.alternateNumber?.message}
+                    />
+                  </div>
+                </>
+              )}
 
               <Input
                 {...register("email", {
