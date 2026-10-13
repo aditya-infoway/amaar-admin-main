@@ -1034,6 +1034,31 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
+                         {
+              path: "production",
+              children: [
+                {
+                  index: true,
+                  element: <Navigate to="/settings/production/main-process" replace />,
+                },
+                {
+                  path: "main-process",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/settings/sections/prodcutionsettings")
+                    ).default,
+                  }),
+                },
+                {
+                  path: "sub-process",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/settings/sections/prodcutionsettings/sub-process")
+                    ).default,
+                  }),
+                },
+              ],
+            },
           ],
         },
       ],
