@@ -36,7 +36,9 @@ export default function PurchaseRegisterPage() {
 
   // ---- Details drawer state ----
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(
+    null,
+  );
 
   const fetchPurchaseList = async () => {
     try {
@@ -46,10 +48,15 @@ export default function PurchaseRegisterPage() {
       if (res.data?.success) {
         setData(res.data.data || []);
       } else {
-        toasterrormsg(res.data?.message || "Failed to load purchase register list.");
+        toasterrormsg(
+          res.data?.message || "Failed to load purchase register list.",
+        );
       }
     } catch (err: any) {
-      toasterrormsg(err?.response?.data?.message || "Failed to load purchase register list.");
+      toasterrormsg(
+        err?.response?.data?.message ||
+          "Failed to load purchase register list.",
+      );
     } finally {
       setLoading(false);
     }
@@ -88,10 +95,6 @@ export default function PurchaseRegisterPage() {
     });
   }, [data, filterSupplier, filterLocation, filterStatus]);
 
-  const removeLocally = (ids: Set<string>) => {
-    setData((prev) => prev.filter((item) => !ids.has(item.id)));
-  };
-
   const handleViewRow = (row: PurchaseRegister) => {
     setSelectedPurchaseId(row.id);
     setDetailsOpen(true);
@@ -104,15 +107,7 @@ export default function PurchaseRegisterPage() {
     enableRowSelection: true,
     getRowId: (row) => row.id,
     meta: {
-      openEditDrawer: (row: PurchaseRegister) =>
-        navigate(`/purchase-master/purchase-register/edit/${row.id}`),
-      viewRow: handleViewRow, // 👈 add — RowActions component isko call kar sakti hai "View" ke liye
-      deleteRow: (row) => removeLocally(new Set([row.original.id])),
-      deleteRows: (rows) => {
-        const ids = new Set(rows.map((r) => r.original.id));
-        removeLocally(ids);
-        setRowSelection({});
-      },
+      viewRow: handleViewRow,
     },
     filterFns: { fuzzy: fuzzyFilter },
     globalFilterFn: fuzzyFilter,

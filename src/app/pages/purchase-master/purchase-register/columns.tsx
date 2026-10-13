@@ -4,18 +4,21 @@ import {
   SelectCell,
   SelectHeader,
 } from "@/components/shared/table/SelectCheckbox";
-import { createRowActions } from "../shared/createRowActions";
 import { TextCell } from "../shared/tableCells";
 import { PurchaseRegister } from "./data";
 import { ExportColumn } from "../shared/export";
-const RowActions = createRowActions<PurchaseRegister>("purchase register");
+import { EyeIcon } from "@heroicons/react/24/outline";
+import { Button } from "@/components/ui";
 
 export const columns: ColumnDef<PurchaseRegister>[] = [
   {
-    id: "select",
-    header: SelectHeader,
-    cell: SelectCell,
-    enableSorting: false,
+    id: "srNo",
+    header: "Sr. No.",
+    cell: ({ row, table }) => {
+      const pagination = table.getState().pagination;
+
+      return pagination.pageIndex * pagination.pageSize + row.index + 1;
+    },
   },
   {
     id: "purchaseDate",
@@ -101,12 +104,30 @@ export const columns: ColumnDef<PurchaseRegister>[] = [
     header: "Status",
     cell: TextCell,
   },
-   { id: "createdBy", accessorKey: "createdBy", header: "Created By", cell: TextCell },
-  { id: "createdType", accessorKey: "createdType", header: "Created Type", cell: TextCell }, 
+  {
+    id: "createdBy",
+    accessorKey: "createdBy",
+    header: "Created By",
+    cell: TextCell,
+  },
+  {
+    id: "createdType",
+    accessorKey: "createdType",
+    header: "Created Type",
+    cell: TextCell,
+  },
   {
     id: "actions",
     header: "Actions",
-    cell: RowActions,
+    cell: ({ row, table }) => (
+      <Button
+        isIcon
+        className="size-8 rounded-full"
+        onClick={() => table.options.meta?.viewRow?.(row.original)}
+      >
+        <EyeIcon className="size-4.5 stroke-1" />
+      </Button>
+    ),
     enableSorting: false,
   },
 ];
