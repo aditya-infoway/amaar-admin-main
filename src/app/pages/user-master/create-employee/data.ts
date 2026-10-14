@@ -3,12 +3,14 @@ export interface Employee {
   department: string;
   branch: string;
   roleId: string;
+  processId?: number | string | null;
+  subProcessId?: number | string | null;
+  accountId?: number | string | null;
   employeeName: string;
   mobileNumber: string;
   alternateNumber: string;
   email: string;
   password: string;
-   accountId?: number | string | null; 
   createdBy: string;
   createdType: string;
   createdAt: string;
@@ -19,12 +21,14 @@ export const emptyEmployee = (): Employee => ({
   department: "",
   branch: "main-branch",
   roleId: "",
+  processId: "",
+  subProcessId: "",
+  accountId: "",
   employeeName: "",
   mobileNumber: "",
   alternateNumber: "",
   email: "",
   password: "",
-  accountId :"",
   createdBy: "",
   createdType: "",
   createdAt: new Date().toISOString(),
@@ -36,13 +40,16 @@ export function mapApiEmployeeToEmployee(apiEmployee: any): Employee {
     id: String(apiEmployee.employeeId),
     department: apiEmployee.department ?? "",
     branch: apiEmployee.branch ?? "main-branch",
-    roleId: String(apiEmployee.roleId ?? ""),
+    // Production me roleId 0 hota hai, use khali rakho
+    roleId: apiEmployee.roleId ? String(apiEmployee.roleId) : "",
+    processId: apiEmployee.processId ?? "",
+    subProcessId: apiEmployee.subProcessId ?? "",
     employeeName: apiEmployee.employeeName ?? "",
     mobileNumber: apiEmployee.mobileNumber ?? "",
     alternateNumber: apiEmployee.alternateNumber ?? "",
     email: apiEmployee.email ?? "",
     password: "",
-    accountId:apiEmployee.accountId ??"",
+    accountId: apiEmployee.accountId ?? "",
     createdBy: apiEmployee.createdBy ?? "",
     createdType: apiEmployee.createdType ?? "",
     createdAt: apiEmployee.created ?? "",
