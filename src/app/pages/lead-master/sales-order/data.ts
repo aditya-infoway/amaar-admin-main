@@ -15,6 +15,7 @@ export const emptySalesOrder = (): SalesOrder => ({
   qty: 1,
   unitPrice: 0,
   totalAmount: 0,
+  expectedDate: "",
   mode: "asIs",
   aadharNumber: "",
   aadharImage: "",
