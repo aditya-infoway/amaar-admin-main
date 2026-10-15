@@ -9,6 +9,7 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 
 import { Button, Input } from "@/components/ui";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
+import { DatePicker } from "@/components/shared/form/Datepicker";
 import { Get, Post, Put, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 import type { SalesOrder } from "../shared/types";
 
@@ -49,6 +50,29 @@ interface PartyOption {
   cityName?: string;
 }
 
+// Converts any ISO / date string to "YYYY-MM-DD" for <input type="date" />
+const toDateInput = (value: any): string => {
+  if (!value) return "";
+  const str = String(value);
+  // ISO string like 2026-10-20T00:00:00.000Z -> 2026-10-20
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+// Converts a Date (from DatePicker) to "YYYY-MM-DD" for the API
+const formatDateForApi = (date: Date): string => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 export function SalesOrderDrawer({
   isOpen,
   close,
@@ -72,6 +96,9 @@ export function SalesOrderDrawer({
   // ---- Select Party — replaces the earlier "Details Mode" (As Its / Manual) toggle ----
   const [partyOptions, setPartyOptions] = useState<PartyOption[]>([]);
   const [selectedParty, setSelectedParty] = useState<PartyOption[]>([]);
+
+  // ---- Expected Date (sits in the same row as Select Party) ----
+  const [expectedDate, setExpectedDate] = useState("");
 
   // ---- TOP BLOCK: read-only snapshot of the selected quotation ----
   // Set ONLY when a quotation is selected (or on edit-prefill).
@@ -268,6 +295,7 @@ export function SalesOrderDrawer({
 
     fetchUsedQuotations();
   }, [isOpen, salesOrder?.id]);
+
   const availableQuotationOptions = useMemo(() => {
     if (isEditing) {
       // Lock to the quotation this sales order was created for
@@ -331,45 +359,47 @@ export function SalesOrderDrawer({
   }, [selectedParty]);
 
   // Prefill on edit / reset on add
- useEffect(() => {
-  if (!isOpen) return;
+  useEffect(() => {
+    if (!isOpen) return;
 
-  queueMicrotask(() => {
-    if (salesOrder && salesOrder.id) {
-      setSoNo((salesOrder as any).soNo || "");
-      const q = quotationOptions.find(
-        (item) => String(item.id) === String((salesOrder as any).quotationId),
-      );
-      setSelectedQuotation(q ? [q] : []);
+    queueMicrotask(() => {
+      if (salesOrder && salesOrder.id) {
+        setSoNo((salesOrder as any).soNo || "");
+        const q = quotationOptions.find(
+          (item) => String(item.id) === String((salesOrder as any).quotationId),
+        );
+        setSelectedQuotation(q ? [q] : []);
 
-      const p = partyOptions.find(
-        (item) => String(item.id) === String((salesOrder as any).accountId),
-      );
-      setSelectedParty(p ? [p] : []);
+        const p = partyOptions.find(
+          (item) => String(item.id) === String((salesOrder as any).accountId),
+        );
+        setSelectedParty(p ? [p] : []);
 
-      setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
-      setCity(q?.city || (salesOrder as any).city || "");
-      setCustomerName(
-        q?.customerName || (salesOrder as any).customerName || "",
-      );
-      setMobile(q?.mobile || (salesOrder as any).mobile || "");
-      setEmail(q?.email || (salesOrder as any).email || "");
-      setAddress(q?.address || (salesOrder as any).address || "");
-      setModel(q?.model || (salesOrder as any).model || "");
-      setRemark(q?.remark || (salesOrder as any).remark || "");
+        setExpectedDate(toDateInput((salesOrder as any).expectedDate));
 
-      setDetailCustomerName((salesOrder as any).customerName || "");
-      setDetailMobile((salesOrder as any).mobile || "");
-      setDetailEmail((salesOrder as any).email || "");
-      setDetailAddress((salesOrder as any).address || "");
-      setDetailCity((salesOrder as any).city || "");
+        setLeadCode(q?.leadCode || (salesOrder as any).leadCode || "");
+        setCity(q?.city || (salesOrder as any).city || "");
+        setCustomerName(
+          q?.customerName || (salesOrder as any).customerName || "",
+        );
+        setMobile(q?.mobile || (salesOrder as any).mobile || "");
+        setEmail(q?.email || (salesOrder as any).email || "");
+        setAddress(q?.address || (salesOrder as any).address || "");
+        setModel(q?.model || (salesOrder as any).model || "");
+        setRemark(q?.remark || (salesOrder as any).remark || "");
 
-      setQty(String((salesOrder as any).qty ?? "1"));
-    }
+        setDetailCustomerName((salesOrder as any).customerName || "");
+        setDetailMobile((salesOrder as any).mobile || "");
+        setDetailEmail((salesOrder as any).email || "");
+        setDetailAddress((salesOrder as any).address || "");
+        setDetailCity((salesOrder as any).city || "");
 
-    setErrors({});
-  });
-}, [salesOrder, quotationOptions, partyOptions]); // isOpen removed from here on purpose, see below
+        setQty(String((salesOrder as any).qty ?? "1"));
+      }
+
+      setErrors({});
+    });
+  }, [salesOrder, quotationOptions, partyOptions]); // isOpen removed from here on purpose, see below
 
   // Reset form for "Add" mode — runs once per drawer open, not on every list change
   useEffect(() => {
@@ -380,6 +410,7 @@ export function SalesOrderDrawer({
       setSoNo("");
       setSelectedQuotation([]);
       setSelectedParty([]);
+      setExpectedDate("");
       setQty("1");
       setErrors({});
     });
@@ -422,6 +453,9 @@ export function SalesOrderDrawer({
 
     if (!selectedQuotation?.[0]) nextErrors.quotation = "Select a Quotation";
 
+    // Uncomment if Expected Date should be mandatory:
+    // if (!expectedDate) nextErrors.expectedDate = "Select Expected Date";
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -438,17 +472,18 @@ export function SalesOrderDrawer({
       return;
     }
 
-  const payload = {
-  financialYearId: Number(financialYearId),
-  quotationId: q?.id ?? "",
-  leadId: q?.leadId ?? "",
-  accountId: p?.id ? Number(p.id) : null,
-  model: model || "",
-  remark: remark || "",
-  qty,
-  unitPrice: quotationAmount,
-  totalAmount,
-};
+    const payload = {
+      financialYearId: Number(financialYearId),
+      quotationId: q?.id ?? "",
+      leadId: q?.leadId ?? "",
+      accountId: p?.id ? Number(p.id) : null,
+      expectedDate: expectedDate || null,
+      model: model || "",
+      remark: remark || "",
+      qty,
+      unitPrice: quotationAmount,
+      totalAmount,
+    };
 
     try {
       const response =
@@ -627,27 +662,44 @@ export function SalesOrderDrawer({
                 </div>
               </div>
 
-              {/* Select Party — only Sundry Debtors / Customer group accounts.
-                  Replaces the earlier "Details Mode" (As Its / Manual) toggle:
-                  picking a party prefills the editable block below. */}
-              <div>
-                <Combobox
-                  data={partyOptions}
-                  displayField="label"
-                  value={selectedParty[0] ?? null}
-                  onChange={(val: any) =>
-                    setSelectedParty(
-                      val ? (Array.isArray(val) ? val : [val]) : [],
-                    )
-                  }
-                  placeholder="Select Party"
-                  label="Select Party"
-                  searchFields={["label", "accountName"]}
-                  disabled={readOnly}
-                />
+              {/* Select Party + Expected Date (same row).
+                  Party: only Sundry Debtors / Customer group accounts. */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <Combobox
+                    data={partyOptions}
+                    displayField="label"
+                    value={selectedParty[0] ?? null}
+                    onChange={(val: any) =>
+                      setSelectedParty(
+                        val ? (Array.isArray(val) ? val : [val]) : [],
+                      )
+                    }
+                    placeholder="Select Party"
+                    label="Select Party"
+                    searchFields={["label", "accountName"]}
+                    disabled={readOnly}
+                  />
+                </div>
+
+                <div>
+                  <DatePicker
+                    label="Expected Date"
+                    value={expectedDate}
+                    disabled={readOnly}
+                    onChange={(dates: Date[]) => {
+                      const picked = dates?.[0];
+                      setExpectedDate(picked ? formatDateForApi(picked) : "");
+                      if (errors.expectedDate) {
+                        setErrors((prev) => ({ ...prev, expectedDate: "" }));
+                      }
+                    }}
+                    placeholder="Choose date..."
+                    error={errors.expectedDate}
+                  />
+                </div>
               </div>
 
-           
               <div className="dark:border-dark-500 border-t border-dashed border-gray-300 pt-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Input

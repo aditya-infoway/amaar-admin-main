@@ -3,7 +3,6 @@ import { Menu, MenuButton, MenuItem, MenuItems, Switch } from "@headlessui/react
 import {
   EllipsisHorizontalIcon,
   EyeIcon,
-  PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import {
@@ -43,17 +42,6 @@ function RowActions({ row, table }: { row: any; table: any }) {
           >
             <EyeIcon className="size-4.5" />
             View
-          </button>
-        </MenuItem>
-
-        <MenuItem>
-          <button
-            type="button"
-            className={itemClass}
-            onClick={() => meta?.openEditDrawer?.(row.original)}
-          >
-            <PencilIcon className="size-4.5" />
-            Edit
           </button>
         </MenuItem>
 

@@ -12,7 +12,7 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Button, Input } from "@/components/ui";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 
-import { Get, Post, Put, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
+import { Get, Post, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 
 import type { WorkOrder } from "../shared/types";
 
@@ -42,17 +42,6 @@ interface SalesOrderOption {
   label: string;
 }
 
-interface StageEmployee {
-  id: number;
-  name: string;
-}
-
-interface StageField {
-  key: string;
-  label: string;
-  employees: StageEmployee[];
-}
-
 export default function WorkOrderDrawer({
   isOpen,
   close,
@@ -70,15 +59,10 @@ export default function WorkOrderDrawer({
   const [usedSalesOrderIds, setUsedSalesOrderIds] = useState<Set<string>>(
     new Set(),
   );
-  const [stageFields, setStageFields] = useState<StageField[]>([]);
-  const [stageSelection, setStageSelection] = useState<
-    Record<string, StageEmployee | null>
-  >({});
   const [loading, setLoading] = useState(false);
 
   const [salesOrdersLoaded, setSalesOrdersLoaded] = useState(false);
-  const [stageFieldsLoaded, setStageFieldsLoaded] = useState(false);
-  const dataReady = salesOrdersLoaded && stageFieldsLoaded;
+  const dataReady = salesOrdersLoaded;
 
   /*
    * Fetch Sales Orders
@@ -269,80 +253,11 @@ export default function WorkOrderDrawer({
   }, [selectedSalesOrder]);
 
   /*
-   * Fetch employees for each production stage
-   */
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const fetchStageEmployees = async () => {
-      try {
-        const response = await Get("workorder/stage-employees", {}, false);
-
-        if (response?.data?.success || response?.data?.status === 200) {
-          setStageFields(response?.data?.data || []);
-        }
-      } catch (error) {
-        console.error("Stage employees error:", error);
-        toasterrormsg("Unable to load stage employees.");
-      } finally {
-        setStageFieldsLoaded(true);
-      }
-    };
-
-    fetchStageEmployees();
-  }, [isOpen]);
-
-  /*
-   * Stage selection prefill (edit/view) or reset (create)
-   */
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (!workOrder?.id) {
-      setStageSelection({});
-      return;
-    }
-
-    const next: Record<string, StageEmployee | null> = {};
-    (workOrder.stages || []).forEach((s) => {
-      const field = stageFields.find((f) => f.key === s.stage);
-      next[s.stage] = field?.employees.find(
-        (e) => String(e.id) === String(s.employeeId),
-      ) || {
-        id: Number(s.employeeId),
-        name: s.employeeName || "",
-      };
-    });
-    setStageSelection(next);
-  }, [isOpen, workOrder, stageFields]);
-
-  const allStagesSelected =
-    stageFields.length > 0 && stageFields.every((f) => stageSelection[f.key]);
-
-  const lockedStages = useMemo(
-    () =>
-      new Set(
-        (workOrder?.stages || [])
-          .filter((s) => s.status && s.status !== "Pending")
-          .map((s) => s.stage),
-      ),
-    [workOrder],
-  );
-
-  /*
    * Submit
    */
   const handleSubmit = async () => {
     if (!selectedSalesOrder) {
       toasterrormsg("Please select a Sales Order.");
-      return;
-    }
-
-    const missing = stageFields.find((f) => !stageSelection[f.key]);
-    if (stageFields.length === 0 || missing) {
-      toasterrormsg(
-        `Please select an employee for ${missing?.label || "all stages"}.`,
-      );
       return;
     }
 
@@ -355,10 +270,6 @@ export default function WorkOrderDrawer({
         toasterrormsg("Financial Year not found.");
         return;
       }
-
-      const stagesPayload = Object.fromEntries(
-        stageFields.map((f) => [f.key, stageSelection[f.key]?.id]),
-      );
 
       const payload = {
         financialYearId,
@@ -386,24 +297,13 @@ export default function WorkOrderDrawer({
         gst: amount.gst,
 
         grandTotal: amount.grandTotal,
-        stages: stagesPayload,
       };
 
-      const response =
-        isEditing && workOrder?.id
-          ? await Put(
-              `workorder/${workOrder.id}/stages`,
-              { stages: stagesPayload },
-              false,
-            )
-          : await Post("workorder/create", payload, false);
+      const response = await Post("workorder/create", payload, false);
 
       if (response?.data?.success || response?.data?.status === 200) {
         toastsuccessmsg(
-          response?.data?.message ||
-            (isEditing
-              ? "Work Order updated successfully."
-              : "Work Order generated successfully."),
+          response?.data?.message || "Work Order generated successfully.",
         );
 
         onSave();
@@ -581,32 +481,6 @@ export default function WorkOrderDrawer({
                   />
                 </div>
               </div>
-
-              {/* PRODUCTION STAGES */}
-              <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
-                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-                  {stageFields.map((field) => (
-                    <Combobox
-                      key={field.key}
-                      data={field.employees}
-                      displayField="name"
-                      value={stageSelection[field.key] ?? null}
-                      onChange={(value: any) =>
-                        setStageSelection((prev) => ({
-                          ...prev,
-                          [field.key]: Array.isArray(value)
-                            ? value[0] || null
-                            : value || null,
-                        }))
-                      }
-                      placeholder={`Select ${field.label} employee`}
-                      label={field.label}
-                      searchFields={["name"]}
-                      disabled={readOnly || lockedStages.has(field.key)}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Footer */}
@@ -615,25 +489,15 @@ export default function WorkOrderDrawer({
                 Cancel
               </Button>
 
-              {!readOnly && (
+              {/* Edit mode: nothing editable now that stages are removed */}
+              {!readOnly && !isEditing && (
                 <Button
                   type="button"
                   color="primary"
                   onClick={handleSubmit}
-                  disabled={
-                    loading ||
-                    !dataReady ||
-                    !selectedSalesOrder ||
-                    !allStagesSelected
-                  }
+                  disabled={loading || !dataReady || !selectedSalesOrder}
                 >
-                  {loading
-                    ? isEditing
-                      ? "Updating..."
-                      : "Generating..."
-                    : isEditing
-                      ? "Update"
-                      : "Generate To Work Order"}
+                  {loading ? "Generating..." : "Generate To Work Order"}
                 </Button>
               )}
             </div>

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogPanel,
@@ -14,7 +14,13 @@ import {
 
 import { Button, Input } from "@/components/ui";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
-import { Post, Put, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
+import {
+  Get,
+  Post,
+  Put,
+  toasterrormsg,
+  toastsuccessmsg,
+} from "@/ApiHelper";
 import { SERIAL_OPTIONS, type ItemCategory, type ProcessRow } from "./data";
 
 type Mode = "add" | "edit" | "view";
@@ -32,6 +38,17 @@ interface Option {
   label: string;
 }
 
+// Static process names (combobox options)
+const PROCESS_NAME_OPTIONS: Option[] = [
+  "Material Cutting",
+  "Welding",
+  "Blasting",
+  "Paint",
+  "QC",
+].map((name) => ({ id: name, label: name }));
+
+const formatCode = (n: number) => String(n).padStart(3, "0");
+
 export function ItemCategoryDrawer({
   isOpen,
   close,
@@ -45,18 +62,55 @@ export function ItemCategoryDrawer({
   const [mainProcess, setMainProcess] = useState("");
   const [processes, setProcesses] = useState<ProcessRow[]>([]);
 
-  // row-level draft (code + name + serial -> check button)
-  const [processCode, setProcessCode] = useState("");
+  // row-level draft (name + serial -> check button)
   const [processName, setProcessName] = useState("");
   const [selectedSerial, setSelectedSerial] = useState<Option[]>([]);
+
+  // backend se aaya hua next code number (company ka agla number)
+  const [nextCodeBase, setNextCodeBase] = useState(1);
 
   // table ki kaunsi row edit ho rahi hai (null = nayi row add mode)
   const [editIndex, setEditIndex] = useState<number | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Combobox ke liye selected option.
+  const selectedProcessName: Option | null = processName
+    ? (PROCESS_NAME_OPTIONS.find((o) => o.label === processName) ?? {
+        id: processName,
+        label: processName,
+      })
+    : null;
+
+  // Nayi rows (jinke paas id nahi) ko serial order me 001, 002... preview code.
+  // Backend bhi save par isi order me code assign karta hai.
+  const displayProcesses = useMemo(() => {
+    let counter = nextCodeBase;
+    return processes.map((p) =>
+      p.id ? p : { ...p, processCode: formatCode(counter++) },
+    );
+  }, [processes, nextCodeBase]);
+
+  // Input me dikhne wala code
+  const draftCode =
+    editIndex !== null
+      ? (displayProcesses[editIndex]?.processCode ?? "")
+      : formatCode(nextCodeBase + processes.filter((p) => !p.id).length);
+
+  const fetchNextCode = async () => {
+    try {
+      const response = await Get("main-process/next-code");
+      const res = response?.data;
+      const code = res?.data?.nextCode ?? res?.nextCode;
+      const n = parseInt(code, 10);
+      setNextCodeBase(Number.isNaN(n) ? 1 : n);
+    } catch (error) {
+      console.error("Next process code fetch error:", error);
+      setNextCodeBase(1);
+    }
+  };
+
   const resetDraft = () => {
-    setProcessCode("");
     setProcessName("");
     setSelectedSerial([]);
     setEditIndex(null);
@@ -75,6 +129,8 @@ export function ItemCategoryDrawer({
     }
     resetDraft();
     setErrors({});
+
+    if (!isView) fetchNextCode();
   }, [isOpen, itemCategory]);
 
   // table row ka edit icon
@@ -82,7 +138,6 @@ export function ItemCategoryDrawer({
     const row = processes[index];
     if (!row) return;
 
-    setProcessCode(row.processCode);
     setProcessName(row.processName);
     setSelectedSerial([
       { id: String(row.serialNo), label: String(row.serialNo) },
@@ -99,21 +154,19 @@ export function ItemCategoryDrawer({
   // ✓ button — add ya update (editIndex ke hisaab se)
   const handleAddProcess = () => {
     const next: Record<string, string> = {};
-    const code = processCode.trim();
     const name = processName.trim();
 
-    if (!code) next.processCode = "Enter Process Code";
-    if (!name) next.processName = "Enter Process Name";
+    if (!name) next.processName = "Select Process Name";
     if (!selectedSerial[0]) next.serialNo = "Select Serial No";
 
     // edit me apni row ko chhod kar baaki rows se compare
     const others = processes.filter((_, i) => i !== editIndex);
 
     if (
-      code &&
-      others.some((p) => p.processCode.toLowerCase() === code.toLowerCase())
+      name &&
+      others.some((p) => p.processName.toLowerCase() === name.toLowerCase())
     ) {
-      next.processCode = "Process Code already added";
+      next.processName = "Process Name already added";
     }
 
     if (selectedSerial[0]) {
@@ -138,19 +191,18 @@ export function ItemCategoryDrawer({
     const serialNo = Number(selectedSerial[0].id);
 
     if (editIndex !== null) {
-      // same row update (id preserve hota hai)
+      // same row update (id aur code preserve hota hai)
       setProcesses((prev) =>
         prev
           .map((p, i) =>
-            i === editIndex
-              ? { ...p, processCode: code, processName: name, serialNo }
-              : p,
+            i === editIndex ? { ...p, processName: name, serialNo } : p,
           )
           .sort((a, b) => a.serialNo - b.serialNo),
       );
     } else {
+      // nayi row: code backend save par final karta hai
       setProcesses((prev) =>
-        [...prev, { processCode: code, processName: name, serialNo }].sort(
+        [...prev, { processCode: "", processName: name, serialNo }].sort(
           (a, b) => a.serialNo - b.serialNo,
         ),
       );
@@ -158,7 +210,7 @@ export function ItemCategoryDrawer({
 
     resetDraft();
     setErrors((prev) => {
-      const { processCode, processName, serialNo, processes: _p, ...rest } = prev;
+      const { processName, serialNo, processes: _p, ...rest } = prev;
       return rest;
     });
   };
@@ -179,7 +231,7 @@ export function ItemCategoryDrawer({
 
     if (editIndex !== null) {
       next.processes = "Click the ✓ button to update the process first";
-    } else if (processCode.trim() || processName.trim() || selectedSerial[0]) {
+    } else if (processName.trim() || selectedSerial[0]) {
       next.processes = "Click the ✓ button to add the process to the table";
     } else if (processes.length === 0) {
       next.processes = "Add at least one process";
@@ -203,9 +255,9 @@ export function ItemCategoryDrawer({
     const payload = {
       financialYearId: Number(financialYearId),
       mainProcess: mainProcess.trim(),
+      // processCode nahi bhejna, backend generate karta hai
       processes: processes.map((p) => ({
         ...(p.id ? { id: p.id } : {}),
-        processCode: p.processCode,
         processName: p.processName,
         serialNo: p.serialNo,
       })),
@@ -302,20 +354,36 @@ export function ItemCategoryDrawer({
               {/* Process row: code | name | serial | ✓ (| ✗ edit cancel) */}
               {!isView && (
                 <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[1fr_1fr_120px_auto]">
+                  {/* Process Code — backend se auto, read-only */}
                   <Input
                     label="Process Code"
                     placeholder="Code"
-                    value={processCode}
-                    error={errors.processCode}
-                    onChange={(e: any) => setProcessCode(e.target.value)}
+                    value={draftCode}
+                    disabled
+                    readOnly
                   />
-                  <Input
-                    label="Process Name"
-                    placeholder="Name"
-                    value={processName}
-                    error={errors.processName}
-                    onChange={(e: any) => setProcessName(e.target.value)}
-                  />
+
+                  {/* Process Name — static combobox */}
+                  <div>
+                    <Combobox
+                      data={PROCESS_NAME_OPTIONS}
+                      displayField="label"
+                      value={selectedProcessName}
+                      onChange={(val: any) => {
+                        const picked = Array.isArray(val) ? val[0] : val;
+                        setProcessName(picked?.label ?? "");
+                      }}
+                      placeholder="Select process"
+                      label="Process Name"
+                      searchFields={["label"]}
+                    />
+                    {errors.processName && (
+                      <p className="text-error mt-1 text-xs">
+                        {errors.processName}
+                      </p>
+                    )}
+                  </div>
+
                   <div>
                     <Combobox
                       data={SERIAL_OPTIONS}
@@ -376,7 +444,7 @@ export function ItemCategoryDrawer({
                       </tr>
                     </thead>
                     <tbody>
-                      {processes.length === 0 ? (
+                      {displayProcesses.length === 0 ? (
                         <tr>
                           <td
                             colSpan={isView ? 4 : 5}
@@ -386,9 +454,9 @@ export function ItemCategoryDrawer({
                           </td>
                         </tr>
                       ) : (
-                        processes.map((p, i) => (
+                        displayProcesses.map((p, i) => (
                           <tr
-                            key={`${p.processCode}-${i}`}
+                            key={`${p.id ?? "new"}-${p.processName}-${i}`}
                             className={`dark:border-dark-500 border-t border-gray-200 ${
                               editIndex === i ? "bg-primary-600/10" : ""
                             }`}
