@@ -7,7 +7,7 @@ import {
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { useForm } from "react-hook-form";
 import { Controller } from "react-hook-form";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
@@ -33,6 +33,12 @@ interface Option {
   label: string;
 }
 
+interface SubProcessRow {
+  processId: string;
+  id: string;
+  label: string;
+}
+
 interface EmployeeFormValues extends Employee {
   confirmPassword: string;
   accountGroup?: string;
@@ -48,6 +54,22 @@ interface EmployeeDrawerProps {
   onSave: (employee: Employee) => void;
 }
 
+// backend number bhejta hai, combobox string id se match karta hai
+const toStr = (v: any) =>
+  v === undefined || v === null || v === 0 || v === "0" ? "" : String(v);
+
+// ---- Simple module-level cache: drawer dobara kholne par turant options dikhenge ----
+const CACHE_TTL = 60 * 1000; // 60 sec ke baad background refresh
+
+const cache: {
+  processes?: { at: number; data: Option[] };
+  parties?: { at: number; data: AccountGroupOption[] };
+  subProcesses?: { at: number; data: SubProcessRow[] };
+} = {};
+
+const isFresh = (entry?: { at: number }) =>
+  !!entry && Date.now() - entry.at < CACHE_TTL;
+
 export function EmployeeDrawer({
   isOpen,
   close,
@@ -61,16 +83,34 @@ export function EmployeeDrawer({
   // Party (Sundry Creditor) list
   const [accountGroupOptions, setAccountGroupOptions] = useState<
     AccountGroupOption[]
-  >([]);
+  >(cache.parties?.data || []);
   const [loadingAccountGroups, setLoadingAccountGroups] = useState(false);
 
   // Production: process list (Active main process ke processes)
-  const [processOptions, setProcessOptions] = useState<Option[]>([]);
+  const [processOptions, setProcessOptions] = useState<Option[]>(
+    cache.processes?.data || [],
+  );
   const [loadingProcesses, setLoadingProcesses] = useState(false);
 
-  // Production: selected process ke sub process
-  const [subProcessOptions, setSubProcessOptions] = useState<Option[]>([]);
+  // Production: saare Active sub process (selected process ke hisaab se client-side filter)
+  const [allSubProcesses, setAllSubProcesses] = useState<SubProcessRow[]>(
+    cache.subProcesses?.data || [],
+  );
   const [loadingSubProcesses, setLoadingSubProcesses] = useState(false);
+
+  // Edit prefill: ids ko string me normalize karo
+  const formValues = useMemo(() => {
+    if (!employee) return undefined;
+    const e: any = employee;
+    return {
+      ...employee,
+      roleId: toStr(e.roleId),
+      processId: toStr(e.processId),
+      subProcessId: toStr(e.subProcessId),
+      accountId: toStr(e.accountId),
+      confirmPassword: "",
+    } as EmployeeFormValues;
+  }, [employee]);
 
   const {
     register,
@@ -83,7 +123,7 @@ export function EmployeeDrawer({
     clearErrors,
     formState: { errors },
   } = useForm<EmployeeFormValues>({
-    values: employee ? { ...employee, confirmPassword: "" } : undefined,
+    values: formValues,
   });
 
   const selectedDepartment = watch("department");
@@ -102,143 +142,94 @@ export function EmployeeDrawer({
   const isContractorManager =
     !isProduction && selectedRole?.label === "Contractor Manager";
 
-  // Party: Contractor Manager ya Production
-  const needsParty = isContractorManager || isProduction;
+  // Sub process options: selected process ke hisaab se
+  const subProcessOptions: Option[] = useMemo(
+    () =>
+      selectedProcessId
+        ? allSubProcesses
+            .filter((s) => s.processId === String(selectedProcessId))
+            .map((s) => ({ id: s.id, label: s.label }))
+        : [],
+    [allSubProcesses, selectedProcessId],
+  );
 
-  // 1) Production: Active main process ke processes fetch karo
+  // Drawer khulte hi teeno lists prefetch (department select hone ka wait nahi)
   useEffect(() => {
-    if (!isProduction) {
-      setProcessOptions([]);
-      return;
-    }
+    if (!isOpen) return;
 
     let isMounted = true;
+    const financialYearId = localStorage.getItem("financialYearId");
+    const fyParams = financialYearId ? { financialYearId } : {};
 
-    const fetchProcesses = async () => {
-      setLoadingProcesses(true);
-      try {
-        const financialYearId = localStorage.getItem("financialYearId");
-        const response = await Get(
-          "main-process/list",
-          financialYearId ? { financialYearId } : {},
-          false,
-        );
-
-        if (isMounted && response?.data?.success) {
+    // 1) Processes
+    if (cache.processes) setProcessOptions(cache.processes.data);
+    if (!isFresh(cache.processes)) {
+      if (!cache.processes) setLoadingProcesses(true);
+      Get("main-process/list", fyParams, false)
+        .then((response: any) => {
+          if (!isMounted || !response?.data?.success) return;
           const list: any[] = response.data.data || [];
-          setProcessOptions(
-            list
-              .filter((m) => m.status === "Active")
-              .flatMap((m) =>
-                (m.processes || []).map((p: any) => ({
-                  id: String(p.id),
-                  label: p.processName,
-                })),
-              ),
-          );
-        }
-      } catch (error) {
-        if (isMounted) setProcessOptions([]);
-      } finally {
-        if (isMounted) setLoadingProcesses(false);
-      }
-    };
-
-    fetchProcesses();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isProduction]);
-
-  // 2) Process select hone par uske Active sub process fetch karo
-  useEffect(() => {
-    if (!isProduction || !selectedProcessId) {
-      setSubProcessOptions([]);
-      return;
-    }
-
-    let isMounted = true;
-
-    const fetchSubProcesses = async () => {
-      setLoadingSubProcesses(true);
-      try {
-        const financialYearId = localStorage.getItem("financialYearId");
-        const response = await Get(
-          "sub-process/list",
-          financialYearId ? { financialYearId } : {},
-          false,
-        );
-
-        if (isMounted && response?.data?.success) {
-          const list: any[] = response.data.data || [];
-          setSubProcessOptions(
-            list
-              .filter(
-                (s) =>
-                  String(s.processId) === String(selectedProcessId) &&
-                  s.status === "Active",
-              )
-              .map((s) => ({
-                id: String(s.id),
-                label: s.subProcessName,
+          const data: Option[] = list
+            .filter((m) => m.status === "Active")
+            .flatMap((m) =>
+              (m.processes || []).map((p: any) => ({
+                id: String(p.id),
+                label: p.processName,
               })),
-          );
-        }
-      } catch (error) {
-        if (isMounted) setSubProcessOptions([]);
-      } finally {
-        if (isMounted) setLoadingSubProcesses(false);
-      }
-    };
-
-    fetchSubProcesses();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isProduction, selectedProcessId]);
-
-  // 3) Party list (Contractor Manager ya Production)
-  useEffect(() => {
-    if (!needsParty) {
-      setAccountGroupOptions([]);
-      return;
+            );
+          cache.processes = { at: Date.now(), data };
+          setProcessOptions(data);
+        })
+        .catch(() => {})
+        .finally(() => isMounted && setLoadingProcesses(false));
     }
 
-    let isMounted = true;
-
-    const fetchSundryCreditorAccounts = async () => {
-      setLoadingAccountGroups(true);
-      try {
-        const response = await Get(
-          "master/account/sundry-creditor/list",
-          {},
-          false,
-        );
-        if (isMounted && response.data?.success) {
+    // 2) Parties
+    if (cache.parties) setAccountGroupOptions(cache.parties.data);
+    if (!isFresh(cache.parties)) {
+      if (!cache.parties) setLoadingAccountGroups(true);
+      Get("master/account/sundry-creditor/list", {}, false)
+        .then((response: any) => {
+          if (!isMounted || !response?.data?.success) return;
           const list: any[] = response.data.data || [];
-          setAccountGroupOptions(
-            list.map((item) => ({
-              id: String(item.id),
-              label: item.accountName,
-              mobile: item.mobileNo || item.mobileNumber || "",
-            })),
-          );
-        }
-      } catch (error) {
-        if (isMounted) setAccountGroupOptions([]);
-      } finally {
-        if (isMounted) setLoadingAccountGroups(false);
-      }
-    };
+          const data: AccountGroupOption[] = list.map((item) => ({
+            id: String(item.id),
+            label: item.accountName,
+            mobile: item.mobileNo || item.mobileNumber || "",
+          }));
+          cache.parties = { at: Date.now(), data };
+          setAccountGroupOptions(data);
+        })
+        .catch(() => {})
+        .finally(() => isMounted && setLoadingAccountGroups(false));
+    }
 
-    fetchSundryCreditorAccounts();
+    // 3) Sub processes (ek hi baar, filter client-side)
+    if (cache.subProcesses) setAllSubProcesses(cache.subProcesses.data);
+    if (!isFresh(cache.subProcesses)) {
+      if (!cache.subProcesses) setLoadingSubProcesses(true);
+      Get("sub-process/list", fyParams, false)
+        .then((response: any) => {
+          if (!isMounted || !response?.data?.success) return;
+          const list: any[] = response.data.data || [];
+          const data: SubProcessRow[] = list
+            .filter((s) => s.status === "Active")
+            .map((s) => ({
+              processId: String(s.processId),
+              id: String(s.id),
+              label: s.subProcessName,
+            }));
+          cache.subProcesses = { at: Date.now(), data };
+          setAllSubProcesses(data);
+        })
+        .catch(() => {})
+        .finally(() => isMounted && setLoadingSubProcesses(false));
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [needsParty]);
+  }, [isOpen]);
 
   const handleClose = () => {
     reset();
@@ -286,6 +277,8 @@ export function EmployeeDrawer({
       ? {
           ...data,
           roleId: "",
+          processId: data.processId || "",
+          subProcessId: data.subProcessId || "",
           employeeName: party?.label || data.employeeName || "",
           mobileNumber: party?.mobile || "",
           alternateNumber: "",
@@ -335,6 +328,9 @@ export function EmployeeDrawer({
     onSave({ ...rest, id: employee?.id || "" } as Employee);
     handleClose();
   };
+
+  // Party: Contractor Manager ya Production
+  const needsParty = isContractorManager || isProduction;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -438,8 +434,9 @@ export function EmployeeDrawer({
                     <Combobox
                       data={processOptions}
                       value={
-                        processOptions.find((item) => item.id === value) ||
-                        null
+                        processOptions.find(
+                          (item) => item.id === String(value ?? ""),
+                        ) || null
                       }
                       onChange={(item: Option) => {
                         onChange(item?.id || "");
@@ -448,12 +445,13 @@ export function EmployeeDrawer({
                       }}
                       label="Role"
                       placeholder={
-                        loadingProcesses ? "Loading..." : "Select role"
+                        loadingProcesses && processOptions.length === 0
+                          ? "Loading..."
+                          : "Select role"
                       }
                       displayField="label"
                       searchFields={["label"]}
                       error={errors.processId?.message}
-                      inputProps={{ disabled: loadingProcesses }}
                     />
                   )}
                 />
@@ -466,12 +464,14 @@ export function EmployeeDrawer({
                     <Listbox
                       data={roleOptions}
                       value={
-                        roleOptions.find((item) => item.id === value) || null
+                        roleOptions.find(
+                          (item) => item.id === String(value ?? ""),
+                        ) || null
                       }
                       onChange={(item) => {
                         onChange(item.id);
                         // Role badalne par party reset karo
-                        setValue("accountGroup", "");
+                        setValue("accountId" as any, "");
                       }}
                       label="Role"
                       placeholder="Select role"
@@ -496,20 +496,20 @@ export function EmployeeDrawer({
                       <Combobox
                         data={subProcessOptions}
                         value={
-                          subProcessOptions.find((item) => item.id === value) ||
-                          null
+                          subProcessOptions.find(
+                            (item) => item.id === String(value ?? ""),
+                          ) || null
                         }
                         onChange={(item: Option) => onChange(item?.id || "")}
                         label="Sub Process"
                         placeholder={
-                          loadingSubProcesses
+                          loadingSubProcesses && subProcessOptions.length === 0
                             ? "Loading..."
                             : "Select sub process"
                         }
                         displayField="label"
                         searchFields={["label"]}
                         error={errors.subProcessId?.message}
-                        inputProps={{ disabled: loadingSubProcesses }}
                       />
                     )}
                   />
@@ -519,26 +519,28 @@ export function EmployeeDrawer({
               {needsParty && (
                 <Controller
                   control={control}
-                  name="accountId"
+                  name={"accountId" as any}
                   rules={{ required: "Party is required" }}
                   render={({ field: { value, onChange } }) => (
                     <Combobox
                       data={accountGroupOptions}
                       value={
-                        accountGroupOptions.find((item) => item.id === value) ||
-                        null
+                        accountGroupOptions.find(
+                          (item) => item.id === String(value ?? ""),
+                        ) || null
                       }
                       onChange={(item: AccountGroupOption) =>
                         onChange(item?.id || "")
                       }
                       label="Select Party"
                       placeholder={
-                        loadingAccountGroups ? "Loading..." : "Select party"
+                        loadingAccountGroups && accountGroupOptions.length === 0
+                          ? "Loading..."
+                          : "Select party"
                       }
                       displayField="label"
                       searchFields={["label"]}
-                      error={errors.accountId?.message}
-                      inputProps={{ disabled: loadingAccountGroups }}
+                      error={(errors as any).accountId?.message}
                     />
                   )}
                 />

@@ -39,9 +39,16 @@ interface RoleOption {
   department: string;
 }
 
+// Production employees ke liye table me role ki jagah process ka naam dikhane ke liye
+const PROCESS_PREFIX = "p-";
+
+const isProductionDept = (department: string) =>
+  String(department || "").toLowerCase() === "production";
+
 export default function EmployeePage() {
   const [data, setData] = useState<Employee[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [processMap, setProcessMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const [globalFilter, setGlobalFilter] = useState("");
@@ -53,13 +60,20 @@ export default function EmployeePage() {
   const [filterName, setFilterName] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("");
 
-  // ---- Fetch roles and employees ----
+  // ---- Fetch roles, employees and process names ----
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [roleRes, employeeRes] = await Promise.all([
+      const financialYearId = localStorage.getItem("financialYearId");
+
+      const [roleRes, employeeRes, processRes] = await Promise.all([
         Get("master/role/list", {}, false),
         Get("master/employee/list", {}, false),
+        Get(
+          "main-process/list",
+          financialYearId ? { financialYearId } : {},
+          false,
+        ).catch(() => null),
       ]);
 
       if (roleRes.data?.success) {
@@ -70,6 +84,16 @@ export default function EmployeePage() {
             department: item.department,
           })),
         );
+      }
+
+      if (processRes?.data?.success) {
+        const map: Record<string, string> = {};
+        (processRes.data.data || []).forEach((m: any) =>
+          (m.processes || []).forEach((p: any) => {
+            map[String(p.id)] = p.processName;
+          }),
+        );
+        setProcessMap(map);
       }
 
       if (employeeRes.data?.success) {
@@ -91,26 +115,38 @@ export default function EmployeePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getRoleName = (id: string) =>
-    roles.find((item) => item.id === id)?.label || "";
+  // roleId normal role ka id hota hai; "p-<processId>" aaye to process ka naam
+  const getRoleName = (id: string) => {
+    if (String(id).startsWith(PROCESS_PREFIX)) {
+      return processMap[String(id).slice(PROCESS_PREFIX.length)] || "";
+    }
+    return roles.find((item) => item.id === id)?.label || "";
+  };
 
   const columns = useMemo(
     () => createColumns(getRoleName),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [roles.length],
+    [roles.length, processMap],
   );
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      if (
-        filterName &&
-        !item.employeeName.toLowerCase().includes(filterName.toLowerCase())
-      )
-        return false;
-      if (filterDepartment && item.department !== filterDepartment)
-        return false;
-      return true;
-    });
+    return data
+      .filter((item) => {
+        if (
+          filterName &&
+          !item.employeeName.toLowerCase().includes(filterName.toLowerCase())
+        )
+          return false;
+        if (filterDepartment && item.department !== filterDepartment)
+          return false;
+        return true;
+      })
+      // table display ke liye: Production rows ka role = process
+      .map((item) =>
+        isProductionDept(item.department) && item.processId
+          ? { ...item, roleId: `${PROCESS_PREFIX}${item.processId}` }
+          : item,
+      );
   }, [data, filterName, filterDepartment]);
 
   const exportRows = filteredData.map((row) => ({
@@ -122,16 +158,27 @@ export default function EmployeePage() {
 
   // ---- Save (create or update) via API ----
   const handleSave = async (item: Employee) => {
+    const isProduction = isProductionDept(item.department);
+
     const payload: any = {
       department: item.department,
       branch: item.branch,
-      roleId: Number(item.roleId),
       employeeName: item.employeeName,
       mobileNumber: item.mobileNumber,
       alternateNumber: item.alternateNumber,
       email: item.email,
       accountId: item.accountId ? Number(item.accountId) : null,
     };
+
+    if (isProduction) {
+      // Production me role nahi, process / sub process jaata hai
+      payload.processId = item.processId ? Number(item.processId) : undefined;
+      payload.subProcessId = item.subProcessId
+        ? Number(item.subProcessId)
+        : undefined;
+    } else {
+      payload.roleId = Number(item.roleId);
+    }
 
     try {
       if (item.id) {
@@ -221,7 +268,8 @@ export default function EmployeePage() {
     getRowId: (row) => row.id,
     meta: {
       openEditDrawer: (row: Employee) => {
-        setEditing(row);
+        // table row me roleId display ke liye badla hua hai, drawer ko original do
+        setEditing(data.find((d) => d.id === row.id) || row);
         setDrawerOpen(true);
       },
       deleteRow: (row) => handleDeleteOne(row.original),

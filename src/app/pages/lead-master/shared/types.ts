@@ -84,7 +84,6 @@ export interface Quotation {
   createdAt?: string;
 }
 
-
 export interface SalesOrder {
   id: string;
   soNo: string;
@@ -104,7 +103,7 @@ export interface SalesOrder {
   qty: number;
   unitPrice: number;
   totalAmount: number;
-
+  expectedDate?: string;
   aadharNumber?: string;
   aadharImage?: string;
 
