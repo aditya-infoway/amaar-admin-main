@@ -237,31 +237,25 @@ export function EmployeeDrawer({
     close();
   };
 
-  // ---- Mobile/email uniqueness ka lightweight client-side check ----
+  // ---- Email uniqueness ka lightweight client-side check ----
   // (Server final validation karega hi.)
-  const checkUnique = async (mobileNumber: string, email: string) => {
+  // Mobile number ka uniqueness check hata diya gaya hai (same number allowed).
+  const checkUnique = async (email: string) => {
     setChecking(true);
     try {
       const response = await Get("master/employee/list", {}, false);
       if (response.data?.success) {
         const allEmployees: any[] = response.data.data || [];
-        const mobileTaken =
-          !!mobileNumber &&
-          allEmployees.some(
-            (e) =>
-              e.mobileNumber?.trim() === mobileNumber.trim() &&
-              String(e.employeeId) !== String(employee?.id || ""),
-          );
         const emailTaken = allEmployees.some(
           (e) =>
             e.email?.trim().toLowerCase() === email.trim().toLowerCase() &&
             String(e.employeeId) !== String(employee?.id || ""),
         );
-        return { mobileTaken, emailTaken };
+        return { emailTaken };
       }
-      return { mobileTaken: false, emailTaken: false };
+      return { emailTaken: false };
     } catch (error) {
-      return { mobileTaken: false, emailTaken: false }; // fail-open; server enforce karega
+      return { emailTaken: false }; // fail-open; server enforce karega
     } finally {
       setChecking(false);
     }
@@ -285,29 +279,10 @@ export function EmployeeDrawer({
         }
       : { ...data, processId: "", subProcessId: "" };
 
-    const { mobileTaken, emailTaken } = await checkUnique(
-      finalData.mobileNumber,
-      finalData.email,
-    );
+    const { emailTaken } = await checkUnique(finalData.email);
 
     let hasError = false;
 
-    if (mobileTaken) {
-      if (isProduction) {
-        // mobile field hidden hai, isliye party field pe error dikhao
-        setError("accountId" as any, {
-          type: "manual",
-          message: "This party's mobile number is already used by an employee.",
-        });
-      } else {
-        setError("mobileNumber", {
-          type: "manual",
-          message:
-            "Mobile number already exists. Please enter a different number.",
-        });
-      }
-      hasError = true;
-    }
     if (emailTaken) {
       setError("email", {
         type: "manual",
