@@ -1,7 +1,4 @@
-import {
-  flexRender,
-  Table as TanstackTable,
-} from "@tanstack/react-table";
+import { flexRender, Table as TanstackTable } from "@tanstack/react-table";
 import clsx from "clsx";
 
 import { PaginationSection } from "@/components/shared/table/PaginationSection";
@@ -32,32 +29,45 @@ export function MasterTable<T>({
             <THead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <Tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <Th
-                      key={header.id}
-                      className="dark:bg-dark-800 dark:text-dark-100 bg-gray-200 font-semibold text-gray-800 uppercase first:ltr:rounded-tl-lg last:ltr:rounded-tr-lg"
-                    >
-                      {header.column.getCanSort() ? (
-                        <div
-                          className="flex cursor-pointer items-center gap-3 select-none"
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          <span>
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                          </span>
-                          <TableSortIcon sorted={header.column.getIsSorted()} />
-                        </div>
-                      ) : (
-                        flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )
-                      )}
-                    </Th>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    // plain top-level column: draw it once, in the first row, spanning all header rows
+                    const isTopLeaf =
+                      header.column.depth === 0 &&
+                      header.column.columns.length === 0;
+                    if (isTopLeaf && headerGroup.depth > 0) return null;
+
+                    return (
+                      <Th
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        rowSpan={isTopLeaf ? table.getHeaderGroups().length : 1}
+                        className="dark:bg-dark-800 dark:text-dark-100 bg-gray-200 font-semibold text-gray-800 uppercase first:ltr:rounded-tl-lg last:ltr:rounded-tr-lg"
+                      >
+                        {header.isPlaceholder &&
+                        !isTopLeaf ? null : header.column.getCanSort() ? (
+                          <div
+                            className="flex cursor-pointer items-center gap-3 select-none"
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            <span>
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                            </span>
+                            <TableSortIcon
+                              sorted={header.column.getIsSorted()}
+                            />
+                          </div>
+                        ) : (
+                          flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )
+                        )}
+                      </Th>
+                    );
+                  })}
                 </Tr>
               ))}
             </THead>
@@ -105,7 +115,7 @@ export function MasterTable<T>({
         </div>
 
         {table.getRowModel().rows.length > 0 && (
-          <div className="px-4 pb-4 pt-4 sm:px-5">
+          <div className="px-4 pt-4 pb-4 sm:px-5">
             <PaginationSection table={table} />
           </div>
         )}

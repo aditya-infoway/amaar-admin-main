@@ -12,7 +12,9 @@ export interface StockReportItem {
   currentStock: string;
 }
 
-export const mapApiStockReportItemToStockReportItem = (item: any): StockReportItem => ({
+export const mapApiStockReportItemToStockReportItem = (
+  item: any,
+): StockReportItem => ({
   id: String(item.id),
   itemCode: item.itemCode ?? "",
   itemName: item.itemName ?? "",
@@ -30,11 +32,14 @@ export interface StockReportDetailRow {
   id?: number | string;
   date?: string;
   type?: string;
+  voucherNo?: string;
   partyName?: string;
-  billNo?: string;
-  qty?: number | string;
-  billAmount?: number | string;
-  currentStock?: number | string;
+  qtyIn?: number | string;
+  qtyOut?: number | string;
+  physicalStock?: number | string;
+  reservedQty?: number | string;
+  reservedTotal?: number | string;
+  availableStock?: number | string;
 }
 
 export interface StockReportDetail {
