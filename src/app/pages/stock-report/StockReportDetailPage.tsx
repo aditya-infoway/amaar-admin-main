@@ -5,18 +5,15 @@ import { Page } from "@/components/shared/Page";
 import { Button } from "@/components/ui";
 import { Get, toasterrormsg } from "@/ApiHelper";
 import { StockReportDetail } from "./data";
+import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { MasterTable } from "../master/shared/MasterTable";
+import { detailColumns } from "./detail-columns";
 
-const formatDateDDMMYYYY = (date: string | Date) => {
-  const parsedDate = new Date(date);
 
-  if (Number.isNaN(parsedDate.getTime())) return "—";
-
-  return [
-    String(parsedDate.getDate()).padStart(2, "0"),
-    String(parsedDate.getMonth() + 1).padStart(2, "0"),
-    parsedDate.getFullYear(),
-  ].join("/");
-};
 
 export default function StockReportDetailPage() {
   const { itemId } = useParams<{ itemId: string }>();
@@ -48,6 +45,14 @@ export default function StockReportDetailPage() {
   }, [itemId]);
 
   const rows = data?.rows || [];
+
+  const table = useReactTable({
+    data: rows,
+    columns: detailColumns,
+    enableSorting: false,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
 
   return (
     <Page title="Stock History">
@@ -150,136 +155,13 @@ export default function StockReportDetailPage() {
             </span>
           </h3>
 
-          <div className="dark:border-dark-600 overflow-hidden rounded-xl border border-gray-200">
-            <table className="dark:divide-dark-600 min-w-full divide-y divide-gray-200">
-              <thead className="dark:bg-dark-700 bg-gray-50">
-                <tr>
-                  <th className="dark:text-dark-200 px-4 py-3 text-center text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Sr. No.
-                  </th>
-
-                  <th className="dark:text-dark-200 px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Date
-                  </th>
-
-                  <th className="dark:text-dark-200 px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Type
-                  </th>
-
-                  <th className="dark:text-dark-200 px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Party Name
-                  </th>
-
-                  <th className="dark:text-dark-200 px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Bill No
-                  </th>
-
-                  <th className="dark:text-dark-200 px-4 py-3 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Qty
-                  </th>
-
-                  <th className="dark:text-dark-200 px-4 py-3 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Bill Amount
-                  </th>
-
-                  <th className="dark:text-dark-200 px-4 py-3 text-right text-xs font-semibold tracking-wider text-gray-600 uppercase">
-                    Current Stock
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="dark:divide-dark-600 dark:bg-dark-800 divide-y divide-gray-200 bg-white">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-8 text-center text-gray-500"
-                    >
-                      Loading stock history...
-                    </td>
-                  </tr>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-8 text-center text-gray-500"
-                    >
-                      No stock history found.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row, idx) => {
-                    const rowType = (row as { type?: string }).type;
-
-                    return (
-                      <tr key={row.id || idx}>
-                        {/* Sr. No. */}
-                        <td className="px-4 py-3 text-center text-sm font-medium whitespace-nowrap">
-                          {idx + 1}
-                        </td>
-
-                        {/* Date */}
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {row.date ? formatDateDDMMYYYY(row.date) : "—"}
-                        </td>
-
-                        {/* Type */}
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              rowType?.toLowerCase() === "purchase"
-                                ? "bg-green-100 text-green-800"
-                                : rowType?.toLowerCase() === "opening"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {rowType || "—"}
-                          </span>
-                        </td>
-
-                        {/* Party Name */}
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {(row as { partyName?: string }).partyName || "—"}
-                        </td>
-
-                        {/* Bill No */}
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {(row as { billNo?: string }).billNo || "—"}
-                        </td>
-
-                        {/* Qty */}
-                        <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">
-                          {Number(row.qty) > 0
-                            ? `+${row.qty}`
-                            : (row.qty ?? "—")}
-                        </td>
-
-                        {/* Bill Amount */}
-                        <td className="px-4 py-3 text-right text-sm whitespace-nowrap">
-                          {(row as { billAmount?: number | string })
-                            .billAmount != null
-                            ? `₹${Number(
-                                (row as { billAmount?: number | string })
-                                  .billAmount,
-                              ).toLocaleString("en-IN", {
-                                maximumFractionDigits: 2,
-                              })}`
-                            : "—"}
-                        </td>
-
-                        {/* Current Stock */}
-                        <td className="px-4 py-3 text-right text-sm font-medium whitespace-nowrap">
-                          {(row as { currentStock?: number | string })
-                            .currentStock ?? "—"}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <MasterTable
+            table={table}
+            columnCount={10}
+            emptyMessage={
+              loading ? "Loading stock history..." : "No stock history found."
+            }
+          />
         </div>
       </div>
     </Page>
