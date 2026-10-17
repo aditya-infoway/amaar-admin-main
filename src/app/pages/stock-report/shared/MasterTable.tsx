@@ -30,23 +30,38 @@ export function MasterTable<T>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <Tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
-                    // plain top-level column: draw it once, in the first row, spanning all header rows
-                    const isTopLeaf =
-                      header.column.depth === 0 &&
-                      header.column.columns.length === 0;
-                    if (isTopLeaf && headerGroup.depth > 0) return null;
+                    // a top-level column in a lower header row is already drawn
+                    // by its placeholder in the top row (with rowSpan), so skip it
+                    if (
+                      !header.isPlaceholder &&
+                      headerGroup.depth > 0 &&
+                      header.column.depth === 0
+                    )
+                      return null;
+
+                    const rowSpan = header.isPlaceholder
+                      ? table.getHeaderGroups().length - headerGroup.depth
+                      : 1;
+
+                    const centered =
+                      header.colSpan > 1 || header.column.depth > 0;
 
                     return (
                       <Th
                         key={header.id}
                         colSpan={header.colSpan}
-                        rowSpan={isTopLeaf ? table.getHeaderGroups().length : 1}
-                        className="dark:bg-dark-800 dark:text-dark-100 bg-gray-200 font-semibold text-gray-800 uppercase first:ltr:rounded-tl-lg last:ltr:rounded-tr-lg"
+                        rowSpan={rowSpan}
+                        className={clsx(
+                          "dark:bg-dark-800 dark:text-dark-100 bg-gray-200 font-semibold text-gray-800 uppercase first:ltr:rounded-tl-lg last:ltr:rounded-tr-lg",
+                          centered && "text-center",
+                        )}
                       >
-                        {header.isPlaceholder &&
-                        !isTopLeaf ? null : header.column.getCanSort() ? (
+                        {header.column.getCanSort() ? (
                           <div
-                            className="flex cursor-pointer items-center gap-3 select-none"
+                            className={clsx(
+                              "flex cursor-pointer items-center gap-3 select-none",
+                              centered && "justify-center",
+                            )}
                             onClick={header.column.getToggleSortingHandler()}
                           >
                             <span>
@@ -71,6 +86,7 @@ export function MasterTable<T>({
                 </Tr>
               ))}
             </THead>
+
             <TBody>
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map((row) => (

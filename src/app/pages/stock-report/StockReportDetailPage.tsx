@@ -10,10 +10,8 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MasterTable } from "../master/shared/MasterTable";
+import { MasterTable } from "./shared/MasterTable";
 import { detailColumns } from "./detail-columns";
-
-
 
 export default function StockReportDetailPage() {
   const { itemId } = useParams<{ itemId: string }>();
