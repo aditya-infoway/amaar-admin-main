@@ -14,6 +14,8 @@ const columnHelper = createColumnHelper<WorkOrder>();
 export const createColumns = (onAssign: (row: WorkOrder) => void) => {
   const RowActions = createRowActions<WorkOrder>("work order", {
     withView: true,
+    withEdit: false,
+    withDelete: false,
     withAssign: true,
     onAssign,
     extraItems: (row, table) => [

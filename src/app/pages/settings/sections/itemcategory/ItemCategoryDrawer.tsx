@@ -10,7 +10,7 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import { Button } from "@/components/ui";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Get, Post, Put, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
-import { STAGE_OPTIONS, type ItemCategory } from "./data";
+import type { ItemCategory } from "./data";
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +24,16 @@ interface Option {
   label: string;
 }
 
+// status ka format alag ho sakta hai (ACTIVE / 1 / true), isliye sab handle kiya hai.
+// Agar status field hi nahi aaya to active maan liya jaata hai.
+const isActive = (status: any): boolean => {
+  if (status === undefined || status === null) return true;
+  if (typeof status === "boolean") return status;
+  if (typeof status === "number") return status === 1;
+  const v = String(status).trim().toLowerCase();
+  return v === "active" || v === "1" || v === "true" || v === "enabled";
+};
+
 export function ItemCategoryDrawer({
   isOpen,
   close,
@@ -33,6 +43,7 @@ export function ItemCategoryDrawer({
   const isEditing = Boolean(itemCategory?.id);
 
   const [categoryOptions, setCategoryOptions] = useState<Option[]>([]);
+  const [stageOptions, setStageOptions] = useState<Option[]>([]);
   const [selectedStage, setSelectedStage] = useState<Option[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Option[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -49,7 +60,7 @@ export function ItemCategoryDrawer({
           const list = response.data.data || [];
           setCategoryOptions(
             list.map((c: any) => ({
-                id: String(c.id ?? c.itemCategoryId ?? c.categoryId),
+              id: String(c.id ?? c.itemCategoryId ?? c.categoryId),
               label: c.categoryName ?? c.name,
             })),
           );
@@ -63,13 +74,68 @@ export function ItemCategoryDrawer({
     fetchCategories();
   }, [isOpen]);
 
+  // Stage = Production Process (sirf active Main Process ke process names)
+  // ⚠️ endpoint apne backend ke hisaab se change karo
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchStages = async () => {
+      try {
+        const response = await Get("main-process/list", {}, false);
+
+        if (response?.data?.success || response?.data?.status === 200) {
+          const list: any[] = response.data.data || [];
+
+          // sirf active main process
+          const activeMains = list.filter((m) => isActive(m.status));
+
+          // har main process ke andar processes[] ho to wo, warna row khud
+          const rows: any[] = activeMains
+            .flatMap((m: any) =>
+              Array.isArray(m.processes) ? m.processes : [m],
+            )
+            // process row pe status aaye to wo bhi active hona chahiye
+            .filter((p) => isActive(p?.status));
+
+          const seen = new Set<string>();
+          const options: Option[] = [];
+
+          rows
+            .filter((p) => p?.processName)
+            .sort((a, b) => Number(a.serialNo ?? 0) - Number(b.serialNo ?? 0))
+            .forEach((p) => {
+              const id = String(p.processId ?? p.id);
+              if (seen.has(id)) return;
+              seen.add(id);
+              options.push({ id, label: p.processName });
+            });
+
+          setStageOptions(options);
+        }
+      } catch (error) {
+        console.error("Process list error:", error);
+        toasterrormsg("Unable to load processes.");
+      }
+    };
+
+    fetchStages();
+  }, [isOpen]);
+
   // Prefill on edit / reset on add
   useEffect(() => {
     if (!isOpen) return;
 
     queueMicrotask(() => {
       if (itemCategory?.id) {
-        const stage = STAGE_OPTIONS.find((s) => s.id === itemCategory.stage);
+        const stageValue = String((itemCategory as any).stage ?? "");
+        const stageProcessId = String((itemCategory as any).processId ?? "");
+
+        const stage = stageOptions.find(
+          (s) =>
+            s.id === stageProcessId ||
+            s.id === stageValue ||
+            s.label.toLowerCase() === stageValue.toLowerCase(),
+        );
         setSelectedStage(stage ? [stage] : []);
 
         const cat = categoryOptions.find(
@@ -82,7 +148,7 @@ export function ItemCategoryDrawer({
       }
       setErrors({});
     });
-  }, [isOpen, itemCategory, categoryOptions]);
+  }, [isOpen, itemCategory, categoryOptions, stageOptions]);
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -94,15 +160,19 @@ export function ItemCategoryDrawer({
 
   const handleSubmit = async () => {
     if (!validate()) return;
-  const financialYearId = localStorage.getItem("financialYearId");
 
-  if (!financialYearId) {
-    toasterrormsg("Financial Year not found. Please select a company year.");
-    return;
-  }
+    const financialYearId = localStorage.getItem("financialYearId");
+
+    if (!financialYearId) {
+      toasterrormsg("Financial Year not found. Please select a company year.");
+      return;
+    }
+
     const payload = {
-            financialYearId: Number(financialYearId),
-       stage: selectedStage[0].id,
+      financialYearId: Number(financialYearId),
+      // stage = process name, processId = process ki id
+      stage: selectedStage[0].label,
+      processId: Number(selectedStage[0].id),
       categoryId: Number(selectedCategory[0].id),
     };
 
@@ -117,7 +187,8 @@ export function ItemCategoryDrawer({
 
       if (res?.success || res?.status === 200) {
         toastsuccessmsg(
-          res?.message || (isEditing ? "Updated successfully" : "Saved successfully"),
+          res?.message ||
+            (isEditing ? "Updated successfully" : "Saved successfully"),
         );
         onSave();
         close();
@@ -176,11 +247,13 @@ export function ItemCategoryDrawer({
             <div className="hide-scrollbar grow space-y-5 overflow-y-auto px-4 py-4 sm:px-6">
               <div>
                 <Combobox
-                  data={STAGE_OPTIONS}
+                  data={stageOptions}
                   displayField="label"
                   value={selectedStage[0] ?? null}
                   onChange={(val: any) =>
-                    setSelectedStage(val ? (Array.isArray(val) ? val : [val]) : [])
+                    setSelectedStage(
+                      val ? (Array.isArray(val) ? val : [val]) : [],
+                    )
                   }
                   placeholder="Select Stage"
                   label="Stage"

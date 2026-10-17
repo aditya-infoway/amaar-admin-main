@@ -99,7 +99,7 @@ export function ItemCategoryDrawer({
 
   const fetchNextCode = async () => {
     try {
-      const response = await Get("main-process/next-code");
+     const response = await Get("main-process/next-code", {}, false);
       const res = response?.data;
       const code = res?.data?.nextCode ?? res?.nextCode;
       const n = parseInt(code, 10);
