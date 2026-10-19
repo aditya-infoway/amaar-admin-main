@@ -1513,12 +1513,12 @@ export default function SalesInvoice() {
           <h1 className="text-primary border-primary border-b-4 pb-1 text-xl font-extrabold">
             Sales Register
           </h1>
-          <Link to="/purchase-master/sales-register" title="Back">
-            <Button
-              variant="outlined"
-              className="flex h-10 w-10 items-center justify-center p-0"
-            >
-              <Icon.Back className="size-5" />
+          <Link
+            to="/purchase-master/sales-register"
+            className="text-primary text-sm hover:underline"
+          >
+            <Button variant="outlined" className="gap-2">
+              <Icon.Back /> Back
             </Button>
           </Link>
         </div>
