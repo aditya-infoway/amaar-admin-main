@@ -14,7 +14,6 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import {
   ArchiveBoxIcon,
-  ExclamationTriangleIcon,
   ClipboardDocumentCheckIcon,
   // PlusIcon,
 } from "@heroicons/react/20/solid";
@@ -314,8 +313,8 @@ export default function MaterialAvailability() {
       deleteRows: (rows) => {
         // Skip page index reset until after next rerender
         skipAutoResetPageIndex();
-        const rowIds = rows.map((row) => row.original.item_id);
-        setItems((old) => old.filter((row) => !rowIds.includes(row.item_id)));
+        // const rowIds = rows.map((row) => row.original.item_id);
+        // setItems((old) => old.filter((row) => !rowIds.includes(row.item_id)));
       },
     },
 

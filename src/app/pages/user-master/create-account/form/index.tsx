@@ -721,14 +721,15 @@ export function AccountForm() {
           </h1>
           <Button
             type="button"
+            variant="outlined"
+            color="primary"
             onClick={() => navigate("/user-master/accounts")}
-            className="bg-primary-500 hover:bg-primary-600 flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors"
+            className="flex h-10 w-10 items-center justify-center p-0"
+            title="Back"
           >
-            <ArrowLeftIcon className="size-4" />
-            Back
+            <ArrowLeftIcon className="size-5" />
           </Button>
         </div>
-
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate

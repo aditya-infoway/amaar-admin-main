@@ -33,11 +33,17 @@ interface RowActionsOptions<
 > {
   withView?: boolean;
 
+  // Default true. Set false to hide the Edit item.
+  withEdit?: boolean;
+
+  // Default true. Set false to hide the Delete item.
+  withDelete?: boolean;
+
   withAssign?: boolean;
 
   onAssign?: (row: T) => void;
 
- extraItems?: (row: T, table: Table<T>) => RowActionExtraItem[];
+  extraItems?: (row: T, table: Table<T>) => RowActionExtraItem[];
 }
 
 export function createRowActions<
@@ -47,6 +53,8 @@ export function createRowActions<
   },
 >(entityName: string, options?: RowActionsOptions<T>) {
   const withView = options?.withView ?? false;
+  const withEdit = options?.withEdit ?? true;
+  const withDelete = options?.withDelete ?? true;
   const withAssign = options?.withAssign ?? false;
   const onAssign = options?.onAssign;
   const confirmMessages: ConfirmMessages = {
@@ -75,10 +83,10 @@ export function createRowActions<
 
     const state = deleteError ? "error" : deleteSuccess ? "success" : "pending";
 
-  const extraItems =
-  options
-    ?.extraItems?.(row.original, table)
-    ?.filter((item) => item.show !== false) ?? [];
+    const extraItems =
+      options?.extraItems?.(row.original, table)?.filter(
+        (item) => item.show !== false,
+      ) ?? [];
 
     return (
       <>
@@ -133,44 +141,50 @@ export function createRowActions<
               );
             })}
 
-            <MenuItem>
-              {({ focus }) => (
-                <button
-                  type="button"
-                  onClick={() =>
-                    table.options.meta?.openEditDrawer?.(row.original)
-                  }
-                  className={clsx(
-                    "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
-                    focus &&
-                      "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
-                  )}
-                >
-                  <PencilIcon className="size-4.5 stroke-1" />
-                  <span>Edit</span>
-                </button>
-              )}
-            </MenuItem>
-            <MenuItem>
-              {({ focus }) => (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDeleteError(false);
-                    setDeleteSuccess(false);
-                    setDeleteModalOpen(true);
-                  }}
-                  className={clsx(
-                    "text-this dark:text-this-light flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
-                    focus && "bg-this/10 dark:bg-this-light/10",
-                  )}
-                >
-                  <TrashIcon className="size-4.5 stroke-1" />
-                  <span>Delete</span>
-                </button>
-              )}
-            </MenuItem>
-         {withAssign && (
+            {withEdit && (
+              <MenuItem>
+                {({ focus }) => (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      table.options.meta?.openEditDrawer?.(row.original)
+                    }
+                    className={clsx(
+                      "flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
+                      focus &&
+                        "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
+                    )}
+                  >
+                    <PencilIcon className="size-4.5 stroke-1" />
+                    <span>Edit</span>
+                  </button>
+                )}
+              </MenuItem>
+            )}
+
+            {withDelete && (
+              <MenuItem>
+                {({ focus }) => (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteError(false);
+                      setDeleteSuccess(false);
+                      setDeleteModalOpen(true);
+                    }}
+                    className={clsx(
+                      "text-this dark:text-this-light flex h-9 w-full items-center gap-3 px-3 tracking-wide outline-hidden transition-colors",
+                      focus && "bg-this/10 dark:bg-this-light/10",
+                    )}
+                  >
+                    <TrashIcon className="size-4.5 stroke-1" />
+                    <span>Delete</span>
+                  </button>
+                )}
+              </MenuItem>
+            )}
+
+            {withAssign && (
               <MenuItem>
                 {({ focus }) => (
                   <button
@@ -191,14 +205,16 @@ export function createRowActions<
           </MenuItems>
         </Menu>
 
-        <ConfirmModal
-          show={deleteModalOpen}
-          onClose={() => setDeleteModalOpen(false)}
-          messages={confirmMessages}
-          onOk={handleDelete}
-          confirmLoading={confirmDeleteLoading}
-          state={state}
-        />
+        {withDelete && (
+          <ConfirmModal
+            show={deleteModalOpen}
+            onClose={() => setDeleteModalOpen(false)}
+            messages={confirmMessages}
+            onOk={handleDelete}
+            confirmLoading={confirmDeleteLoading}
+            state={state}
+          />
+        )}
       </>
     );
   };
