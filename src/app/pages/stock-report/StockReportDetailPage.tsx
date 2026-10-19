@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeftIcon } from "@heroicons/react/20/solid";
+import { ChevronLeftIcon, ArrowPathIcon } from "@heroicons/react/20/solid";
 import { Link, useParams } from "react-router";
 import { Page } from "@/components/shared/Page";
 import { Button } from "@/components/ui";
@@ -10,10 +10,8 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MasterTable } from "../master/shared/MasterTable";
+import { MasterTable } from "./shared/MasterTable";
 import { detailColumns } from "./detail-columns";
-
-
 
 export default function StockReportDetailPage() {
   const { itemId } = useParams<{ itemId: string }>();
@@ -61,9 +59,12 @@ export default function StockReportDetailPage() {
         <div className="flex items-center justify-between px-5 py-5 lg:px-6 lg:py-6">
           <div className="flex items-center gap-3">
             <Link to="/stock-report">
-              <Button color="primary" variant="outlined" className="gap-1">
-                <ChevronLeftIcon className="size-5" />
-                Back to Stock
+              <Button
+                color="primary"
+                variant="outlined"
+                className="flex h-10 w-10 items-center justify-center p-0"
+              >
+                <ChevronLeftIcon className="size-6" />
               </Button>
             </Link>
             <h2 className="text-primary dark:text-dark-50 text-xl font-bold tracking-wide">
@@ -77,7 +78,9 @@ export default function StockReportDetailPage() {
             onClick={fetchData}
             disabled={loading}
           >
-            Refresh
+            <ArrowPathIcon
+              className={`size-5 ${loading ? "animate-spin" : ""}`}
+            />
           </Button>
         </div>
 
