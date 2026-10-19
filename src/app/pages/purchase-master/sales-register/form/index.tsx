@@ -268,32 +268,6 @@ const TERMS_OPTIONS = [
   { id: "Bank", name: "Bank" },
 ];
 
-const GROUP_OPTIONS = [
-  { id: 1, name: "Sundry Creditors" },
-  { id: 2, name: "Sundry Debtors" },
-  { id: 3, name: "Bank Accounts" },
-  { id: 4, name: "Cash in Hand" },
-  { id: 5, name: "Loans (Liability)" },
-];
-const STATE_OPTIONS = [
-  { id: 1, name: "Gujarat" },
-  { id: 2, name: "Maharashtra" },
-  { id: 3, name: "Rajasthan" },
-  { id: 4, name: "Karnataka" },
-  { id: 5, name: "Tamil Nadu" },
-  { id: 6, name: "Delhi" },
-  { id: 7, name: "Punjab" },
-];
-const DISTRICT_OPTIONS = [
-  { id: 1, name: "Ahmedabad" },
-  { id: 2, name: "Surat" },
-  { id: 3, name: "Rajkot" },
-  { id: 4, name: "Vadodara" },
-  { id: 5, name: "Amreli" },
-  { id: 6, name: "Bhavnagar" },
-  { id: 7, name: "Junagadh" },
-];
-
 const INIT_ITEMS: any[] = [];
 
 const EMPTY_ROW = {
@@ -1537,12 +1511,12 @@ export default function SalesInvoice() {
           <h1 className="text-primary border-primary border-b-4 pb-1 text-xl font-extrabold">
             Sales Register
           </h1>
-          <Link to="/purchase-master/sales-register" title="Back">
-            <Button
-              variant="outlined"
-              className="flex h-10 w-10 items-center justify-center p-0"
-            >
-              <Icon.Back className="size-5" />
+          <Link
+            to="/purchase-master/sales-register"
+            className="text-primary text-sm hover:underline"
+          >
+            <Button variant="outlined" className="gap-2">
+              <Icon.Back /> Back
             </Button>
           </Link>
         </div>

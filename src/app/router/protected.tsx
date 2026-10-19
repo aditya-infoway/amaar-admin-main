@@ -1034,12 +1034,14 @@ const protectedRoutes: RouteObject = {
                 ).default,
               }),
             },
-                         {
+            {
               path: "production",
               children: [
                 {
                   index: true,
-                  element: <Navigate to="/settings/production/main-process" replace />,
+                  element: (
+                    <Navigate to="/settings/production/main-process" replace />
+                  ),
                 },
                 {
                   path: "main-process",

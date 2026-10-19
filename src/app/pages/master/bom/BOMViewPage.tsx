@@ -38,7 +38,7 @@ interface BOMItem {
   width?: string;
   children: BOMItem[];
 }
-
+ 
 interface BOMDetail {
   bomId: string;
   bomName: string;
