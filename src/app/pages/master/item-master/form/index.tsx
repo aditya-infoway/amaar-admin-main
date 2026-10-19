@@ -288,82 +288,82 @@ export default function ItemMasterFormPage() {
     return fallback;
   };
 
- const onSubmit = async (data: ItemMasterFormValues) => {
-  try {
-    isSavingRef.current = true;
-    setSubmitting(true);
+  const onSubmit = async (data: ItemMasterFormValues) => {
+    try {
+      isSavingRef.current = true;
+      setSubmitting(true);
 
-    const payload = {
-      ...data,
-      itemCategoryId: Number(data.itemCategoryId),
-      groupId: Number(data.groupId),
-      minQty: data.stockMapping ? data.minQty : null,
-      maxQty: data.stockMapping ? data.maxQty : null,
-      thickness: data.thickness ? Number(data.thickness) : null,
-      length: data.length ? Number(data.length) : null,
-      width: data.width ? Number(data.width) : null,
-      weight: data.weight ? Number(data.weight) : null,
-    };
-
-    let res;
-
-    if (isEdit && id) {
-      res = await Put(
-        "master/itemmaster/update",
-        {
-          itemId: Number(id),
-          ...payload,
-        },
-        false,
-      );
-
-      if (res?.data?.status === 400 || res?.data?.success === false) {
-        isSavingRef.current = false;
-        toasterrormsg(extractErrorMessage(res, "Something went wrong."));
-        return;
-      }
-
-      toastsuccessmsg(extractErrorMessage(res, "Item updated successfully"));
-    } else {
-      // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
-      const companyId = localStorage.getItem("companyId") || "";
-
-      const createPayload = {
-        ...payload,
-        createdBy: Number(companyId),
-        createdType: "Super Admin",
+      const payload = {
+        ...data,
+        itemCategoryId: Number(data.itemCategoryId),
+        groupId: Number(data.groupId),
+        minQty: data.stockMapping ? data.minQty : null,
+        maxQty: data.stockMapping ? data.maxQty : null,
+        thickness: data.thickness ? Number(data.thickness) : null,
+        length: data.length ? Number(data.length) : null,
+        width: data.width ? Number(data.width) : null,
+        weight: data.weight ? Number(data.weight) : null,
       };
 
-      res = await Post("master/itemmaster/create", createPayload, false);
+      let res;
 
-      if (res?.data?.status === 400 || res?.data?.success === false) {
-        isSavingRef.current = false;
-        toasterrormsg(extractErrorMessage(res, "Something went wrong."));
-        return;
+      if (isEdit && id) {
+        res = await Put(
+          "master/itemmaster/update",
+          {
+            itemId: Number(id),
+            ...payload,
+          },
+          false,
+        );
+
+        if (res?.data?.status === 400 || res?.data?.success === false) {
+          isSavingRef.current = false;
+          toasterrormsg(extractErrorMessage(res, "Something went wrong."));
+          return;
+        }
+
+        toastsuccessmsg(extractErrorMessage(res, "Item updated successfully"));
+      } else {
+        // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+        const companyId = localStorage.getItem("companyId") || "";
+
+        const createPayload = {
+          ...payload,
+          createdBy: Number(companyId),
+          createdType: "Super Admin",
+        };
+
+        res = await Post("master/itemmaster/create", createPayload, false);
+
+        if (res?.data?.status === 400 || res?.data?.success === false) {
+          isSavingRef.current = false;
+          toasterrormsg(extractErrorMessage(res, "Something went wrong."));
+          return;
+        }
+
+        toastsuccessmsg(extractErrorMessage(res, "Item created successfully"));
       }
 
-      toastsuccessmsg(extractErrorMessage(res, "Item created successfully"));
-    }
+      reset(data);
+      setDirty(false);
 
-    reset(data);
-    setDirty(false);
-
-    setTimeout(() => {
+      setTimeout(() => {
+        isSavingRef.current = false;
+        navigate("/master/item-master");
+      }, 0);
+    } catch (err: any) {
       isSavingRef.current = false;
-      navigate("/master/item-master");
-    }, 0);
-  } catch (err: any) {
-    isSavingRef.current = false;
-    toasterrormsg(
-      extractErrorMessage(
-        err?.response,
-        "Something went wrong. Please try again.",
-      ),
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+      toasterrormsg(
+        extractErrorMessage(
+          err?.response,
+          "Something went wrong. Please try again.",
+        ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <Page title={isEdit ? "Edit Item" : "Create Item"}>
       <div className="transition-content w-full px-(--margin-x) pb-8">
@@ -380,9 +380,10 @@ export default function ItemMasterFormPage() {
                 navigate("/master/item-master");
               });
             }}
+            title="Back"
+            className="flex h-10 w-10 items-center justify-center p-0"
           >
-            <ChevronLeftIcon className="size-6" />
-            <span>Back</span>
+            <ChevronLeftIcon className="size-5" />
           </Button>
         </div>
 

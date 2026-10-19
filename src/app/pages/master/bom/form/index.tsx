@@ -1642,9 +1642,10 @@ export default function BOMFormPage() {
             color="primary"
             variant="outlined"
             onClick={() => handleProtectedNavigation("/master/item-master/bom")}
+            title="Back"
+            className="flex h-10 w-10 items-center justify-center p-0"
           >
-            <ChevronLeftIcon className="size-6" />
-            <span>Back</span>
+            <ChevronLeftIcon className="size-5" />
           </Button>
         </div>
 
