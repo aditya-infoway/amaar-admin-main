@@ -1920,7 +1920,7 @@ export default function PurchaseOrderPage() {
                   </div>
                 ) : (
                   /* Fixed height + scrollbar */
-                  <div className="max-h-105 space-y-3 overflow-y-auto">
+                <div className="max-h-[calc(100vh-280px)] space-y-3 overflow-y-auto">
                     {sortedSuppliers.map((supplier, index) => {
                       const supplierId = getSupplierKey(supplier, index);
 
