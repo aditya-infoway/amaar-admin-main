@@ -38,6 +38,10 @@ const prefixForOptions = [
   { id: "QC", label: "QC" },
   { id: "Debit Note", label: "Debit Note" },
    { id: "SALES INVOICE", label: "SALES INVOICE" },
+     { id: "ITEM ORDER", label: "ITEM ORDER" },
+  { id: "ITEM RETURN", label: "ITEM RETURN" },
+  { id: "STORE ISSUE", label: "STORE ISSUE" },
+    { id: "STORE RETURN", label: "STORE RETURN" },
 ];
 
 const schema = yup.object({

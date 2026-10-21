@@ -778,8 +778,18 @@ const protectedRoutes: RouteObject = {
           children: [
             {
               index: true,
+              element: <Navigate to="/stock-report/list" replace />, // ← redirect
+            },
+            {
+              path: "list", // ← new path
               lazy: async () => ({
                 Component: (await import("@/app/pages/stock-report")).default,
+              }),
+            },
+            {
+              path: "alert",
+              lazy: async () => ({
+                Component: (await import("@/app/pages/stock-alert")).default,
               }),
             },
             {
@@ -792,6 +802,7 @@ const protectedRoutes: RouteObject = {
             },
           ],
         },
+
         // In your route configuration file
         {
           path: "user-master",
