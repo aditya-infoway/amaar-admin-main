@@ -834,7 +834,7 @@ export default function ItemMasterFormPage() {
                 type="button"
                 onClick={() => {
                   requestNavigation(() => {
-                    navigate("/item-master");
+                    navigate("/master/item-master");
                   });
                 }}
               >

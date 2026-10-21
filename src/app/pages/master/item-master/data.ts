@@ -14,15 +14,17 @@ export interface ItemMaster {
   stockMapping: boolean;
   minQty: string;
   maxQty: string;
-  // purchasePrice: string;
-  // actualPurchasePrice: string;
-  // salesPrice: string;
-  // mrp: string;
+  openingStock?: string;
+  stockValue?: string;
+  thickness?: string;
+  length?: string;
+  width?: string;
+  weight?: string;
   barcodeType: "manual" | "generate";
   barcode: string;
   status: string;
-  createdBy?: string; 
-  createdType?:string;  // 👈 add
+  createdBy?: string;
+  createdType?: string;
   createdAt?: string;
 }
 
@@ -40,15 +42,17 @@ export const emptyItem = (): ItemMaster => ({
   stockMapping: false,
   minQty: "",
   maxQty: "",
-  // purchasePrice: "",
-  // actualPurchasePrice: "",
-  // salesPrice: "",
-  // mrp: "",
+  openingStock: "",
+  stockValue: "",
+  thickness: "",
+  length: "",
+  width: "",
+  weight: "",
   barcodeType: "manual",
   barcode: "",
   status: "active",
-  createdBy: "", 
-  createdType :""  
+  createdBy: "",
+  createdType: "",
 });
 
 export const mapApiItemMasterToItemMaster = (item: any): ItemMaster => ({
@@ -67,14 +71,18 @@ export const mapApiItemMasterToItemMaster = (item: any): ItemMaster => ({
   stockMapping: Boolean(item.stockMapping),
   minQty: item.minQty != null ? String(item.minQty) : "",
   maxQty: item.maxQty != null ? String(item.maxQty) : "",
-  // purchasePrice: item.purchasePrice != null ? String(item.purchasePrice) : "",
-  // actualPurchasePrice: item.actualPurchasePrice != null ? String(item.actualPurchasePrice) : "",
-  // salesPrice: item.salesPrice != null ? String(item.salesPrice) : "",
-  // mrp: item.mrp != null ? String(item.mrp) : "",
+  openingStock: item.openingStock != null ? String(item.openingStock) : "",
+  stockValue: item.stockValue != null ? String(item.stockValue) : "",
+  thickness: item.thickness != null ? String(item.thickness) : "",
+  length: item.length != null ? String(item.length) : "",
+  width: item.width != null ? String(item.width) : "",
+  weight: item.weight != null ? String(item.weight) : "",
   barcodeType: item.barcodeType || "manual",
   barcode: item.barcode || "",
   status: item.status || "active",
-  createdBy: item.createdBy || "", 
-  createdType: item.createdType || "",     // 👈 add
-  createdAt: item.created,
+  createdBy: item.createdBy || "",
+  createdType: item.createdType || "",
+  createdAt: item.created
+    ? new Date(item.created).toLocaleDateString("en-IN")
+    : "",
 });
