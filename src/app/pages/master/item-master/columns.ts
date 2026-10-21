@@ -1,5 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { SelectCell, SelectHeader } from "@/components/shared/table/SelectCheckbox";
+import {
+  SelectCell,
+  SelectHeader,
+} from "@/components/shared/table/SelectCheckbox";
 import { createRowActions } from "../shared/createRowActions";
 import { TextCell } from "../shared/tableCells";
 import { ItemMaster } from "./data";
@@ -8,29 +11,90 @@ import { ExportColumn } from "../shared/export";
 const RowActions = createRowActions<ItemMaster>("item");
 
 export const columns: ColumnDef<ItemMaster>[] = [
-  { id: "select", header: SelectHeader, cell: SelectCell, enableSorting: false },
-  { id: "itemCode", accessorKey: "itemCode", header: "Item Code", cell: TextCell },
-  { id: "itemName", accessorKey: "itemName", header: "Item Name", cell: TextCell },
-  { id: "shortName", accessorKey: "shortName", header: "Short Name", cell: TextCell },
-  { id: "categoryName", accessorKey: "categoryName", header: "Item Category", cell: TextCell },
-  { id: "groupName", accessorKey: "groupName", header: "Group", cell: TextCell },
+  {
+    id: "select",
+    header: SelectHeader,
+    cell: SelectCell,
+    enableSorting: false,
+  },
+  {
+    id: "itemCode",
+    accessorKey: "itemCode",
+    header: "Item Code",
+    cell: TextCell,
+  },
+  {
+    id: "itemName",
+    accessorKey: "itemName",
+    header: "Item Name",
+    cell: TextCell,
+  },
+  {
+    id: "shortName",
+    accessorKey: "shortName",
+    header: "Short Name",
+    cell: TextCell,
+  },
+  {
+    id: "categoryName",
+    accessorKey: "categoryName",
+    header: "Item Category",
+    cell: TextCell,
+  },
+  {
+    id: "groupName",
+    accessorKey: "groupName",
+    header: "Group",
+    cell: TextCell,
+  },
   // { id: "salesPrice", accessorKey: "salesPrice", header: "Sales Price", cell: TextCell },
   // { id: "mrp", accessorKey: "mrp", header: "MRP", cell: TextCell },
   { id: "barcode", accessorKey: "barcode", header: "Barcode", cell: TextCell },
-  { id: "createdBy", accessorKey: "createdBy", header: "Created By", cell: TextCell },
-  { id: "createdType", accessorKey: "createdType", header: "Created Type", cell: TextCell },  // 👈 add
+  {
+    id: "createdBy",
+    accessorKey: "createdBy",
+    header: "Created By",
+    cell: TextCell,
+  },
+  {
+    id: "createdType",
+    accessorKey: "createdType",
+    header: "Created Type",
+    cell: TextCell,
+  }, // 👈 add
   { id: "actions", header: "Actions", cell: RowActions, enableSorting: false },
 ];
 
 export const exportColumns: ExportColumn<ItemMaster>[] = [
+  // Basic Information
   { key: "itemCode", header: "Item Code" },
   { key: "itemName", header: "Item Name" },
   { key: "shortName", header: "Short Name" },
+  { key: "hsnCode", header: "HSN Code" },
+  { key: "itemLocation", header: "Item Location" },
   { key: "categoryName", header: "Item Category" },
   { key: "groupName", header: "Group" },
-  // { key: "salesPrice", header: "Sales Price" },
-  // { key: "mrp", header: "MRP" },
+  { key: "unit", header: "Unit / UOM" },
+  { key: "thickness", header: "Thickness (mm)" },
+  { key: "length", header: "Length (mm)" },
+  { key: "width", header: "Width (mm)" },
+  { key: "weight", header: "Weight (kg)" },
+
+  // Tax & Stock
+  { key: "taxSlab", header: "Tax Slab" },
+  { key: "stockMapping", header: "Stock Mapping" },
+  { key: "minQty", header: "Min Qty" },
+  { key: "maxQty", header: "Max Qty" },
+  { key: "openingStock", header: "Opening Stock" },
+  { key: "stockValue", header: "Stock Value" },
+
+  // Barcode
+  { key: "barcodeType", header: "Barcode Type" },
   { key: "barcode", header: "Barcode" },
+
+  // Status & Audit
+  { key: "status", header: "Status" },
   { key: "createdBy", header: "Created By" },
-    { key: "createdType", header: "Created Type" }, // 👈 add
+  { key: "createdType", header: "Created Type" },
+  { key: "createdAt", header: "Created At" },
 ];
