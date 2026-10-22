@@ -13,7 +13,7 @@ import { useNavigate } from "react-router";
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
-import { Get, toasterrormsg } from "@/ApiHelper";
+import { Get, toasterrormsg,GetBlob } from "@/ApiHelper";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
@@ -98,7 +98,31 @@ export default function SalesRegisterPage() {
     setSelectedSalesId(row.id);
     setDetailsOpen(true);
   };
+const handlePrintRow = async (row: SalesRegister) => {
+  try {
+    const res = await GetBlob(`sales/print/${row.id}`);
+    const blob: Blob = res.data;
 
+    // backend error JSON bheje to PDF ki jagah wahi message dikhao
+    if (!blob.type.includes("application/pdf")) {
+      const text = await blob.text();
+      let msg = "Failed to generate invoice.";
+      try {
+        msg = JSON.parse(text).message || msg;
+      } catch {}
+      toasterrormsg(msg);
+      return;
+    }
+
+    const blobUrl = window.URL.createObjectURL(blob);
+    window.open(blobUrl, "_blank");
+
+    // memory free (tab ko load hone ka time do)
+    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60_000);
+  } catch (err: any) {
+    toasterrormsg(err?.message || "Failed to print invoice.");
+  }
+};
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -109,6 +133,7 @@ export default function SalesRegisterPage() {
       openEditDrawer: (row: SalesRegister) =>
         navigate(`/purchase-master/sales-register/edit/${row.id}`),
       viewRow: handleViewRow,
+        printRow: handlePrintRow, 
       deleteRow: (row) => removeLocally(new Set([row.original.id])),
       deleteRows: (rows) => {
         const ids = new Set(rows.map((r) => r.original.id));

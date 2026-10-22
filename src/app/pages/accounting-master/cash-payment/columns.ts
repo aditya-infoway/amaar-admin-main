@@ -1,5 +1,5 @@
-// import { createElement } from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { createElement } from "react";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
 // import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatDateDDMMYYYY } from "@/ApiHelper";
 
@@ -29,9 +29,25 @@ import { CashPayment } from "../shared/types";
 //     ),
 //   );
 
+const TYPE_BADGE_STYLES: Record<string, string> = {
+  CP: "bg-rose-100 text-rose-700",
+  PCP: "bg-violet-100 text-violet-700",
+};
+
+const TypeCell = (info: CellContext<CashPayment, unknown>) => {
+  const type = info.getValue<string>() || "—";
+  const style = TYPE_BADGE_STYLES[type] || "bg-slate-100 text-slate-700";
+
+  return createElement(
+    "span",
+    { className: `rounded-full px-2 py-0.5 text-xs font-medium ${style}` },
+    type
+  );
+};
 export const columns: ColumnDef<CashPayment>[] = [
   { id: "select", header: SelectHeader, cell: SelectCell, enableSorting: false },
   { id: "voucherNo", accessorKey: "voucherNo", header: "Voucher No", cell: TextCell },
+   { id: "type", accessorKey: "type", header: "Type", cell: TypeCell, enableSorting: false },
   { id: "cashAccount", accessorKey: "cashAccount", header: "Cash Account", cell: TextCell },
   { id: "oppAccount", accessorKey: "oppAccount", header: "Opp. Account", cell: TextCell },
   { id: "amount", accessorKey: "amount", header: "Amount", cell: TextCell },
@@ -58,6 +74,7 @@ export const columns: ColumnDef<CashPayment>[] = [
 
 export const exportColumns: ExportColumn<CashPayment>[] = [
   { key: "voucherNo", header: "Voucher No" },
+    { key: "type", header: "Type" },
   { key: "cashAccount", header: "Cash Account" },
   { key: "oppAccount", header: "Opp. Account" },
   { key: "amount", header: "Amount" },

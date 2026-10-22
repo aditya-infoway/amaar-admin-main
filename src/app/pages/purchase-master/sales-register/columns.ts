@@ -9,7 +9,10 @@ import { TextCell } from "../shared/tableCells";
 import { SalesRegister } from "./data";
 import { ExportColumn } from "../shared/export";
 
-const RowActions = createRowActions<SalesRegister>("sales register");
+const RowActions = createRowActions<SalesRegister>("sales register", {
+  edit: false,
+  delete: false,
+});
 
 export const columns: ColumnDef<SalesRegister>[] = [
   {

@@ -11,6 +11,7 @@ export interface CashPayment {
   paymentMode: "manual" | "bom";
   cashAccount: string;
   voucherNo: string;
+    type?: string;
   date: string;
   oppAccount: string;
   amount: string;
@@ -93,6 +94,7 @@ export interface BankPayment {
   bomNo?: { id: string; label: string }[];
   bankAccount: string;
   voucherNo: string;
+    type?: string;
   date: string;
   oppAccount: string;
   amount: string;
@@ -110,6 +112,7 @@ export interface CashReceipt {
   receiptMode: "manual" | "lead" | "job-card";
   cashAccount: string;
   voucherNo: string;
+    type?: string;
   date: string;
   oppAccount: string;
   amount: string;
@@ -122,6 +125,7 @@ export interface BankReceipt {
   receiptMode: "manual" | "lead" | "job-card";
   bankAccount: string;
   voucherNo: string;
+    type?: string;
   date: string;
   oppAccount: string;
   amount: string;

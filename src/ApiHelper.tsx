@@ -164,7 +164,30 @@ export const Get = async (fileName: string, data: any, useHeader: any) => {
     throw error;
   }
 };
-
+// API CALL for file/PDF (blob) GET
+export const GetBlob = async (fileName: string, data: any = {}) => {
+  try {
+    const url = `${URL.localurl}${fileName}`;
+    const response = await axios.get(url, {
+      params: data,
+      responseType: "blob",
+      headers: {
+        "x-token": getToken(),
+        apitoken: "2ed1b72407c91c22dc7bd2b729f67145",
+        elevel: 0,
+      },
+    });
+    return response;
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 401 || error.response?.status === 403)
+    ) {
+      Logout();
+    }
+    throw error;
+  }
+};
 // API CALL for PUT method
 export const Put = async (fileName: string, data: any, useHeader: any) => {
   try {

@@ -19,18 +19,18 @@ import {
 } from "@/components/shared/form/AccountListbox";
 import { Get, Post, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
 
-// 1. Create a local type to align React Hook Form with the new state fields
+// ✅ CHANGED — workorder hata diya, salesinvoice add kiya
 type FormCashReceipt = Omit<CashReceipt, "receiptMode"> & {
-  receiptMode: "manual" | "workorder" | "salesorder";
-  workOrderNo?: any[];
+  receiptMode: "manual" | "salesorder" | "salesinvoice";
   salesOrderNo?: any[];
+  salesInvoiceNo?: any[];
 };
 
 interface CashReceiptDrawerProps {
   isOpen: boolean;
   close: () => void;
   cashReceipt: CashReceipt | null;
-  onSaved: () => void; // ✅ CHANGED — ab list refresh trigger karega
+  onSaved: () => void;
 }
 
 interface AccountListItem {
@@ -38,18 +38,27 @@ interface AccountListItem {
   label: string;
 }
 
-// ✅ NEW — work order API helper
-const workOrderApi = {
-  list: () => Get("workorder/list", {}, false),
-};
+// pending Sales Invoice / Sales Order option
+interface PendingDocOption extends AccountListItem {
+  accountId: string;
+  pendingAmount: number;
+}
 
-// ✅ NEW — sales order API helper
+// Sales order API helper
+// invoice bana hua SO nahi aata + pending advance (totalAmount − mile advances) aata hai
 const salesOrderApi = {
   list: (financialYearId: string) =>
-    Get("salesorder/list", { financialYearId }, false),
+    Get("salesorder/pending-advance-list", { financialYearId }, false),
 };
 
-// ✅ NEW — payment API helpers
+// ✅ NEW — sales invoice API helper
+// sirf Credit terms + pending amount > 0 wale invoices aate hain
+const salesInvoiceApi = {
+  list: (financialYearId: string) =>
+    Get("sales/pending-credit-list", { financialYearId }, false),
+};
+
+// Payment API helpers
 const paymentApi = {
   nextVoucherNo: (financialYearId: string) =>
     Get(
@@ -81,8 +90,8 @@ export function CashReceiptDrawer({
   } = useForm<FormCashReceipt>({
     defaultValues: {
       receiptMode: "manual",
-      workOrderNo: [],
       salesOrderNo: [],
+      salesInvoiceNo: [],
     },
     values: (cashReceipt as unknown as FormCashReceipt) || undefined,
   });
@@ -100,24 +109,28 @@ export function CashReceiptDrawer({
   const [oppLoading, setOppLoading] = useState(false);
 
   const [voucherLoading, setVoucherLoading] = useState(false);
-  const [workOrderOptions, setWorkOrderOptions] = useState<AccountListItem[]>(
-    [],
-  );
-  const [workOrderLoading, setWorkOrderLoading] = useState(false);
 
-  // ✅ NEW — Sales Order options
+  // Sales Order options
   const [salesOrderOptions, setSalesOrderOptions] = useState<
-    AccountListItem[]
+    PendingDocOption[]
   >([]);
   const [salesOrderLoading, setSalesOrderLoading] = useState(false);
 
+  // ✅ NEW — Sales Invoice options
+  const [salesInvoiceOptions, setSalesInvoiceOptions] = useState<
+    PendingDocOption[]
+  >([]);
+  const [salesInvoiceLoading, setSalesInvoiceLoading] = useState(false);
+// selected Invoice / Sales Order ka pending amount (sirf display + max limit ke liye)
+const [pendingAmount, setPendingAmount] = useState<number | null>(null);
   // Drawer open hote hi current date + voucher no set (naya add karte waqt)
   useEffect(() => {
     if (!isOpen) return;
     if (isEdit) return;
 
-    setValue("date", new Date().toISOString().slice(0, 10));
-
+    const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  setValue("date", today, { shouldValidate: true });
     const fetchVoucherNo = async () => {
       setVoucherLoading(true);
       try {
@@ -138,43 +151,7 @@ export function CashReceiptDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Work Order list — sirf jab "Work Order" mode select ho
-  useEffect(() => {
-    if (!isOpen) return;
-    if (receiptMode !== "workorder") return;
-    if (workOrderOptions.length > 0) return; // already loaded, dobara call na ho
-
-    const fetchWorkOrders = async () => {
-      setWorkOrderLoading(true);
-      try {
-        const res = await workOrderApi.list();
-        if (res.data?.success) {
-          const mapped: AccountListItem[] = (res.data.data || []).map(
-            (item: any) => ({
-              id: String(item.id),
-              label: item.workOrderNo || item.number || "", // ⚠️ API response field name check kar lena
-            }),
-          );
-          setWorkOrderOptions(mapped);
-        } else {
-          setWorkOrderOptions([]);
-          toasterrormsg(res.data?.message || "Failed to load work orders.");
-        }
-      } catch (err: any) {
-        setWorkOrderOptions([]);
-        toasterrormsg(
-          err?.response?.data?.message ||
-            "Something went wrong while loading work orders.",
-        );
-      } finally {
-        setWorkOrderLoading(false);
-      }
-    };
-
-    fetchWorkOrders();
-  }, [isOpen, receiptMode]);
-
-  // ✅ NEW — Sales Order list — sirf jab "Sales Order" mode select ho
+  // Sales Order list — sirf jab "Sales Order" mode select ho
   useEffect(() => {
     if (!isOpen) return;
     if (receiptMode !== "salesorder") return;
@@ -186,10 +163,12 @@ export function CashReceiptDrawer({
         const financialYearId = localStorage.getItem("financialYearId") || "";
         const res = await salesOrderApi.list(financialYearId);
         if (res.data?.success) {
-          const mapped: AccountListItem[] = (res.data.data || []).map(
+          const mapped: PendingDocOption[] = (res.data.data || []).map(
             (item: any) => ({
               id: String(item.id),
               label: item.soNo || "",
+              accountId: String(item.accountId ?? ""),
+              pendingAmount: Number(item.pendingAmount ?? 0),
             }),
           );
           setSalesOrderOptions(mapped);
@@ -209,6 +188,48 @@ export function CashReceiptDrawer({
     };
 
     fetchSalesOrders();
+  }, [isOpen, receiptMode]);
+
+  // ✅ NEW — Sales Invoice list — sirf jab "Sales Invoice" mode select ho
+  useEffect(() => {
+    if (!isOpen) return;
+    if (receiptMode !== "salesinvoice") return;
+    if (salesInvoiceOptions.length > 0) return; // already loaded, dobara call na ho
+
+    const fetchSalesInvoices = async () => {
+      setSalesInvoiceLoading(true);
+      try {
+        const financialYearId = localStorage.getItem("financialYearId") || "";
+        const res = await salesInvoiceApi.list(financialYearId);
+        if (res.data?.success) {
+        const mapped: PendingDocOption[] = (res.data.data || []).map(
+  (item: any) => ({
+    id: String(item.id),
+    // ✅ Invoice No + (SO No) — SO na ho to sirf invoice no
+   label: item.salesOrderNo
+  ? `${item.salesInvoiceNo}  |  SO: (${item.salesOrderNo})`
+  : item.salesInvoiceNo || "",
+    accountId: String(item.accountId ?? ""),
+    pendingAmount: Number(item.pendingAmount ?? 0),
+  }),
+);
+          setSalesInvoiceOptions(mapped);
+        } else {
+          setSalesInvoiceOptions([]);
+          toasterrormsg(res.data?.message || "Failed to load sales invoices.");
+        }
+      } catch (err: any) {
+        setSalesInvoiceOptions([]);
+        toasterrormsg(
+          err?.response?.data?.message ||
+            "Something went wrong while loading sales invoices.",
+        );
+      } finally {
+        setSalesInvoiceLoading(false);
+      }
+    };
+
+    fetchSalesInvoices();
   }, [isOpen, receiptMode]);
 
   useEffect(() => {
@@ -281,21 +302,69 @@ export function CashReceiptDrawer({
     fetchOppAccounts();
   }, [isOpen]);
 
+  // ✅ NEW — invoice select hone par Opp. Account + Amount auto-fill
+  const handleDocSelect = (
+  value: any,
+  onChange: (v: any) => void,
+  options: PendingDocOption[],
+) => {
+  onChange(value);
+  const picked = Array.isArray(value) ? value[0] : value;
+  const pickedId = String(picked?.id ?? picked ?? "");
+  const doc = options.find((o) => o.id === pickedId);
+  if (!doc) return;
+  setValue("oppAccount", doc.accountId as any);
+  setValue("amount", "" as any);          // ✅ user khud enter karega
+  setPendingAmount(doc.pendingAmount);    // ✅ label ke right me dikhega
+};
+useEffect(() => {
+  setPendingAmount(null);
+  setValue("amount", "" as any);
+}, [receiptMode]);
   const handleClose = () => {
     reset();
     close();
   };
 
-  // ✅ CHANGED — ab real API call hoga
   const onSubmit = async (data: FormCashReceipt) => {
-    if (data.receiptMode === "workorder") {
-      toasterrormsg("BOM cash receipt is not available yet.");
-      return;
+    // ✅ salesorder mode — advance receipt (salesOrderId ke saath)
+    let salesOrderId: number | undefined;
+    if (data.receiptMode === "salesorder") {
+      const picked: any = Array.isArray(data.salesOrderNo)
+        ? data.salesOrderNo[0]
+        : data.salesOrderNo;
+      salesOrderId = Number(picked?.id ?? picked) || undefined;
+      if (!salesOrderId) {
+        toasterrormsg("Please select a Sales Order.");
+        return;
+      }
+      const so = salesOrderOptions.find((o) => o.id === String(salesOrderId));
+      if (so && Number(data.amount) > so.pendingAmount) {
+        toasterrormsg(
+          `Advance cannot exceed pending amount (${so.pendingAmount}).`,
+        );
+        return;
+      }
     }
 
-    if (data.receiptMode === "salesorder") {
-      toasterrormsg("Sales Order cash receipt is not available yet.");
-      return;
+    // ✅ salesinvoice mode ab real save hoga (salesId ke saath)
+    let salesId: number | undefined;
+    if (data.receiptMode === "salesinvoice") {
+      const picked: any = Array.isArray(data.salesInvoiceNo)
+        ? data.salesInvoiceNo[0]
+        : data.salesInvoiceNo;
+      salesId = Number(picked?.id ?? picked) || undefined;
+      if (!salesId) {
+        toasterrormsg("Please select a Sales Invoice.");
+        return;
+      }
+      const inv = salesInvoiceOptions.find((o) => o.id === String(salesId));
+      if (inv && Number(data.amount) > inv.pendingAmount) {
+        toasterrormsg(
+          `Amount cannot exceed pending amount (${inv.pendingAmount}).`,
+        );
+        return;
+      }
     }
 
     try {
@@ -310,6 +379,8 @@ export function CashReceiptDrawer({
         oppAccountId: Number(data.oppAccount),
         amount: Number(data.amount),
         narration: data.narration || "",
+        salesId, // invoice se link (manual me undefined)
+        salesOrderId, // ✅ NEW — SO advance link
         financialYearId: financialYearId ? Number(financialYearId) : undefined,
         createdBy: companyId ? Number(companyId) : undefined,
         createdType: "Super Admin",
@@ -394,50 +465,25 @@ export function CashReceiptDrawer({
 
                     <label className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
                       <Radio
-                        checked={field.value === "workorder"}
-                        onChange={() => field.onChange("workorder")}
-                      />
-                      Work Order
-                    </label>
-
-                    {/* ✅ NEW — Sales Order */}
-                    <label className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
-                      <Radio
                         checked={field.value === "salesorder"}
                         onChange={() => field.onChange("salesorder")}
                       />
                       Sales Order
                     </label>
+
+                    {/* ✅ NEW — Sales Invoice */}
+                    <label className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                      <Radio
+                        checked={field.value === "salesinvoice"}
+                        onChange={() => field.onChange("salesinvoice")}
+                      />
+                      Sales Invoice
+                    </label>
                   </div>
                 )}
               />
 
-              {/* Work Order No — only shown when Work Order is selected */}
-              {receiptMode === "workorder" && (
-                <Controller
-                  control={control}
-                  name="workOrderNo"
-                  rules={{ required: "Work Order No is required" }}
-                  render={({ field: { value, onChange } }) => (
-                    <Combobox
-                      data={workOrderOptions}
-                      displayField="label"
-                      value={value}
-                      onChange={onChange}
-                      placeholder={
-                        workOrderLoading
-                          ? "Loading..."
-                          : "Select Work Order No."
-                      }
-                      label="Work Order No."
-                      searchFields={["label"]}
-                      error={errors.workOrderNo?.message}
-                    />
-                  )}
-                />
-              )}
-
-              {/* ✅ NEW — Sales Order No — only shown when Sales Order is selected */}
+              {/* Sales Order No — only shown when Sales Order is selected */}
               {receiptMode === "salesorder" && (
                 <Controller
                   control={control}
@@ -448,7 +494,9 @@ export function CashReceiptDrawer({
                       data={salesOrderOptions}
                       displayField="label"
                       value={value}
-                      onChange={onChange}
+                      onChange={(v: any) =>
+                        handleDocSelect(v, onChange, salesOrderOptions)
+                      }
                       placeholder={
                         salesOrderLoading
                           ? "Loading..."
@@ -457,6 +505,33 @@ export function CashReceiptDrawer({
                       label="Sales Order No."
                       searchFields={["label"]}
                       error={errors.salesOrderNo?.message}
+                    />
+                  )}
+                />
+              )}
+
+              {/* ✅ NEW — Sales Invoice No — only shown when Sales Invoice is selected */}
+              {receiptMode === "salesinvoice" && (
+                <Controller
+                  control={control}
+                  name="salesInvoiceNo"
+                  rules={{ required: "Sales Invoice No is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <Combobox
+                      data={salesInvoiceOptions}
+                      displayField="label"
+                      value={value}
+                      onChange={(v: any) =>
+                        handleDocSelect(v, onChange, salesInvoiceOptions)
+                      }
+                      placeholder={
+                        salesInvoiceLoading
+                          ? "Loading..."
+                          : "Select Sales Invoice No."
+                      }
+                      label="Sales Invoice No."
+                      searchFields={["label"]}
+                      error={errors.salesInvoiceNo?.message}
                     />
                   )}
                 />
@@ -518,15 +593,10 @@ export function CashReceiptDrawer({
                         onChange(`${yyyy}-${mm}-${dd}`);
                       }}
                       options={{
-                        disable: [
-                          function (date) {
-                            return date.getDay() === 0 || date.getDay() === 6;
-                          },
-                        ],
-                        locale: {
-                          firstDayOfWeek: 1,
-                        },
-                      }}
+  locale: {
+    firstDayOfWeek: 1,
+  },
+}}
                       placeholder="Choose date..."
                       error={errors.date?.message}
                     />
@@ -560,16 +630,36 @@ export function CashReceiptDrawer({
                     )}
                   />
                 </div>
+<div>
+  {/* Label row: left me "Amount", right me pending amount */}
+  <div className="mb-1 flex items-center justify-between">
+    <span className="dark:text-dark-100 text-sm font-medium text-gray-800">
+      Amount
+    </span>
+    {pendingAmount !== null && (
+      <span className="text-xs font-medium text-red-600">
+        Pending: ₹
+        {pendingAmount.toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+      </span>
+    )}
+  </div>
 
-                <Input
-                  {...register("amount", {
-                    required: "Amount is required",
-                  })}
-                  label="Amount"
-                  placeholder="Amount"
-                  type="number"
-                  error={errors.amount?.message}
-                />
+  <Input
+    {...register("amount", {
+      required: "Amount is required",
+      validate: (v) =>
+        pendingAmount === null ||
+        Number(v) <= pendingAmount ||
+        `Amount cannot exceed ₹${pendingAmount}`,
+    })}
+    placeholder="Enter amount"
+    type="number"
+    error={errors.amount?.message}
+  />
+</div>
               </div>
 
               {/* Narration */}
