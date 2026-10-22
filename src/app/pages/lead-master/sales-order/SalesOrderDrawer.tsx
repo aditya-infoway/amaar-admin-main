@@ -1,17 +1,18 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogPanel,
   Transition,
   TransitionChild,
 } from "@headlessui/react";
-import { XMarkIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, PlusIcon } from "@heroicons/react/24/solid";
 
 import { Button, Input } from "@/components/ui";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { DatePicker } from "@/components/shared/form/Datepicker";
 import { Get, Post, Put, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
 import type { SalesOrder } from "../shared/types";
+import { CreateAccountDrawer } from "./CreateAccountDrawer"; // 👈 path apne folder ke hisaab se
 
 interface SalesOrderDrawerProps {
   isOpen: boolean;
@@ -93,16 +94,18 @@ export function SalesOrderDrawer({
     [],
   );
 
-  // ---- Select Party — replaces the earlier "Details Mode" (As Its / Manual) toggle ----
+  // ---- Select Party ----
   const [partyOptions, setPartyOptions] = useState<PartyOption[]>([]);
   const [selectedParty, setSelectedParty] = useState<PartyOption[]>([]);
+
+  // ---- Create Account drawer (Party ke side wale + button se khulta hai) ----
+  const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
 
   // ---- Expected Date (sits in the same row as Select Party) ----
   const [expectedDate, setExpectedDate] = useState("");
 
   // ---- TOP BLOCK: read-only snapshot of the selected quotation ----
-  // Set ONLY when a quotation is selected (or on edit-prefill).
-  const [leadCode, setLeadCode] = useState(""); // renamed from leadId
+  const [leadCode, setLeadCode] = useState("");
   const [city, setCity] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -112,7 +115,6 @@ export function SalesOrderDrawer({
   const [remark, setRemark] = useState("");
 
   // ---- BOTTOM BLOCK: editable details, actually submitted ----
-  // Auto-filled from the selected Party, but always editable afterwards.
   const [detailCustomerName, setDetailCustomerName] = useState("");
   const [detailMobile, setDetailMobile] = useState("");
   const [detailEmail, setDetailEmail] = useState("");
@@ -122,9 +124,6 @@ export function SalesOrderDrawer({
   const [qty, setQty] = useState("1");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Bottom block fields are always editable; top block is always read-only.
-  const fieldsDisabled = readOnly;
 
   const [quotationAmount, setQuotationAmount] = useState(0);
 
@@ -215,50 +214,66 @@ export function SalesOrderDrawer({
     fetchQuotations();
   }, [isOpen]);
 
-  // Fetch Parties (accounts) — only Sundry Debtors / Customer group
+  // ✅ Parties fetch — useCallback me taaki account create hone ke baad dobara call kar sakein
+  const fetchParties = useCallback(async (): Promise<PartyOption[]> => {
+    try {
+      const response = await Get("master/account/list", {}, false);
+
+      if (response?.data?.success || response?.data?.status === 200) {
+        const list = response.data.data || response.data || [];
+
+        const filtered = list.filter((acc: any) => {
+          const groupName = (
+            acc.groupName ||
+            acc.group?.groupName ||
+            acc.Group?.groupName ||
+            ""
+          )
+            .toString()
+            .toLowerCase();
+
+          return PARTY_GROUP_NAMES.some((g) => groupName.includes(g));
+        });
+
+        const mapped: PartyOption[] = filtered.map((acc: any) => ({
+          id: String(acc.id ?? acc.accountId),
+          label: acc.accountName,
+          accountName: acc.accountName,
+          mobileNo: acc.mobileNo || acc.mobile || "",
+          email: acc.email || "",
+          addressLine1: acc.addressLine1 || acc.address || "",
+          cityName: acc.cityName || acc.city || "",
+        }));
+
+        setPartyOptions(mapped);
+        return mapped;
+      }
+    } catch (error) {
+      console.error("Party list error:", error);
+      toasterrormsg("Unable to load parties.");
+    }
+    return [];
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
-
-    const fetchParties = async () => {
-      try {
-        const response = await Get("master/account/list", {}, false);
-
-        if (response?.data?.success || response?.data?.status === 200) {
-          const list = response.data.data || response.data || [];
-
-          const filtered = list.filter((acc: any) => {
-            const groupName = (
-              acc.groupName ||
-              acc.group?.groupName ||
-              acc.Group?.groupName ||
-              ""
-            )
-              .toString()
-              .toLowerCase();
-
-            return PARTY_GROUP_NAMES.some((g) => groupName.includes(g));
-          });
-
-          setPartyOptions(
-            filtered.map((acc: any) => ({
-              id: String(acc.id ?? acc.accountId),
-              label: acc.accountName,
-              accountName: acc.accountName,
-              mobileNo: acc.mobileNo || acc.mobile || "",
-              email: acc.email || "",
-              addressLine1: acc.addressLine1 || acc.address || "",
-              cityName: acc.cityName || acc.city || "",
-            })),
-          );
-        }
-      } catch (error) {
-        console.error("Party list error:", error);
-        toasterrormsg("Unable to load parties.");
-      }
-    };
-
     fetchParties();
-  }, [isOpen]);
+  }, [isOpen, fetchParties]);
+
+  // ✅ Naya account ban gaya -> list refresh + usi ko Select Party me select kar do
+  const handleAccountCreated = useCallback(
+    async (created: any) => {
+      const list = await fetchParties();
+      const newId = String(created?.id ?? created?.accountId ?? "");
+
+      const match =
+        (newId && list.find((p) => p.id === newId)) ||
+        list.find((p) => p.accountName === created?.accountName);
+
+      if (match) setSelectedParty([match]);
+    },
+    [fetchParties],
+  );
 
   // Fetch sales orders to know which quotations are already used
   useEffect(() => {
@@ -280,7 +295,6 @@ export function SalesOrderDrawer({
           setUsedQuotationIds(
             new Set(
               orders
-                // don't exclude the quotation belonging to the SO currently being edited
                 .filter(
                   (o: any) => String(o.id) !== String(salesOrder?.id || ""),
                 )
@@ -298,7 +312,6 @@ export function SalesOrderDrawer({
 
   const availableQuotationOptions = useMemo(() => {
     if (isEditing) {
-      // Lock to the quotation this sales order was created for
       return selectedQuotation[0] ? [selectedQuotation[0]] : [];
     }
 
@@ -340,7 +353,6 @@ useEffect(() => {
 }, [selectedQuotation, isEditing]);
 
   // Auto-fill the BOTTOM (editable) block whenever a Party is selected.
-  // Fields stay editable afterwards — this is just a convenient prefill.
   useEffect(() => {
     const p = selectedParty?.[0];
 
@@ -396,12 +408,12 @@ useEffect(() => {
 
       setErrors({});
     });
-  }, [salesOrder, quotationOptions, partyOptions]); // isOpen removed from here on purpose, see below
+  }, [salesOrder, quotationOptions, partyOptions]);
 
-  // Reset form for "Add" mode — runs once per drawer open, not on every list change
+  // Reset form for "Add" mode — runs once per drawer open
   useEffect(() => {
     if (!isOpen) return;
-    if (salesOrder && salesOrder.id) return; // editing — handled by the effect above
+    if (salesOrder && salesOrder.id) return;
 
     queueMicrotask(() => {
       setSoNo("");
@@ -411,9 +423,9 @@ useEffect(() => {
       setQty("1");
       setErrors({});
     });
-  }, [isOpen]); // ← only isOpen, nothing else
+  }, [isOpen]);
 
-  // Generate next SO number, same pattern as quotation/next-number
+  // Generate next SO number
   useEffect(() => {
     if (!isOpen || isEditing) return;
 
@@ -659,24 +671,37 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Select Party + Expected Date (same row).
-                  Party: only Sundry Debtors / Customer group accounts. */}
+              {/* Select Party (+ button) + Expected Date (same row). */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <Combobox
-                    data={partyOptions}
-                    displayField="label"
-                    value={selectedParty[0] ?? null}
-                    onChange={(val: any) =>
-                      setSelectedParty(
-                        val ? (Array.isArray(val) ? val : [val]) : [],
-                      )
-                    }
-                    placeholder="Select Party"
-                    label="Select Party"
-                    searchFields={["label", "accountName"]}
-                    disabled={readOnly}
-                  />
+                <div className="flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Combobox
+                      data={partyOptions}
+                      displayField="label"
+                      value={selectedParty[0] ?? null}
+                      onChange={(val: any) =>
+                        setSelectedParty(
+                          val ? (Array.isArray(val) ? val : [val]) : [],
+                        )
+                      }
+                      placeholder="Select Party"
+                      label="Select Party"
+                      searchFields={["label", "accountName"]}
+                      disabled={readOnly}
+                    />
+                  </div>
+
+                  {/* ➕ Create Account — readOnly me hide */}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setAccountDrawerOpen(true)}
+                      className="bg-primary-600 hover:bg-primary-700 flex h-[38px] w-[38px] flex-shrink-0 cursor-pointer items-center justify-center rounded-lg text-white shadow-sm transition-colors"
+                      title="Create new account"
+                    >
+                      <PlusIcon className="size-4" />
+                    </button>
+                  )}
                 </div>
 
                 <div>
@@ -711,7 +736,7 @@ useEffect(() => {
                     label="Qty"
                     value={qty}
                     min={1}
-                    disabled={readOnly}
+                    disabled={readOnly || isEditing}
                     onChange={(e) => {
                       setQty(e.target.value);
                     }}
@@ -749,6 +774,13 @@ useEffect(() => {
             </div>
           </div>
         </TransitionChild>
+
+        {/* Create Account drawer — Sundry Debtors / Customer groups only */}
+        <CreateAccountDrawer
+          open={accountDrawerOpen}
+          onClose={() => setAccountDrawerOpen(false)}
+          onCreated={handleAccountCreated}
+        />
       </Dialog>
     </Transition>
   );
