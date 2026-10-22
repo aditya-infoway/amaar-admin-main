@@ -11,6 +11,7 @@ export interface StockReportItem {
   taxSlab: string;
   minQty: string;
   maxQty: string;
+  currentStock: string;
 }
 
 export const mapApiStockReportItemToStockReportItem = (
@@ -28,4 +29,5 @@ export const mapApiStockReportItemToStockReportItem = (
   taxSlab: item.taxSlab ?? "0",
   minQty: item.minQty ?? "0",
   maxQty: item.maxQty ?? "0",
+  currentStock: item.currentStock ?? item.stock ?? "0",
 });

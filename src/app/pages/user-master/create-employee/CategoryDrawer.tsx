@@ -58,6 +58,13 @@ interface EmployeeDrawerProps {
 const toStr = (v: any) =>
   v === undefined || v === null || v === 0 || v === "0" ? "" : String(v);
 
+// DB me "Fitting  Manager" jaise double space ho sakte hain
+const normalizeLabel = (s: string) =>
+  String(s || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
 // ---- Simple module-level cache: drawer dobara kholne par turant options dikhenge ----
 const CACHE_TTL = 60 * 1000; // 60 sec ke baad background refresh
 
@@ -133,7 +140,8 @@ export function EmployeeDrawer({
   // Production department select hua hai?
   const isProduction =
     String(selectedDepartment || "").toLowerCase() === "production";
-
+const isProcessSelected = isProduction && !!selectedProcessId;
+  // Role table se (department ke hisaab se)
   const roleOptions = roles
     .filter((item) => item.department === selectedDepartment)
     .map((item) => ({ id: item.id, label: item.label }));
@@ -141,6 +149,40 @@ export function EmployeeDrawer({
   const selectedRole = roles.find((item) => item.id === selectedRoleId);
   const isContractorManager =
     !isProduction && selectedRole?.label === "Contractor Manager";
+
+  // ---- Production Role dropdown = Processes + role table ke wo roles jo process ke duplicate nahi ----
+  // Role "Welding Manager" ka base = "welding". Agar kisi process ke naam me
+  // ye base aata hai (jaise "Welding", "Material Cutting"), to wo role process
+  // ka duplicate hai, isliye skip.
+  const productionRoleOptions: Option[] = useMemo(() => {
+    const isProcessRole = (roleLabel: string) => {
+      const base = normalizeLabel(roleLabel).replace(/\s*manager$/, "");
+      if (!base) return false;
+      return processOptions.some((p) => {
+        const pn = normalizeLabel(p.label);
+        if (pn.length < 2) return false;
+        return pn.includes(base) || base.includes(pn);
+      });
+    };
+
+    return [
+      // id me prefix: p: = process, r: = role (dono tables ki ids clash na karein)
+      ...processOptions.map((p) => ({ id: `p:${p.id}`, label: p.label })),
+      ...roles
+        .filter(
+          (r) =>
+            r.department === selectedDepartment && !isProcessRole(r.label),
+        )
+        .map((r) => ({ id: `r:${r.id}`, label: r.label })),
+    ];
+  }, [processOptions, roles, selectedDepartment]);
+
+  // Combobox me kaunsa selected dikhana hai
+  const selectedProductionRoleValue = selectedProcessId
+    ? `p:${selectedProcessId}`
+    : selectedRoleId
+      ? `r:${selectedRoleId}`
+      : "";
 
   // Sub process options: selected process ke hisaab se
   const subProcessOptions: Option[] = useMemo(
@@ -261,51 +303,54 @@ export function EmployeeDrawer({
     }
   };
 
-  const onSubmit = async (data: EmployeeFormValues) => {
-    // Production me name / mobile party se aate hain, role khali, process jaata hai
-    const party = accountGroupOptions.find(
-      (p) => p.id === String((data as any).accountId),
-    );
+const onSubmit = async (data: EmployeeFormValues) => {
+  const party = accountGroupOptions.find(
+    (p) => p.id === String((data as any).accountId),
+  );
 
-    const finalData: EmployeeFormValues = isProduction
-      ? {
-          ...data,
-          roleId: "",
-          processId: data.processId || "",
-          subProcessId: data.subProcessId || "",
-          employeeName: party?.label || data.employeeName || "",
-          mobileNumber: party?.mobile || "",
-          alternateNumber: "",
-        }
-      : { ...data, processId: "", subProcessId: "" };
+  // Production me sirf Process select hua ho tab name/mobile party se aayenge
+  const isProcess = isProduction && !!data.processId;
 
-    const { emailTaken } = await checkUnique(finalData.email);
+  const finalData: EmployeeFormValues = isProcess
+    ? {
+        ...data,
+        roleId: "",
+        processId: data.processId || "",
+        subProcessId: data.subProcessId || "",
+        employeeName: party?.label || data.employeeName || "",
+        mobileNumber: party?.mobile || "",
+        alternateNumber: "",
+      }
+    : { ...data, processId: "", subProcessId: "" };
 
-    let hasError = false;
+  const { emailTaken } = await checkUnique(finalData.email);
 
-    if (emailTaken) {
-      setError("email", {
-        type: "manual",
-        message: "Email already exists. Please enter a different email.",
-      });
-      hasError = true;
-    }
-    if (!isEditing && data.password !== data.confirmPassword) {
-      setError("confirmPassword", {
-        type: "manual",
-        message: "Passwords do not match",
-      });
-      hasError = true;
-    }
-    if (hasError) return;
+  let hasError = false;
 
-    const { confirmPassword, ...rest } = finalData;
-    onSave({ ...rest, id: employee?.id || "" } as Employee);
-    handleClose();
-  };
+  if (emailTaken) {
+    setError("email", {
+      type: "manual",
+      message: "Email already exists. Please enter a different email.",
+    });
+    hasError = true;
+  }
+  if (!isEditing && data.password !== data.confirmPassword) {
+    setError("confirmPassword", {
+      type: "manual",
+      message: "Passwords do not match",
+    });
+    hasError = true;
+  }
+  if (hasError) return;
 
-  // Party: Contractor Manager ya Production
-  const needsParty = isContractorManager || isProduction;
+  const { confirmPassword, ...rest } = finalData;
+  onSave({ ...rest, id: employee?.id || "" } as Employee);
+  handleClose();
+};
+
+
+// Party: Contractor Manager (non-production) ya Production me Process select ho
+const needsParty = isContractorManager || isProcessSelected;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -399,25 +444,40 @@ export function EmployeeDrawer({
                 )}
               />
 
-              {/* Role: Production me options = processes, baaki me roles */}
+              {/* Role: Production me = processes + role table ke (non-process) roles, baaki me roles */}
               {isProduction ? (
                 <Controller
                   control={control}
-                  name="processId"
-                  rules={{ required: "Role is required" }}
-                  render={({ field: { value, onChange } }) => (
+                  name="roleId"
+                
+                  render={() => (
                     <Combobox
-                      data={processOptions}
+                      data={productionRoleOptions}
                       value={
-                        processOptions.find(
-                          (item) => item.id === String(value ?? ""),
+                        productionRoleOptions.find(
+                          (item) => item.id === selectedProductionRoleValue,
                         ) || null
                       }
-                      onChange={(item: Option) => {
-                        onChange(item?.id || "");
-                        // process badalne par sub process reset
-                        setValue("subProcessId", "");
-                      }}
+                    onChange={(item: Option) => {
+  const picked = String(item?.id || "");
+  if (picked.startsWith("p:")) {
+    // process select hua
+    setValue("processId", picked.slice(2));
+    setValue("roleId", "", { shouldValidate: true });
+  } else if (picked.startsWith("r:")) {
+    // role select hua
+    setValue("roleId", picked.slice(2), {
+      shouldValidate: true,
+    });
+    setValue("processId", "");
+  } else {
+    setValue("processId", "");
+    setValue("roleId", "", { shouldValidate: true });
+  }
+  // har case me sub process aur party reset
+  setValue("subProcessId", "");
+  setValue("accountId" as any, "");
+}}
                       label="Role"
                       placeholder={
                         loadingProcesses && processOptions.length === 0
@@ -426,7 +486,7 @@ export function EmployeeDrawer({
                       }
                       displayField="label"
                       searchFields={["label"]}
-                      error={errors.processId?.message}
+                      error={(errors.roleId?.message as string) || undefined}
                     />
                   )}
                 />
@@ -459,7 +519,7 @@ export function EmployeeDrawer({
                 />
               )}
 
-              {/* Sub Process: sirf jab selected process ke sub process bane ho */}
+              {/* Sub Process: sirf jab process select ho aur uske sub process bane ho */}
               {isProduction &&
                 selectedProcessId &&
                 (loadingSubProcesses || subProcessOptions.length > 0) && (
@@ -522,7 +582,7 @@ export function EmployeeDrawer({
               )}
 
               {/* Production me Employee Name / Mobile / Alternate hide */}
-              {!isProduction && (
+         {!isProcessSelected && (
                 <>
                   <Input
                     {...register("employeeName", {
