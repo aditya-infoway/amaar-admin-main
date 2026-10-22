@@ -2,7 +2,11 @@
 
 import { Page } from "@/components/shared/Page";
 import { Button } from "@/components/ui";
-import { EyeIcon, ArrowDownIcon } from "@heroicons/react/24/outline";
+import {
+  EyeIcon,
+  ArrowDownIcon,
+  ArrowLeftIcon,
+} from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Get, toasterrormsg } from "@/ApiHelper";
@@ -81,8 +85,10 @@ export default function DebitNoteVendorDocsPage() {
             onClick={() =>
               navigate("/accounting-master/debit-note/vendor-note")
             }
+            title="Back"
+            className="flex h-10 w-10 items-center justify-center p-0"
           >
-            Back
+            <ArrowLeftIcon className="size-5" />
           </Button>
         </div>
 

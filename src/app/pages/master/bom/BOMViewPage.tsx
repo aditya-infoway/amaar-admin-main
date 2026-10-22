@@ -19,7 +19,7 @@ interface BOMItem {
   itemName: string;
   quantity: string;
   unit: string;
-    weight?: string;
+  weight?: string;
   serialNo?: string;
   asslyQty?: string;
   ldDay?: string;
@@ -123,7 +123,10 @@ interface TreeProps {
 // remove-button hataye gaye hain, kyunki ye purely read-only view hai.
 function BOMTreeList({ items, level, expanded, onToggle }: TreeProps) {
   return (
-    <ul className="relative" style={level > 0 ? { paddingLeft: INDENT } : undefined}>
+    <ul
+      className="relative"
+      style={level > 0 ? { paddingLeft: INDENT } : undefined}
+    >
       {items.map((item, index) => (
         <BOMTreeNode
           key={item.id}
@@ -153,7 +156,7 @@ function BOMTreeNode({
       {level > 0 && (
         <>
           <span
-            className="absolute bg-gray-300 dark:bg-dark-500"
+            className="dark:bg-dark-500 absolute bg-gray-300"
             style={{
               left: -INDENT + 10,
               top: 0,
@@ -162,14 +165,19 @@ function BOMTreeNode({
             }}
           />
           <span
-            className="absolute bg-gray-300 dark:bg-dark-500"
-            style={{ left: -INDENT + 10, top: TICK_Y, width: INDENT - 10, height: 1 }}
+            className="dark:bg-dark-500 absolute bg-gray-300"
+            style={{
+              left: -INDENT + 10,
+              top: TICK_Y,
+              width: INDENT - 10,
+              height: 1,
+            }}
           />
         </>
       )}
 
       <div
-        className="group flex items-center gap-2 rounded-md py-2 pl-1 pr-2 hover:bg-gray-50 dark:hover:bg-dark-600"
+        className="group dark:hover:bg-dark-600 flex items-center gap-2 rounded-md py-2 pr-2 pl-1 hover:bg-gray-50"
         style={{ minHeight: ROW_H }}
       >
         <button
@@ -179,32 +187,51 @@ function BOMTreeNode({
         >
           {hasChildren ? (
             <ChevronDownIcon
-              className={clsx("size-4 text-gray-400 transition-transform", !isOpen && "-rotate-90")}
+              className={clsx(
+                "size-4 text-gray-400 transition-transform",
+                !isOpen && "-rotate-90",
+              )}
             />
           ) : (
-            <span className="block size-1 rounded-full bg-gray-300 dark:bg-dark-500" />
+            <span className="dark:bg-dark-500 block size-1 rounded-full bg-gray-300" />
           )}
         </button>
 
-        <span className={clsx("size-5 shrink-0", hasChildren ? "text-primary-600" : "text-gray-400")}>
+        <span
+          className={clsx(
+            "size-5 shrink-0",
+            hasChildren ? "text-primary-600" : "text-gray-400",
+          )}
+        >
           {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
         </span>
 
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
-          <span className="shrink-0 text-sm font-medium text-gray-900 dark:text-dark-50">{item.itemCode}</span>
-          <span className="truncate text-xs text-gray-500 dark:text-dark-300">{item.itemName}</span>
+          <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+            {item.itemCode}
+          </span>
+          <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+            {item.itemName}
+          </span>
         </div>
 
-        <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-dark-300">
+        <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
           Qty: {item.quantity}
         </span>
         {item.unit && (
-          <span className="shrink-0 text-xs text-gray-400 dark:text-dark-400">{item.unit}</span>
+          <span className="dark:text-dark-400 shrink-0 text-xs text-gray-400">
+            {item.unit}
+          </span>
         )}
       </div>
 
       {hasChildren && isOpen && (
-        <BOMTreeList items={item.children} level={level + 1} expanded={expanded} onToggle={onToggle} />
+        <BOMTreeList
+          items={item.children}
+          level={level + 1}
+          expanded={expanded}
+          onToggle={onToggle}
+        />
       )}
     </li>
   );
@@ -215,41 +242,43 @@ export default function BOMViewPage() {
 
   const [loading, setLoading] = useState(true);
   const [bom, setBom] = useState<BOMDetail | null>(null);
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
-const handleExportExcel = () => {
-  if (!bom) return;
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>(
+    {},
+  );
+  const handleExportExcel = () => {
+    if (!bom) return;
 
-  const rows = flattenBOMForExport(bom.items);
+    const rows = flattenBOMForExport(bom.items);
 
-  const worksheetData = rows.map((r) => ({
-    "Item Code": r.itemCode,
-    "Item Name": r.itemName,
-    "Child Code": r.childCode,
-    "Child Name": r.childName,
-    "Qty": r.qty,
-    "Unit/UOM": r.unit,
-    "Weight": r.weight,
-  }));
+    const worksheetData = rows.map((r) => ({
+      "Item Code": r.itemCode,
+      "Item Name": r.itemName,
+      "Child Code": r.childCode,
+      "Child Name": r.childName,
+      Qty: r.qty,
+      "Unit/UOM": r.unit,
+      Weight: r.weight,
+    }));
 
-  const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
 
-  // column widths thoda better readability ke liye
-  worksheet["!cols"] = [
-    { wch: 25 }, // Item Code (indented)
-    { wch: 30 }, // Item Name
-    { wch: 25 }, // Child Code
-    { wch: 30 }, // Child Name
-    { wch: 8 },  // Qty
-    { wch: 10 }, // Unit
-    { wch: 10 }, // Weight
-  ];
+    // column widths thoda better readability ke liye
+    worksheet["!cols"] = [
+      { wch: 25 }, // Item Code (indented)
+      { wch: 30 }, // Item Name
+      { wch: 25 }, // Child Code
+      { wch: 30 }, // Child Name
+      { wch: 8 }, // Qty
+      { wch: 10 }, // Unit
+      { wch: 10 }, // Weight
+    ];
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "BOM Structure");
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "BOM Structure");
 
-  const fileName = `BOM_${bom.bomCode || bom.bomId}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
-};
+    const fileName = `BOM_${bom.bomCode || bom.bomId}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
   useEffect(() => {
     const load = async () => {
       if (!id) return;
@@ -261,7 +290,9 @@ const handleExportExcel = () => {
           setBom(data);
           // View page pe default sab nodes expanded dikhao
           setExpandedNodes(
-            Object.fromEntries(collectIds(data.items).map((nid) => [nid, true]))
+            Object.fromEntries(
+              collectIds(data.items).map((nid) => [nid, true]),
+            ),
           );
         } else {
           toasterrormsg(response.data?.message || "Failed to fetch BOM.");
@@ -295,7 +326,7 @@ const handleExportExcel = () => {
   if (!bom) {
     return (
       <Page title="View BOM">
-        <div className="py-16 text-center text-gray-500 dark:text-dark-300">
+        <div className="dark:text-dark-300 py-16 text-center text-gray-500">
           BOM not found.
           <div className="mt-4">
             <Link to="/master/item-master/bom">
@@ -314,46 +345,61 @@ const handleExportExcel = () => {
     <Page title="View BOM">
       <div className="transition-content mx-auto w-full px-(--margin-x) pb-8">
         <div className="flex items-center justify-between py-5 lg:py-6">
-          <h2 className="border-b-4 border-primary text-xl font-bold tracking-wide text-primary dark:text-dark-50 lg:text-2xl">
+          <h2 className="border-primary text-primary dark:text-dark-50 border-b-4 text-xl font-bold tracking-wide lg:text-2xl">
             View BOM
           </h2>
-          <Link to="/master/item-master/bom">
-            <Button color="primary" variant="outlined">
-              <ChevronLeftIcon className="size-6" />
-              <span>Back</span>
+          <Link to="/master/item-master/bom" title="Back">
+            <Button
+              color="primary"
+              variant="outlined"
+              className="flex h-10 w-10 items-center justify-center p-0"
+            >
+              <ChevronLeftIcon className="size-5" />
             </Button>
           </Link>
         </div>
 
         {/* BOM Details — read only */}
         <Card className="mb-6 p-3">
-         <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-4 dark:border-dark-500">
-           
-          
- <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">BOM Details</h3>
-  <Button
-    color="success"
-    variant="outlined"
-    onClick={handleExportExcel}
-    disabled={!bom || bom.items.length === 0}
-  >
-    Export Excel
-  </Button>
-</div>
-          
+          <div className="dark:border-dark-500 mb-4 flex items-center justify-between border-b border-gray-200 pb-4">
+            <h3 className="dark:text-dark-100 text-lg font-medium text-gray-800">
+              BOM Details
+            </h3>
+            <Button
+              color="success"
+              variant="outlined"
+              onClick={handleExportExcel}
+              disabled={!bom || bom.items.length === 0}
+            >
+              Export Excel
+            </Button>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-dark-300">BOM Name</p>
-              <p className="mt-1 text-sm font-medium text-gray-900 dark:text-dark-50">{bom.bomName}</p>
+              <p className="dark:text-dark-300 text-xs font-medium text-gray-500">
+                BOM Name
+              </p>
+              <p className="dark:text-dark-50 mt-1 text-sm font-medium text-gray-900">
+                {bom.bomName}
+              </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-dark-300">BOM Code</p>
-              <p className="mt-1 text-sm font-medium text-gray-900 dark:text-dark-50">{bom.bomCode}</p>
+              <p className="dark:text-dark-300 text-xs font-medium text-gray-500">
+                BOM Code
+              </p>
+              <p className="dark:text-dark-50 mt-1 text-sm font-medium text-gray-900">
+                {bom.bomCode}
+              </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-dark-300">Status</p>
-              <Badge color={bom.status === "active" ? "success" : "neutral"} className="mt-1">
+              <p className="dark:text-dark-300 text-xs font-medium text-gray-500">
+                Status
+              </p>
+              <Badge
+                color={bom.status === "active" ? "success" : "neutral"}
+                className="mt-1"
+              >
                 {bom.status === "active" ? "Active" : "Inactive"}
               </Badge>
             </div>
@@ -362,18 +408,29 @@ const handleExportExcel = () => {
 
         {/* BOM Structure — read-only tree, same layout as Create/Edit page */}
         <Card className="p-3">
-          <div className="mb-4 border-b border-gray-200 pb-4 dark:border-dark-500">
-            <h3 className="text-lg font-medium text-gray-800 dark:text-dark-100">BOM Structure</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-dark-300">
-              {totalItems > 0 ? `${totalItems} item${totalItems > 1 ? "s" : ""}` : "No items in this BOM"}
+          <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
+            <h3 className="dark:text-dark-100 text-lg font-medium text-gray-800">
+              BOM Structure
+            </h3>
+            <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
+              {totalItems > 0
+                ? `${totalItems} item${totalItems > 1 ? "s" : ""}`
+                : "No items in this BOM"}
             </p>
           </div>
 
           <div className="max-h-[600px] space-y-1 overflow-y-auto pr-1">
             {bom.items.length === 0 ? (
-              <div className="py-8 text-center text-gray-500 dark:text-dark-300">No items in this BOM.</div>
+              <div className="dark:text-dark-300 py-8 text-center text-gray-500">
+                No items in this BOM.
+              </div>
             ) : (
-              <BOMTreeList items={bom.items} level={0} expanded={expandedNodes} onToggle={toggleNode} />
+              <BOMTreeList
+                items={bom.items}
+                level={0}
+                expanded={expandedNodes}
+                onToggle={toggleNode}
+              />
             )}
           </div>
         </Card>
