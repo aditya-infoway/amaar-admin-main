@@ -307,40 +307,37 @@ export function SalesOrderDrawer({
 
   // Auto-fill Lead ID / City / Model / Remark / Price whenever a quotation is picked.
   // TOP block always mirrors the quotation, regardless of Party selection.
-  useEffect(() => {
-    const q = selectedQuotation?.[0];
+useEffect(() => {
+  const q = selectedQuotation?.[0];
 
-    queueMicrotask(() => {
-      if (!q) {
-        // Nothing selected — clear everything.
-        setLeadCode("");
-        setCity("");
-        setCustomerName("");
-        setMobile("");
-        setEmail("");
-        setAddress("");
-        setModel("");
-        setRemark("");
+  queueMicrotask(() => {
+    if (!q) {
+      setLeadCode("");
+      setCity("");
+      setCustomerName("");
+      setMobile("");
+      setEmail("");
+      setAddress("");
+      setModel("");
+      setRemark("");
+      if (!isEditing) setQty("1");   // ← changed
+      setQuotationAmount(0);
+      return;
+    }
 
-        setQty("1");
-        setQuotationAmount(0);
-        return;
-      }
+    setLeadCode(q.leadCode || "");
+    setCity(q.city || "");
+    setCustomerName(q.customerName || "");
+    setMobile(q.mobile || "");
+    setEmail(q.email || "");
+    setAddress(q.address || "");
+    setModel(q.model || "");
+    setRemark(q.remark || "");
 
-      // TOP — always set from the quotation, read-only.
-      setLeadCode(q.leadCode || "");
-      setCity(q.city || "");
-      setCustomerName(q.customerName || "");
-      setMobile(q.mobile || "");
-      setEmail(q.email || "");
-      setAddress(q.address || "");
-      setModel(q.model || "");
-      setRemark(q.remark || "");
-
-      setQty("1");
-      setQuotationAmount(Number(q.finalPrice) || 0);
-    });
-  }, [selectedQuotation]);
+    if (!isEditing) setQty("1");     // ← changed
+    setQuotationAmount(Number(q.finalPrice) || 0);
+  });
+}, [selectedQuotation, isEditing]);
 
   // Auto-fill the BOTTOM (editable) block whenever a Party is selected.
   // Fields stay editable afterwards — this is just a convenient prefill.
