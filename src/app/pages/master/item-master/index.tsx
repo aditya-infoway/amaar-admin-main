@@ -20,7 +20,8 @@ import { MasterTable } from "./shared/MasterTable";
 import { MasterToolbar } from "./shared/MasterToolbar";
 import { columns, exportColumns } from "./columns";
 import { ItemMaster, mapApiItemMasterToItemMaster } from "./data";
-import { Upload } from "lucide-react";
+import { Upload, Download, X } from "lucide-react";
+import { downloadItemImportTemplate } from "./shared/itemImportTemplate";
 
 export default function ItemMasterListPage() {
   const navigate = useNavigate();
@@ -35,6 +36,9 @@ export default function ItemMasterListPage() {
   const [filterCategory, setFilterCategory] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const categoryFilterOptions = useMemo(() => {
     const unique = Array.from(
@@ -46,17 +50,38 @@ export default function ItemMasterListPage() {
     ];
   }, [data]);
 
-  const handleImportExcel = async (file: File) => {
+  const closeImportModal = () => {
+    setImportOpen(false);
+    setImportFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleImportExcel = async () => {
+    if (!importFile) return toasterrormsg("Please select a file first.");
+    const file = importFile;
+    setImporting(true);
     try {
       const columnMapping = {
         "Item Code": "itemCode",
         "Item Name": "itemName",
         "Short Name": "shortName",
+        "HSN Code": "hsnCode",
+        "Item Location": "itemLocation",
         "Item Category": "categoryName",
         Group: "groupName",
-        // 'Sales Price': 'salesPrice',
-        // 'MRP': 'mrp',
-        Barcode: "barcode",
+        "Unit / UOM": "unit",
+        "Thickness (mm)": "thickness",
+        "Length (mm)": "length",
+        "Width (mm)": "width",
+        "Weight (kg)": "weight",
+        "Tax Slab": "taxSlab",
+        "Stock Mapping": "stockMapping",
+        "Min Qty": "minQty",
+        "Max Qty": "maxQty",
+        "Opening Stock": "openingStock",
+        "Stock Value": "stockValue",
+        "Auto Generate Barcode": "barcodeType", // ← change this
+        "Generate Barcode": "barcodeType",
       } as const;
 
       const importedData = await importFromExcel<Partial<ItemMaster>>(
@@ -74,6 +99,7 @@ export default function ItemMasterListPage() {
         toastsuccessmsg(
           response.data?.message || "Items imported successfully.",
         );
+        closeImportModal();
         fetchAll();
       } else {
         const errors = response.data?.data;
@@ -86,17 +112,11 @@ export default function ItemMasterListPage() {
             : response.data?.message || "Import failed.",
         );
       }
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     } catch (error) {
       toasterrormsg("Failed to import Excel file. Please check the format.");
+    } finally {
+      setImporting(false);
     }
-  };
-
-  const triggerFileUpload = () => {
-    fileInputRef.current?.click();
   };
 
   const fetchAll = async () => {
@@ -208,7 +228,7 @@ export default function ItemMasterListPage() {
             <Button
               variant="outlined"
               className="h-9 gap-2 rounded-md px-3 text-sm"
-              onClick={triggerFileUpload}
+              onClick={() => setImportOpen(true)}
             >
               <Upload className="size-4" />
               <span>Import Excel</span>
@@ -255,10 +275,7 @@ export default function ItemMasterListPage() {
           accept=".xlsx,.xls,.csv"
           className="hidden"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              handleImportExcel(file);
-            }
+            setImportFile(e.target.files?.[0] ?? null);
           }}
         />
 
@@ -273,6 +290,47 @@ export default function ItemMasterListPage() {
           bordered
         />
       </div>
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="dark:bg-dark-700 w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-5 py-3">
+              <h3 className="font-semibold">Import Items</h3>
+              <button onClick={closeImportModal}>
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="space-y-4 p-5">
+              <button
+                type="button"
+                onClick={() => downloadItemImportTemplate()}
+                className="text-primary-600 flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <Download className="size-4" /> Download sample template
+              </button>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-8 text-sm"
+              >
+                <Upload className="size-6" />
+                <span>
+                  {importFile ? importFile.name : "Select an Excel / CSV file"}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 border-t px-5 py-3">
+              <Button variant="outlined" onClick={closeImportModal}>
+                Close
+              </Button>
+              <Button
+                onClick={handleImportExcel}
+                disabled={!importFile || importing}
+              >
+                {importing ? "Importing..." : "Import"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Page>
   );
 }
