@@ -157,69 +157,61 @@ export default function EmployeePage() {
   }));
 
   // ---- Save (create or update) via API ----
-  const handleSave = async (item: Employee) => {
-    const isProduction = isProductionDept(item.department);
-
-    const payload: any = {
-      department: item.department,
-      branch: item.branch,
-      employeeName: item.employeeName,
-      mobileNumber: item.mobileNumber,
-      alternateNumber: item.alternateNumber,
-      email: item.email,
-      accountId: item.accountId ? Number(item.accountId) : null,
-    };
-
-    if (isProduction) {
-      // Production me role nahi, process / sub process jaata hai
-      payload.processId = item.processId ? Number(item.processId) : undefined;
-      payload.subProcessId = item.subProcessId
-        ? Number(item.subProcessId)
-        : undefined;
-    } else {
-      payload.roleId = Number(item.roleId);
-    }
-
-    try {
-      if (item.id) {
-        if (item.password) payload.password = item.password;
-
-        const response = await Put(
-          "master/employee/update",
-          { employeeId: Number(item.id), ...payload },
-          false,
-        );
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Employee updated successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(response.data?.message || "Failed to update employee.");
-        }
-      } else {
-        payload.password = item.password;
-
-        // ===== companyId localStorage se, createdType default "Super Admin" =====
-        const companyId = localStorage.getItem("companyId") || "";
-        payload.createdBy = Number(companyId);
-        payload.createdType = "Super Admin";
-
-        const response = await Post("master/employee/create", payload, false);
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "Employee created successfully.",
-          );
-          fetchAll();
-        } else {
-          toasterrormsg(response.data?.message || "Failed to create employee.");
-        }
-      }
-    } catch (error) {
-      toasterrormsg("Something went wrong while saving the employee.");
-    }
+const handleSave = async (item: Employee) => {
+  const payload: any = {
+    department: item.department,
+    branch: item.branch,
+    employeeName: item.employeeName,
+    mobileNumber: item.mobileNumber,
+    alternateNumber: item.alternateNumber,
+    email: item.email,
+    accountId: item.accountId ? Number(item.accountId) : null,
   };
 
+  // Role ya process, jo bhi set ho wahi bhejo (Production me dono me se ek)
+  if (item.roleId) payload.roleId = Number(item.roleId);
+  if (item.processId) payload.processId = Number(item.processId);
+  if (item.subProcessId) payload.subProcessId = Number(item.subProcessId);
+
+  try {
+    if (item.id) {
+      if (item.password) payload.password = item.password;
+
+      const response = await Put(
+        "master/employee/update",
+        { employeeId: Number(item.id), ...payload },
+        false,
+      );
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Employee updated successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(response.data?.message || "Failed to update employee.");
+      }
+    } else {
+      payload.password = item.password;
+
+      // companyId localStorage se, createdType default "Super Admin"
+      const companyId = localStorage.getItem("companyId") || "";
+      payload.createdBy = Number(companyId);
+      payload.createdType = "Super Admin";
+
+      const response = await Post("master/employee/create", payload, false);
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Employee created successfully.",
+        );
+        fetchAll();
+      } else {
+        toasterrormsg(response.data?.message || "Failed to create employee.");
+      }
+    }
+  } catch (error) {
+    toasterrormsg("Something went wrong while saving the employee.");
+  }
+};
   const handleDeleteOne = async (row: Employee) => {
     try {
       const response = await Delete(

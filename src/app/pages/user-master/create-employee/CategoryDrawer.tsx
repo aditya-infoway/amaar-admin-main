@@ -140,7 +140,7 @@ export function EmployeeDrawer({
   // Production department select hua hai?
   const isProduction =
     String(selectedDepartment || "").toLowerCase() === "production";
-const isProcessSelected = isProduction && !!selectedProcessId;
+  const isProcessSelected = isProduction && !!selectedProcessId;
   // Role table se (department ke hisaab se)
   const roleOptions = roles
     .filter((item) => item.department === selectedDepartment)
@@ -170,8 +170,7 @@ const isProcessSelected = isProduction && !!selectedProcessId;
       ...processOptions.map((p) => ({ id: `p:${p.id}`, label: p.label })),
       ...roles
         .filter(
-          (r) =>
-            r.department === selectedDepartment && !isProcessRole(r.label),
+          (r) => r.department === selectedDepartment && !isProcessRole(r.label),
         )
         .map((r) => ({ id: `r:${r.id}`, label: r.label })),
     ];
@@ -303,54 +302,66 @@ const isProcessSelected = isProduction && !!selectedProcessId;
     }
   };
 
-const onSubmit = async (data: EmployeeFormValues) => {
-  const party = accountGroupOptions.find(
-    (p) => p.id === String((data as any).accountId),
-  );
+  const onSubmit = async (data: EmployeeFormValues) => {
+      let processId = "";
+let roleId = "";
 
-  // Production me sirf Process select hua ho tab name/mobile party se aayenge
-  const isProcess = isProduction && !!data.processId;
-
-  const finalData: EmployeeFormValues = isProcess
-    ? {
-        ...data,
-        roleId: "",
-        processId: data.processId || "",
-        subProcessId: data.subProcessId || "",
-        employeeName: party?.label || data.employeeName || "",
-        mobileNumber: party?.mobile || "",
-        alternateNumber: "",
-      }
-    : { ...data, processId: "", subProcessId: "" };
-
-  const { emailTaken } = await checkUnique(finalData.email);
-
-  let hasError = false;
-
-  if (emailTaken) {
-    setError("email", {
-      type: "manual",
-      message: "Email already exists. Please enter a different email.",
-    });
-    hasError = true;
+if (isProduction) {
+  if (selectedProductionRoleValue.startsWith("p:")) {
+    processId = selectedProductionRoleValue.slice(2);
+  } else if (selectedProductionRoleValue.startsWith("r:")) {
+    roleId = selectedProductionRoleValue.slice(2);
   }
-  if (!isEditing && data.password !== data.confirmPassword) {
-    setError("confirmPassword", {
-      type: "manual",
-      message: "Passwords do not match",
-    });
-    hasError = true;
-  }
-  if (hasError) return;
+}
 
-  const { confirmPassword, ...rest } = finalData;
-  onSave({ ...rest, id: employee?.id || "" } as Employee);
-  handleClose();
-};
+    const party = accountGroupOptions.find(
+      (p) => p.id === String((data as any).accountId),
+    );
+    const isProcess = isProduction && !!processId;
 
+    const finalData: EmployeeFormValues = isProcess
+      ? {
+          ...data,
+          roleId: "",
+          processId,
+          subProcessId: data.subProcessId || "",
+          employeeName: party?.label || data.employeeName || "",
+          mobileNumber: party?.mobile || "",
+          alternateNumber: "",
+        }
+      : isProduction
+        ? { ...data, roleId, processId: "", subProcessId: "" }
+        : { ...data, processId: "", subProcessId: "" };
 
-// Party: Contractor Manager (non-production) ya Production me Process select ho
-const needsParty = isContractorManager || isProcessSelected;
+    console.log("DRAWER ->", finalData.roleId, finalData.processId);
+
+    const { emailTaken } = await checkUnique(finalData.email);
+
+    let hasError = false;
+
+    if (emailTaken) {
+      setError("email", {
+        type: "manual",
+        message: "Email already exists. Please enter a different email.",
+      });
+      hasError = true;
+    }
+    if (!isEditing && data.password !== data.confirmPassword) {
+      setError("confirmPassword", {
+        type: "manual",
+        message: "Passwords do not match",
+      });
+      hasError = true;
+    }
+    if (hasError) return;
+
+    const { confirmPassword, ...rest } = finalData;
+    onSave({ ...rest, id: employee?.id || "" } as Employee);
+    handleClose();
+  };
+
+  // Party: Contractor Manager (non-production) ya Production me Process select ho
+  const needsParty = isContractorManager || isProcessSelected;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -449,7 +460,6 @@ const needsParty = isContractorManager || isProcessSelected;
                 <Controller
                   control={control}
                   name="roleId"
-                
                   render={() => (
                     <Combobox
                       data={productionRoleOptions}
@@ -458,22 +468,21 @@ const needsParty = isContractorManager || isProcessSelected;
                           (item) => item.id === selectedProductionRoleValue,
                         ) || null
                       }
-                    onChange={(item: Option) => {
+                     onChange={(item: Option) => {
   const picked = String(item?.id || "");
   if (picked.startsWith("p:")) {
     // process select hua
     setValue("processId", picked.slice(2));
-    setValue("roleId", "", { shouldValidate: true });
+    setValue("roleId", "");
   } else if (picked.startsWith("r:")) {
     // role select hua
-    setValue("roleId", picked.slice(2), {
-      shouldValidate: true,
-    });
+    setValue("roleId", picked.slice(2));
     setValue("processId", "");
   } else {
     setValue("processId", "");
-    setValue("roleId", "", { shouldValidate: true });
+    setValue("roleId", "");
   }
+  clearErrors("roleId");
   // har case me sub process aur party reset
   setValue("subProcessId", "");
   setValue("accountId" as any, "");
@@ -494,7 +503,7 @@ const needsParty = isContractorManager || isProcessSelected;
                 <Controller
                   control={control}
                   name="roleId"
-                  rules={{ required: "Role is required" }}
+           
                   render={({ field: { value, onChange, ...rest } }) => (
                     <Listbox
                       data={roleOptions}
@@ -582,7 +591,7 @@ const needsParty = isContractorManager || isProcessSelected;
               )}
 
               {/* Production me Employee Name / Mobile / Alternate hide */}
-         {!isProcessSelected && (
+              {!isProcessSelected && (
                 <>
                   <Input
                     {...register("employeeName", {
