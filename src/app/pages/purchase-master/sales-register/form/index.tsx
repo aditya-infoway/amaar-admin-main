@@ -529,14 +529,20 @@ function AddItemSelector({
             disabled={itemLocked}
             placeholder="Select item / model"
             searchFields={["itemCode", "itemName"]}
-            renderItem={(item: any) => (
-              <div className="flex w-full items-center text-inherit">
-                <span className="w-16 shrink-0 text-xs font-bold">
-                  {item.itemCode}
-                </span>
-                <span className="truncate text-sm">{item.itemName}</span>
-              </div>
-            )}
+         renderItem={(item: any) => (
+  <div className="flex w-full items-center gap-3">
+    <span
+      className="w-24 shrink-0 truncate text-xs font-bold"
+      title={item.itemCode}
+    >
+      {item.itemCode}
+    </span>
+
+    <span className="min-w-0 truncate text-sm">
+      {item.itemName}
+    </span>
+  </div>
+)}
           />
         </div>
         <div className="col-span-6 md:col-span-3">
