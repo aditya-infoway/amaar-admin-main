@@ -64,9 +64,9 @@ interface SalesDetail {
 
 function InfoRow({ label, value }: { label: string; value: any }) {
   return (
-    <div className="flex justify-between border-b border-gray-100 py-2 last:border-0 dark:border-gray-700">
-      <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
-      <span className="text-right text-sm font-medium text-gray-800 dark:text-gray-100">
+    <div className="flex justify-between gap-3 border-b border-gray-100 py-2 last:border-0 dark:border-gray-700">
+      <span className="shrink-0 text-sm text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="min-w-0 text-right text-sm font-medium wrap-break-word text-gray-800 dark:text-gray-100">
         {value || "—"}
       </span>
     </div>
@@ -117,22 +117,22 @@ export function SalesDetailsDrawer({
       {open && (
         <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
       )}
-      <div
-        className={
-          "fixed top-0 right-0 z-50 flex h-full flex-col bg-white shadow-2xl transition-transform duration-300 lg:w-[70%] dark:bg-gray-800 " +
-          (open ? "translate-x-0" : "translate-x-full")
-        }
-      >
+    <div
+  className={
+    "fixed top-0 right-0 z-50 flex h-full w-full max-w-full flex-col bg-white shadow-2xl transition-transform duration-300 lg:w-[70%] dark:bg-gray-800 " +
+    (open ? "translate-x-0" : "translate-x-full")
+  }
+>
         {/* Header */}
-        <div className="bg-primary-600 flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
-          <h3 className="text-base font-bold">
+        <div className="bg-primary-600 flex shrink-0 items-center justify-between px-5 py-4 text-white">
+          <h3 className="min-w-0 truncatetext-base font-bold">
             Sales Details
             {data?.salesInvoiceNo ? ` — ${data.salesInvoiceNo}` : ""}
           </h3>
           <Button
             variant="flat"
             onClick={onClose}
-            className="!text-white hover:!bg-white/20"
+            className="text-white! hover:bg-white/20!"
           >
             <svg
               className="h-4 w-4"
@@ -151,7 +151,7 @@ export function SalesDetailsDrawer({
         </div>
 
         {/* Body */}
-        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+        <div className="min-w-0  flex-1 space-y-5 overflow-y-auto p-5">
           {loading ? (
             <p className="py-10 text-center text-sm text-gray-400">Loading...</p>
           ) : !data ? (
@@ -196,7 +196,7 @@ export function SalesDetailsDrawer({
                   Item Details ({data.items?.length || 0})
                 </h4>
                 <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-                  <table className="w-full min-w-[900px]">
+                  <table className="w-full min-w-225">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
                         {[
@@ -327,7 +327,7 @@ export function SalesDetailsDrawer({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-shrink-0 justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex shrink-0 justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
           <Button variant="outlined" color="secondary" onClick={onClose}>
             Close
           </Button>

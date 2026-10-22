@@ -1,4 +1,6 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+
+
+import { Fragment, useState, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/ui";
 import { DatePicker } from "@/components/shared/form/Datepicker";
@@ -6,7 +8,13 @@ import { Combobox } from "@/components/shared/form/StyledCombobox";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Link, useNavigate } from "react-router";
 import { Get, Post, toasterrormsg, toastsuccessmsg } from "@/ApiHelper";
-
+import { Country, State, City } from "country-state-city";
+import {
+  Dialog,
+  DialogPanel,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
 /* ─────────────────────────────────────────────
    ICONS
 ───────────────────────────────────────────── */
@@ -262,32 +270,6 @@ const TERMS_OPTIONS = [
   { id: "Bank", name: "Bank" },
 ];
 
-const GROUP_OPTIONS = [
-  { id: 1, name: "Sundry Creditors" },
-  { id: 2, name: "Sundry Debtors" },
-  { id: 3, name: "Bank Accounts" },
-  { id: 4, name: "Cash in Hand" },
-  { id: 5, name: "Loans (Liability)" },
-];
-const STATE_OPTIONS = [
-  { id: 1, name: "Gujarat" },
-  { id: 2, name: "Maharashtra" },
-  { id: 3, name: "Rajasthan" },
-  { id: 4, name: "Karnataka" },
-  { id: 5, name: "Tamil Nadu" },
-  { id: 6, name: "Delhi" },
-  { id: 7, name: "Punjab" },
-];
-const DISTRICT_OPTIONS = [
-  { id: 1, name: "Ahmedabad" },
-  { id: 2, name: "Surat" },
-  { id: 3, name: "Rajkot" },
-  { id: 4, name: "Vadodara" },
-  { id: 5, name: "Amreli" },
-  { id: 6, name: "Bhavnagar" },
-  { id: 7, name: "Junagadh" },
-];
-
 const INIT_ITEMS: any[] = [];
 
 const EMPTY_ROW = {
@@ -340,12 +322,12 @@ function BankDetailsDrawer({
           (open ? "translate-x-0" : "translate-x-full")
         }
       >
-        <div className="bg-primary-600 flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
+        <div className="bg-primary-600 flex shrink-0 items-center justify-between px-5 py-4 text-white">
           <h3 className="text-base font-bold">Bank Details</h3>
           <Button
             variant="flat"
             onClick={onClose}
-            className="!text-white hover:!bg-white/20"
+            className="text-white! hover:bg-white/20!"
           >
             <Icon.Close />
           </Button>
@@ -417,7 +399,7 @@ function BankDetailsDrawer({
             />
           </div>
         </div>
-        <div className="flex flex-shrink-0 justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex shrink-0 justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
           <Button variant="outlined" color="secondary" onClick={onClose}>
             Cancel
           </Button>
@@ -672,7 +654,7 @@ function AddItemSelector({
             className={[
               "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
               hasItem && parseFloat(row.qty) > 0
-                ? "bg-primary-500 text-white shadow-md hover:scale-105 hover:bg-primary-500 active:scale-95"
+                ? "bg-primary-500 hover:bg-primary-500 text-white shadow-md hover:scale-105 active:scale-95"
                 : "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-600",
             ].join(" ")}
           >
@@ -684,24 +666,69 @@ function AddItemSelector({
   );
 }
 
+interface AccountDrawerForm {
+  accountName: string;
+  mobile: string;
+  group: any;
+  openingBalance: string;
+  drCr: any;
+  country: any;
+  state: any;
+  stateCode: string;
+  district: any;
+  city: any;
+  address: string;
+  gstNo: string;
+}
 /* ─────────────────────────────────────────────
-   CREATE ACCOUNT DRAWER (party "+" button)
+   CREATE ACCOUNT DRAWER
 ───────────────────────────────────────────── */
 function CreateAccountDrawer({ open, onClose }: any) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<AccountDrawerForm>({
     accountName: "",
     mobile: "",
-    group: [],
+    group: null,
     openingBalance: "0",
     drCr: [],
-    country: [],
-    state: [],
-    stateCode: "24",
-    district: [],
-    city: [],
+    country: { id: "IN", label: "India" },
+    state: null,
+    stateCode: "",
+    district: null,
+    city: null,
     address: "",
     gstNo: "",
   });
+  const [groupOptions, setGroupOptions] = useState<
+    { id: number; name: string; role?: string }[]
+  >([]);
+  const [groupLoading, setGroupLoading] = useState(false);
+  const countryOptions = useMemo(
+    () =>
+      Country.getAllCountries().map((c) => ({ id: c.isoCode, label: c.name })),
+    [],
+  );
+
+  const stateOptions = useMemo(
+    () =>
+      form.country
+        ? State.getStatesOfCountry(form.country.id).map((s) => ({
+            id: s.isoCode,
+            label: s.name,
+          }))
+        : [],
+    [form.country],
+  );
+
+  const cityOptions = useMemo(
+    () =>
+      form.country && form.state
+        ? City.getCitiesOfState(form.country.id, form.state.id).map((c) => ({
+            id: c.name,
+            label: c.name,
+          }))
+        : [],
+    [form.country, form.state],
+  );
   const sf = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const DRCR = [
     { id: 1, name: "CR – Credit" },
@@ -714,150 +741,223 @@ function CreateAccountDrawer({ open, onClose }: any) {
     { id: 4, name: "UK" },
     { id: 5, name: "Singapore" },
   ];
-  return (
-    <>
-      {open && (
-        <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
-      )}
-      <div
-        className={
-          "fixed top-0 right-0 z-50 flex h-full flex-col bg-white shadow-2xl transition-transform duration-300 lg:w-[50%] dark:bg-gray-800 " +
-          (open ? "translate-x-0" : "translate-x-full")
+  useEffect(() => {
+    if (!open) return;
+
+    const fetchGroups = async () => {
+      setGroupLoading(true);
+      try {
+        const res = await Get("master/group/supplier/list", {}, false);
+
+        if (res.data?.success) {
+          setGroupOptions(
+            (res.data.data || []).map((g: any) => ({
+              id: g.id,
+              name: g.groupName,
+              role: g.role,
+            })),
+          );
+        } else {
+          setGroupOptions([]);
+          toasterrormsg(res.data?.message || "Failed to load groups.");
         }
-      >
-        <div className="bg-primary-600 flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
-          <h3 className="text-base font-bold">Create Account</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-white transition-colors"
-          >
-            <Icon.Close />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Account Name *"
-              placeholder="Enter account name"
-              value={form.accountName}
-              onChange={(e: any) => sf("accountName", e.target.value)}
-            />
-            <Input
-              label="Mobile"
-              placeholder="Mobile number"
-              value={form.mobile}
-              onChange={(e: any) => sf("mobile", e.target.value)}
-            />
-            <div>
-              <FieldLabel>Group</FieldLabel>
-              <Combobox
-                data={GROUP_OPTIONS}
-                displayField="name"
-                value={form.group}
-                onChange={(v: any) => sf("group", v)}
-                placeholder="Select group"
-                searchFields={["name"]}
-              />
-            </div>
-            <Input
-              label="Opening Balance"
-              value={form.openingBalance}
-              onChange={(e: any) => sf("openingBalance", e.target.value)}
-              type="number"
-            />
-            <div>
-              <FieldLabel>Dr./Cr.</FieldLabel>
-              <Listbox
-                data={DRCR}
-                value={form.drCr}
-                onChange={(v: any) => sf("drCr", v)}
-                displayField="name"
-                placeholder="Select"
-              />
-            </div>
-            <div>
-              <FieldLabel>Country</FieldLabel>
-              <Listbox
-                data={COUNTRY}
-                value={form.country}
-                onChange={(v: any) => sf("country", v)}
-                displayField="name"
-                placeholder="Country"
-              />
-            </div>
-            <div>
-              <FieldLabel>State</FieldLabel>
-              <Combobox
-                data={STATE_OPTIONS}
-                displayField="name"
-                value={form.state}
-                onChange={(v: any) => sf("state", v)}
-                placeholder="Select state"
-                searchFields={["name"]}
-              />
-            </div>
-            <Input
-              label="State Code"
-              value={form.stateCode}
-              onChange={(e: any) => sf("stateCode", e.target.value)}
-            />
-            <div>
-              <FieldLabel>District</FieldLabel>
-              <Combobox
-                data={DISTRICT_OPTIONS}
-                displayField="name"
-                value={form.district}
-                onChange={(v: any) => sf("district", v)}
-                placeholder="Select district"
-                searchFields={["name"]}
-              />
-            </div>
-            <div>
-              <FieldLabel>City</FieldLabel>
-              <Combobox
-                data={DISTRICT_OPTIONS}
-                displayField="name"
-                value={form.city}
-                onChange={(v: any) => sf("city", v)}
-                placeholder="Select city"
-                searchFields={["name"]}
-              />
-            </div>
-            <div className="col-span-2">
+      } catch (err: any) {
+        setGroupOptions([]);
+        toasterrormsg(
+          err?.response?.data?.message ||
+            "Something went wrong while loading groups.",
+        );
+      } finally {
+        setGroupLoading(false);
+      }
+    };
+
+    fetchGroups();
+  }, [open]);
+  return (
+    <Transition appear show={open} as={Fragment}>
+      <Dialog as="div" className="relative z-100" onClose={onClose}>
+        <TransitionChild
+          as="div"
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40"
+        />
+
+        <TransitionChild
+          as={DialogPanel}
+          enter="ease-out transform-gpu transition-transform duration-200"
+          enterFrom="translate-x-full"
+          enterTo="translate-x-0"
+          leave="ease-in transform-gpu transition-transform duration-200"
+          leaveFrom="translate-x-0"
+          leaveTo="translate-x-full"
+          className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full transform-gpu flex-col bg-white transition-transform duration-200 lg:max-w-[50%]"
+        >
+          {/* Header */}
+          <div className="bg-primary-600 flex flex-shrink-0 items-center justify-between px-5 py-4 text-white">
+            <h3 className="text-base font-bold">Create Account</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-white"
+            >
+              <Icon.Close />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="grid grid-cols-2 gap-4">
               <Input
-                label="Address"
-                placeholder="Enter address"
-                value={form.address}
-                onChange={(e: any) => sf("address", e.target.value)}
+                label="Account Name *"
+                placeholder="Enter account name"
+                value={form.accountName}
+                onChange={(e: any) => sf("accountName", e.target.value)}
               />
-            </div>
-            <div className="col-span-2">
-              <FieldLabel>GST No.</FieldLabel>
-              <div className="flex gap-2">
-                <Input
-                  value={form.gstNo}
-                  onChange={(e: any) => sf("gstNo", e.target.value)}
-                  placeholder="Enter GST number"
-                  className="flex-1"
+              <Input
+                label="Mobile"
+                placeholder="Mobile number"
+                value={form.mobile}
+                onChange={(e: any) => sf("mobile", e.target.value)}
+              />
+              <div>
+                <FieldLabel>Group</FieldLabel>
+
+                <Combobox
+                  data={groupOptions}
+                  displayField="name"
+                  value={form.group}
+                  onChange={(v: any) => sf("group", v || null)}
+                  placeholder={groupLoading ? "Loading..." : "Select group"}
+                  searchFields={["name"]}
                 />
-                <Button color="success" variant="outlined">
-                  Verify
-                </Button>
+              </div>
+              <Input
+                label="Opening Balance"
+                value={form.openingBalance}
+                onChange={(e: any) => sf("openingBalance", e.target.value)}
+                type="number"
+              />
+              <div>
+                <FieldLabel>Dr./Cr.</FieldLabel>
+                <Listbox
+                  data={DRCR}
+                  value={form.drCr}
+                  onChange={(v: any) => sf("drCr", v)}
+                  displayField="name"
+                  placeholder="Select"
+                />
+              </div>
+              <div>
+                <FieldLabel>Country</FieldLabel>
+                <Combobox
+                  data={countryOptions}
+                  displayField="label"
+                  value={form.country}
+                  onChange={(v: any) =>
+                    setForm((f) => ({
+                      ...f,
+                      country: v || null,
+                      state: null,
+                      stateCode: "",
+                      district: null,
+                      city: null,
+                    }))
+                  }
+                  placeholder="Select country"
+                  searchFields={["label"]}
+                />
+              </div>
+
+              <div>
+                <FieldLabel>State</FieldLabel>
+                <Combobox
+                  data={stateOptions}
+                  displayField="label"
+                  value={form.state}
+                  onChange={(v: any) =>
+                    setForm((f) => ({
+                      ...f,
+                      state: v || null,
+                      stateCode: v?.id || "",
+                      district: null,
+                      city: null,
+                    }))
+                  }
+                  placeholder="Select state"
+                  searchFields={["label"]}
+                />
+              </div>
+
+              <Input
+                label="State Code"
+                value={form.stateCode}
+                placeholder="Auto filled on State select"
+                readOnly
+                disabled
+              />
+
+              <div>
+                <FieldLabel>District</FieldLabel>
+                <Combobox
+                  data={cityOptions}
+                  displayField="label"
+                  value={form.district}
+                  onChange={(v: any) => sf("district", v || null)}
+                  placeholder="Select district"
+                  searchFields={["label"]}
+                />
+              </div>
+
+              <div>
+                <FieldLabel>City</FieldLabel>
+                <Combobox
+                  data={cityOptions}
+                  displayField="label"
+                  value={form.city}
+                  onChange={(v: any) => sf("city", v || null)}
+                  placeholder="Select city"
+                  searchFields={["label"]}
+                />
+              </div>
+              <div className="col-span-2">
+                <Input
+                  label="Address"
+                  placeholder="Enter address"
+                  value={form.address}
+                  onChange={(e: any) => sf("address", e.target.value)}
+                />
+              </div>
+              <div className="col-span-2">
+                <FieldLabel>GST No.</FieldLabel>
+                <div className="flex gap-2">
+                  <Input
+                    value={form.gstNo}
+                    onChange={(e: any) => sf("gstNo", e.target.value)}
+                    placeholder="Enter GST number"
+                    className="flex-1"
+                  />
+                  <Button color="success" variant="outlined">
+                    Verify
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex flex-shrink-0 justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
-          <Button variant="outlined" color="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button color="primary" className="gap-2">
-            <Icon.Plus /> Create Account
-          </Button>
-        </div>
-      </div>
-    </>
+          <div className="flex flex-shrink-0 justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
+            <Button variant="outlined" color="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button color="primary" className="gap-2">
+              <Icon.Plus /> Create Account
+            </Button>
+          </div>
+        </TransitionChild>
+      </Dialog>
+    </Transition>
   );
 }
 
@@ -1580,7 +1680,7 @@ export default function SalesInvoice() {
                   <button
                     type="button"
                     onClick={() => setBankDetailsOpen(true)}
-                    className="text-primary flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-gray-300 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+                    className="text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
                     title="Add Bank Details"
                   >
                     <Icon.Bank />
@@ -1619,7 +1719,7 @@ export default function SalesInvoice() {
               <div className="flex justify-between">
                 <FieldLabel required>Select Party</FieldLabel>
                 {selectedParty && (
-                  <span className="text-primary bg-primary/10 border-primary/20 flex-shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">
+                  <span className="text-primary bg-primary/10 border-primary/20 shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-bold whitespace-nowrap">
                     Bal: ₹{selectedParty.balance?.toLocaleString() ?? "0"}{" "}
                     {selectedParty.drOrCr}
                   </span>
@@ -1673,7 +1773,7 @@ export default function SalesInvoice() {
                   <button
                     type="button"
                     onClick={() => setAccountDrawerOpen(true)}
-                    className="bg-primary hover:bg-primary/90 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition-colors"
+                    className="bg-primary hover:bg-primary/90 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition-colors"
                     title="Create new account"
                   >
                     <Icon.Plus />
@@ -1708,131 +1808,149 @@ export default function SalesInvoice() {
               />
             </div>
           </div>
-        </Card>
 
-        {/* ADD ITEM */}
-        <Card title="Add Item" className="mb-5">
-          <AddItemSelector
-            itemCatalog={availableItemCatalog}
-            onAdd={addItemFromPreview}
-            lockFields={isFromSo}
-          />
-        </Card>
+          {/* ── Add Item section ── */}
+          <div className="mt-6 border-t border-dashed border-gray-300 pt-5 dark:border-gray-600">
+            <h3 className="mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+              Add Item
+            </h3>
+            <AddItemSelector
+              itemCatalog={availableItemCatalog}
+              onAdd={addItemFromPreview}
+              lockFields={isFromSo}
+            />
+          </div>
 
-        {/* ITEM DETAILS TABLE */}
-        <Card title="Item Details" className="mb-5">
-          {formErrors.items && <p className="mb-2 text-xs text-red-500">{formErrors.items}</p>}
+          {/* ── Item Details section ── */}
+          <div className="mt-6 border-t border-dashed border-gray-300 pt-5 dark:border-gray-600">
+            <h3 className="mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+              Item Details
+            </h3>
+            {formErrors.items && (
+              <p className="mb-2 text-xs text-red-500">{formErrors.items}</p>
+            )}
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="w-full min-w-[1000px]">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
-                  {[
-                    "#",
-                    "Item Description / Model",
-                    "HSN Code",
-                    "Qty",
-                    "Basic Price (₹)",
-                    "Taxable Amount (₹)",
-                    "Discount (₹)",
-                    "Tax %",
-                    "Tax Amt (₹)",
-                    "Net Amount (₹)",
-                    "Action",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-3 py-3 text-left text-xs font-bold tracking-wide whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item: any, idx: number) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-primary/5 border-b border-gray-100 transition-colors dark:border-gray-700"
-                  >
-                    <td className="px-3 py-2.5 text-sm font-medium text-gray-400">{idx + 1}</td>
-                    <td className="px-3 py-2.5 text-sm font-medium whitespace-nowrap text-gray-800 dark:text-gray-100">
-                      {item.itemName}
-                      {item.itemCode && (
-                        <span className="block text-[10px] text-gray-400">{item.itemCode}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
-                      {item.hsnCode}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {FMT3(item.qty)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
-                      {FMT2(item.basicPrice)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {FMT2(item.taxable)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-600 dark:text-gray-300">
-                      {FMT2(item.discount)}
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
-                        {item.taxPct}%
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
-                      {FMT2(item.taxAmt)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-extrabold text-gray-900 dark:text-white">
-                      {FMT2(item.net)}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30"
+            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+              <table className="w-full min-w-250">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
+                    {[
+                      "#",
+                      "Item Description / Model",
+                      "HSN Code",
+                      "Qty",
+                      "Basic Price (₹)",
+                      "Taxable Amount (₹)",
+                      "Discount (₹)",
+                      "Tax %",
+                      "Tax Amt (₹)",
+                      "Net Amount (₹)",
+                      "Action",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-3 py-3 text-left text-xs font-bold tracking-wide whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
                       >
-                        <Icon.Trash />
-                      </button>
-                    </td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={11} className="px-4 py-10 text-center text-sm text-gray-400">
-                      No items added yet. Select items from the Add Item section above.
+                </thead>
+                <tbody>
+                  {items.map((item: any, idx: number) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-primary/5 border-b border-gray-100 transition-colors dark:border-gray-700"
+                    >
+                      <td className="px-3 py-2.5 text-sm font-medium text-gray-400">
+                        {idx + 1}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm font-medium whitespace-nowrap text-gray-800 dark:text-gray-100">
+                        {item.itemName}
+                        {item.itemCode && (
+                          <span className="block text-[10px] text-gray-400">
+                            {item.itemCode}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
+                        {item.hsnCode}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
+                        {FMT3(item.qty)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
+                        {FMT2(item.basicPrice)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-100">
+                        {FMT2(item.taxable)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-600 dark:text-gray-300">
+                        {FMT2(item.discount)}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-bold">
+                          {item.taxPct}%
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 dark:text-gray-200">
+                        {FMT2(item.taxAmt)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-extrabold text-gray-900 dark:text-white">
+                        {FMT2(item.net)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.id)}
+                          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30"
+                        >
+                          <Icon.Trash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={11}
+                        className="px-4 py-10 text-center text-sm text-gray-400"
+                      >
+                        No items added yet. Select items from the Add Item
+                        section above.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-primary/5 border-primary/20 border-t-2">
+                    <td
+                      className="text-primary px-3 py-3 text-sm font-extrabold"
+                      colSpan={3}
+                    >
+                      Total
                     </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT3(items.reduce((s: number, i: any) => s + i.qty, 0))}
+                    </td>
+                    <td />
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(subTotal)}
+                    </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(totDiscount)}
+                    </td>
+                    <td />
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(totTax)}
+                    </td>
+                    <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
+                      {FMT2(grandTotal)}
+                    </td>
+                    <td />
                   </tr>
-                )}
-              </tbody>
-              <tfoot>
-                <tr className="bg-primary/5 border-primary/20 border-t-2">
-                  <td className="text-primary px-3 py-3 text-sm font-extrabold" colSpan={3}>
-                    Total
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT3(items.reduce((s: number, i: any) => s + i.qty, 0))}
-                  </td>
-                  <td />
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(subTotal)}
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(totDiscount)}
-                  </td>
-                  <td />
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(totTax)}
-                  </td>
-                  <td className="text-primary px-3 py-3 text-right text-sm font-extrabold">
-                    {FMT2(grandTotal)}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
+                </tfoot>
+              </table>
             </div>
           </div>
         </Card>
@@ -1850,12 +1968,12 @@ export default function SalesInvoice() {
                 >
                   <Icon.Save /> {submitting ? "Saving..." : "Save"}
                 </button>
-                <button
+                {/* <button
                   type="button"
                   className="bg-primary hover:bg-primary/90 active:bg-primary/80 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
                 >
                   <Icon.Print /> Save & Print
-                </button>
+                </button> */}
                 <button
                   type="button"
                   className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-600 transition-all hover:border-red-400 hover:text-red-500 dark:border-gray-600 dark:bg-transparent dark:text-gray-300 dark:hover:border-red-500 dark:hover:text-red-400"
