@@ -307,37 +307,37 @@ export function SalesOrderDrawer({
 
   // Auto-fill Lead ID / City / Model / Remark / Price whenever a quotation is picked.
   // TOP block always mirrors the quotation, regardless of Party selection.
-useEffect(() => {
-  const q = selectedQuotation?.[0];
+  useEffect(() => {
+    const q = selectedQuotation?.[0];
 
-  queueMicrotask(() => {
-    if (!q) {
-      setLeadCode("");
-      setCity("");
-      setCustomerName("");
-      setMobile("");
-      setEmail("");
-      setAddress("");
-      setModel("");
-      setRemark("");
-      if (!isEditing) setQty("1");   // ← changed
-      setQuotationAmount(0);
-      return;
-    }
+    queueMicrotask(() => {
+      if (!q) {
+        setLeadCode("");
+        setCity("");
+        setCustomerName("");
+        setMobile("");
+        setEmail("");
+        setAddress("");
+        setModel("");
+        setRemark("");
+        if (!isEditing) setQty("1"); // ← changed
+        setQuotationAmount(0);
+        return;
+      }
 
-    setLeadCode(q.leadCode || "");
-    setCity(q.city || "");
-    setCustomerName(q.customerName || "");
-    setMobile(q.mobile || "");
-    setEmail(q.email || "");
-    setAddress(q.address || "");
-    setModel(q.model || "");
-    setRemark(q.remark || "");
+      setLeadCode(q.leadCode || "");
+      setCity(q.city || "");
+      setCustomerName(q.customerName || "");
+      setMobile(q.mobile || "");
+      setEmail(q.email || "");
+      setAddress(q.address || "");
+      setModel(q.model || "");
+      setRemark(q.remark || "");
 
-    if (!isEditing) setQty("1");     // ← changed
-    setQuotationAmount(Number(q.finalPrice) || 0);
-  });
-}, [selectedQuotation, isEditing]);
+      if (!isEditing) setQty("1"); // ← changed
+      setQuotationAmount(Number(q.finalPrice) || 0);
+    });
+  }, [selectedQuotation, isEditing]);
 
   // Auto-fill the BOTTOM (editable) block whenever a Party is selected.
   // Fields stay editable afterwards — this is just a convenient prefill.
@@ -589,70 +589,70 @@ useEffect(() => {
                 />
               </div>
 
-              {/* TOP BLOCK — read-only snapshot of the selected quotation. */}
+               {/* TOP BLOCK — read-only snapshot of the selected quotation. */}
               <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
                 <div className="grid grid-cols-1 sm:grid-cols-2">
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Lead ID
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {leadCode || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       City
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {city || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Client Name
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {customerName || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Address
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {address || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Client Number
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {mobile || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Model
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {modelLabel}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 px-4 py-2.5">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Email ID
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {email || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Remark
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {remark || "-"}
                     </span>
                   </div>
