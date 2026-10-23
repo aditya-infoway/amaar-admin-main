@@ -3,23 +3,32 @@ import { useNavigate } from "react-router";
 import { EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 
 // Local Imports
 import { Button, Card, Checkbox, Input, InputErrorMsg } from "@/components/ui";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { APP_LOGO } from "@/constants/app";
-import { useState } from "react";
 import { AuthFormValues, schema } from "./schema";
 import { Page } from "@/components/shared/Page";
+import { Combobox } from "@/components/shared/form/StyledCombobox";
 
 // ----------------------------------------------------------------------
 
+const roles = [
+  { id: 1, name: "Super Admin" },
+  { id: 2, name: "Employee" },
+];
+
 export default function SignIn() {
-  const { login, errorMessage } = useAuthContext();
+  const { login, completeAuth, errorMessage } = useAuthContext();
   const navigate = useNavigate();
+
   const [logoSrc, setLogoSrc] = useState(
     localStorage.getItem("companyLogo") || APP_LOGO,
   );
+  const [selectedRole, setSelectedRole] = useState(roles[0]); // default Super Admin
+
   const {
     register,
     handleSubmit,
@@ -32,9 +41,71 @@ export default function SignIn() {
     },
   });
 
+  const getCurrentLocation = (): Promise<{
+    latitude?: number;
+    longitude?: number;
+  }> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve({});
+      navigator.geolocation.getCurrentPosition(
+        (pos) =>
+          resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }),
+        () => resolve({}), // denied/failed — resolve empty, let backend decide if required
+        { timeout: 10000, enableHighAccuracy: true },
+      );
+    });
+  };
+
+  const roleRedirectMap: Record<string, string> = {
+    Employee: import.meta.env.VITE_EMPLOYEE_URL, // e.g. http://localhost:5002
+  };
+
   const onSubmit = async (data: AuthFormValues) => {
     try {
-      await login({ email: data.email, password: data.password });
+      const { latitude, longitude } = await getCurrentLocation();
+      const role = selectedRole?.name ?? "Super Admin";
+
+      const result = await login({
+        email: data.email,
+        password: data.password,
+        role,
+        latitude,
+        longitude,
+      });
+
+      // Super Admin → admin panel only
+      if (result.role === "Super Admin") {
+        navigate("/select-company");
+        return;
+      }
+
+      // Employee → employee panel only (do NOT stay on admin)
+      if (result.role === "Employee") {
+        const base = roleRedirectMap.Employee;
+        if (!base) {
+          console.error("VITE_EMPLOYEE_URL is not set");
+          return;
+        }
+
+        const qs = new URLSearchParams({
+          token: result.token ?? "",
+          role: result.role,
+          companyId: String(result.companyId ?? ""),
+          employeeId: String(result.employeeId ?? ""),
+          employeeName: result.employeeName ?? "",
+          roleId: String(result.roleId ?? ""),
+          roleName: result.roleName ?? "",
+          department: result.department ?? "",
+          email: result.email ?? data.email,
+        }).toString();
+
+        window.location.href = `${base}/auth-bridge?${qs}`;
+        return;
+      }
+
       navigate("/select-company");
     } catch (err) {
       // error handled by context
@@ -81,6 +152,18 @@ export default function SignIn() {
 
                 <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
                   <div className="mt-6 space-y-4">
+                    <Combobox
+                      data={roles}
+                      displayField="name"
+                      value={selectedRole}
+                      onChange={(v: any) =>
+                        setSelectedRole(Array.isArray(v) ? v[0] : v)
+                      }
+                      placeholder="Select Role"
+                      label="Select Role"
+                      searchFields={["name"]}
+                    />
+
                     <Input
                       label="Email"
                       placeholder="Enter Email"

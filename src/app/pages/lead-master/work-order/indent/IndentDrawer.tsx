@@ -101,7 +101,9 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
           </div>
 
           {/* Items Table */}
-          <div className="rounded-md border border-gray-200 overflow-hidden dark:border-dark-600">
+                   {/* Items Table */}
+          {/* Added overflow-x-auto to allow horizontal scrolling on small screens */}
+          <div className="rounded-md border border-gray-200 overflow-x-auto dark:border-dark-600">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 whitespace-nowrap dark:bg-dark-700">
                 <tr className="border-b border-gray-200 text-left dark:border-dark-600">
@@ -130,15 +132,16 @@ export default function IndentDrawer({ isOpen, close, indent }: Props) {
                       key={item.id || index}
                       className="border-b border-gray-200 last:border-0 dark:border-dark-600"
                     >
-                      <td className="p-3">{index + 1}</td>
-                      <td className="p-3 font-medium">
+                      {/* Added whitespace-nowrap to each td to keep the data inline and readable */}
+                      <td className="p-3 whitespace-nowrap">{index + 1}</td>
+                      <td className="p-3 font-medium whitespace-nowrap">
                         {item.itemCode || "-"}
                       </td>
-                      <td className="p-3">{item.itemName || "-"}</td>
-                      <td className="p-3">{item.unit || "-"}</td>
-                      <td className="p-3">{item.hsnCode || "-"}</td>
-                      <td className="p-3">{item.tax ?? "-"}</td>
-                      <td className="p-3 text-right">
+                      <td className="p-3 whitespace-nowrap">{item.itemName || "-"}</td>
+                      <td className="p-3 whitespace-nowrap">{item.unit || "-"}</td>
+                      <td className="p-3 whitespace-nowrap">{item.hsnCode || "-"}</td>
+                      <td className="p-3 whitespace-nowrap">{item.tax ?? "-"}</td>
+                      <td className="p-3 text-right whitespace-nowrap">
                         {item.requiredQty ?? "-"}
                       </td>
                     </tr>

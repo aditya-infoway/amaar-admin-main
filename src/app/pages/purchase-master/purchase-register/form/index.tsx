@@ -600,6 +600,254 @@ const mapApiVehicleItem = (item: any): VehicleCatalogItem => ({
   supplierId: item.supplierId ?? null,
 });
 
+// function AddItemSelector({
+//   itemCatalog,
+//   onAdd,
+//   receivedQty = {},
+// }: {
+//   itemCatalog: VehicleCatalogItem[];
+//   onAdd: (item: any) => void;
+//   receivedQty?: Record<string, number>;
+// }) {
+//   const [row, setRow] = useState({ ...EMPTY_ROW });
+//   const [touched, setTouched] = useState(false);
+
+//   useEffect(() => {
+//     setRow({ ...EMPTY_ROW });
+//     setTouched(false);
+//   }, [itemCatalog]);
+
+//   const fill = (m: VehicleCatalogItem) => {
+//     setRow({
+//       itemId: m.itemId,
+//       itemCode: m.itemCode,
+//       itemName: m.itemName,
+//       hsnCode: m.hsnCode,
+//       uom: m.unit,
+//       qty:
+//         receivedQty[String(m.itemId)] > 0
+//           ? String(receivedQty[String(m.itemId)])
+//           : "",
+//       rate: String(m.salesPrice),
+//       discount: "0",
+//       gstPct: String(m.taxSlab),
+//       _codeQ: m.itemCode,
+//       _nameQ: m.itemName,
+//       _filled: true,
+//     });
+//     setTouched(false);
+//   };
+
+//   const handleAdd = () => {
+//     setTouched(true);
+//     if (!row.itemCode || !row.itemName || !row.qty || !row.itemId) return;
+//     onAdd(
+//       calcItem({
+//         id: Date.now(),
+//         itemId: row.itemId,
+//         itemCode: row.itemCode,
+//         itemName: row.itemName,
+//         hsnCode: row.hsnCode,
+//         uom: row.uom,
+//         qty: parseFloat(row.qty) || 0,
+//         rate: parseFloat(row.rate) || 0,
+//         discount: parseFloat(row.discount) || 0,
+//         gstPct: parseFloat(row.gstPct) || 0,
+//       }),
+//     );
+//     setRow({ ...EMPTY_ROW });
+//     setTouched(false);
+//   };
+
+//   const qty = parseFloat(row.qty) || 0;
+//   const rate = parseFloat(row.rate) || 0;
+//   const disc = parseFloat(row.discount) || 0;
+//   const gstN = parseFloat(row.gstPct) || 0;
+//   const taxable = qty * rate * (1 - disc / 100);
+//   const gstAmt = (taxable * gstN) / 100;
+//   const total = taxable + gstAmt;
+
+//   const qtyInvalid = touched && !row.qty;
+//   const hasItem = !!row.itemId;
+
+//   const isQtyFromGrr =
+//     row.itemId != null && (receivedQty[String(row.itemId)] || 0) > 0;
+
+//   const iCls =
+//     "w-full px-2.5 py-[8px] text-xs border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder-gray-300 dark:placeholder-gray-600 transition-all";
+//   const roCls =
+//     "w-full px-2.5 py-[8px] text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 select-none";
+
+//   return (
+//     <div className="space-y-4">
+//       {/* ─── ROW 1: Dropdown (half width) ─── */}
+//       <div className="w-1/2 min-w-[260px]">
+//         <FieldLabel required>Item Details</FieldLabel>
+//         <Combobox
+//           data={itemCatalog}
+//           displayField="itemName"
+//           value={itemCatalog.find((m) => m.itemId === row.itemId) || null}
+//           onChange={(selected: any) => {
+//             if (selected) fill(selected);
+//             else setRow({ ...EMPTY_ROW });
+//           }}
+//           placeholder="Select item"
+//           searchFields={["itemCode", "itemName"]}
+//           renderItem={(item: any) => (
+//             <div className="flex w-full items-center text-inherit">
+//               <span className="w-16 shrink-0 text-xs font-bold">
+//                 {item.itemCode}
+//               </span>
+//               <span className="truncate text-sm">{item.itemName}</span>
+//             </div>
+//           )}
+//         />
+//       </div>
+
+//       {/* ─── ROW 2: Read-only item info ─── */}
+//       <div className="grid grid-cols-12 gap-3">
+//         <div className="col-span-3">
+//           <FieldLabel>Item Code</FieldLabel>
+//           <div className={roCls + " text-center"}>{row.itemCode || "—"}</div>
+//         </div>
+
+//         <div className="col-span-5">
+//           <FieldLabel>Item Name</FieldLabel>
+//           <div className={roCls}>{row.itemName || "—"}</div>
+//         </div>
+
+//         <div className="col-span-2">
+//           <FieldLabel>HSN Code</FieldLabel>
+//           <div className={roCls + " text-center"}>{row.hsnCode || "—"}</div>
+//         </div>
+
+//         <div className="col-span-1">
+//           <FieldLabel>UOM</FieldLabel>
+//           <div className={roCls + " text-center"}>{row.uom || "—"}</div>
+//         </div>
+
+//         <div className="col-span-1">
+//           <FieldLabel>GST %</FieldLabel>
+//           <div className={roCls + " text-center"}>
+//             {row.gstPct ? (
+//               <span className="bg-primary/10 text-primary inline-block rounded-full px-1.5 py-0.5 text-xs font-bold">
+//                 {row.gstPct}%
+//               </span>
+//             ) : (
+//               "—"
+//             )}
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* ─── ROW 3: Editable + computed + action (all on one line) ─── */}
+//       <div className="grid grid-cols-12 items-end gap-3">
+//         <div className="col-span-1">
+//           <FieldLabel required>Qty</FieldLabel>
+//           <input
+//             type="number"
+//             min={0}
+//             value={row.qty}
+//             readOnly={isQtyFromGrr} // ✅ read-only when from GRR
+//             onChange={(e) => {
+//               if (isQtyFromGrr) return; // safety
+//               setRow((r) => ({ ...r, qty: e.target.value }));
+//               setTouched(false);
+//             }}
+//             placeholder="Qty"
+//             className={[
+//               iCls,
+//               "text-right",
+//               isQtyFromGrr
+//                 ? "cursor-not-allowed bg-gray-50 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300" // look like other read-only fields
+//                 : qtyInvalid
+//                   ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-300 dark:border-red-500 dark:bg-red-900/20"
+//                   : row.qty
+//                     ? "border-green-400 focus:border-green-400 focus:ring-green-300 dark:border-green-600"
+//                     : "border-orange-300 dark:border-orange-600",
+//             ].join(" ")}
+//           />
+//         </div>
+
+//         <div className="col-span-2">
+//           <FieldLabel>Rate (₹)</FieldLabel>
+//           <input
+//             type="number"
+//             value={row.rate}
+//             onChange={(e) => setRow((r) => ({ ...r, rate: e.target.value }))}
+//             placeholder="0.00"
+//             className={iCls + " text-right"}
+//           />
+//         </div>
+
+//         <div className="col-span-2">
+//           <FieldLabel>Disc (%)</FieldLabel>
+//           <input
+//             type="number"
+//             value={row.discount}
+//             onChange={(e) =>
+//               setRow((r) => ({ ...r, discount: e.target.value }))
+//             }
+//             placeholder="0"
+//             className={iCls + " text-right"}
+//           />
+//         </div>
+
+//         <div className="col-span-2">
+//           <FieldLabel>Taxable (₹)</FieldLabel>
+//           <div className={roCls + " text-right"}>
+//             {row._filled || row.qty ? FMT2(taxable) : "—"}
+//           </div>
+//         </div>
+
+//         <div className="col-span-2">
+//           <FieldLabel>GST Amt (₹)</FieldLabel>
+//           <div className={roCls + " text-right"}>
+//             {row._filled || row.qty ? FMT2(gstAmt) : "—"}
+//           </div>
+//         </div>
+
+//         <div className="col-span-2">
+//           <FieldLabel>Total (₹)</FieldLabel>
+//           <div
+//             className={
+//               roCls +
+//               " text-right font-semibold text-gray-800 dark:text-gray-100"
+//             }
+//           >
+//             {row._filled || row.qty ? FMT2(total) : "—"}
+//           </div>
+//         </div>
+
+//         <div className="col-span-1 flex justify-start">
+//           <button
+//             type="button"
+//             onClick={handleAdd}
+//             disabled={!hasItem || !row.qty}
+//             title={
+//               !hasItem
+//                 ? "Select an item from the dropdown first"
+//                 : !row.qty
+//                   ? "Enter quantity"
+//                   : "Add item"
+//             }
+//             className={[
+//               "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
+//               hasItem && row.qty
+//                 ? "bg-green-500 text-white shadow-md hover:scale-105 hover:bg-green-600 active:scale-95"
+//                 : "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-600",
+//             ].join(" ")}
+//           >
+//             <Icon.Check />
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
 function AddItemSelector({
   itemCatalog,
   onAdd,
@@ -680,8 +928,8 @@ function AddItemSelector({
 
   return (
     <div className="space-y-4">
-      {/* ─── ROW 1: Dropdown (half width) ─── */}
-      <div className="w-1/2 min-w-[260px]">
+      {/* ─── ROW 1: Dropdown (full width on mobile, half on desktop) ─── */}
+      <div className="w-full md:w-1/2 md:min-w-[260px]">
         <FieldLabel required>Item Details</FieldLabel>
         <Combobox
           data={itemCatalog}
@@ -704,29 +952,29 @@ function AddItemSelector({
         />
       </div>
 
-      {/* ─── ROW 2: Read-only item info ─── */}
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-3">
+      {/* ─── ROW 2: Read-only item info (Stack on mobile, grid on desktop) ─── */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-12">
+        <div className="md:col-span-3">
           <FieldLabel>Item Code</FieldLabel>
           <div className={roCls + " text-center"}>{row.itemCode || "—"}</div>
         </div>
 
-        <div className="col-span-5">
+        <div className="md:col-span-5">
           <FieldLabel>Item Name</FieldLabel>
           <div className={roCls}>{row.itemName || "—"}</div>
         </div>
 
-        <div className="col-span-2">
+        <div className="md:col-span-2">
           <FieldLabel>HSN Code</FieldLabel>
           <div className={roCls + " text-center"}>{row.hsnCode || "—"}</div>
         </div>
 
-        <div className="col-span-1">
+        <div className="md:col-span-1">
           <FieldLabel>UOM</FieldLabel>
           <div className={roCls + " text-center"}>{row.uom || "—"}</div>
         </div>
 
-        <div className="col-span-1">
+        <div className="md:col-span-1">
           <FieldLabel>GST %</FieldLabel>
           <div className={roCls + " text-center"}>
             {row.gstPct ? (
@@ -740,17 +988,17 @@ function AddItemSelector({
         </div>
       </div>
 
-      {/* ─── ROW 3: Editable + computed + action (all on one line) ─── */}
-      <div className="grid grid-cols-12 items-end gap-3">
-        <div className="col-span-1">
+      {/* ─── ROW 3: Editable + computed + action ─── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-12 md:items-end">
+        <div className="md:col-span-1">
           <FieldLabel required>Qty</FieldLabel>
           <input
             type="number"
             min={0}
             value={row.qty}
-            readOnly={isQtyFromGrr} // ✅ read-only when from GRR
+            readOnly={isQtyFromGrr}
             onChange={(e) => {
-              if (isQtyFromGrr) return; // safety
+              if (isQtyFromGrr) return;
               setRow((r) => ({ ...r, qty: e.target.value }));
               setTouched(false);
             }}
@@ -759,7 +1007,7 @@ function AddItemSelector({
               iCls,
               "text-right",
               isQtyFromGrr
-                ? "cursor-not-allowed bg-gray-50 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300" // look like other read-only fields
+                ? "cursor-not-allowed bg-gray-50 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300"
                 : qtyInvalid
                   ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-300 dark:border-red-500 dark:bg-red-900/20"
                   : row.qty
@@ -769,7 +1017,7 @@ function AddItemSelector({
           />
         </div>
 
-        <div className="col-span-2">
+        <div className="md:col-span-2">
           <FieldLabel>Rate (₹)</FieldLabel>
           <input
             type="number"
@@ -780,7 +1028,7 @@ function AddItemSelector({
           />
         </div>
 
-        <div className="col-span-2">
+        <div className="md:col-span-2">
           <FieldLabel>Disc (%)</FieldLabel>
           <input
             type="number"
@@ -793,21 +1041,21 @@ function AddItemSelector({
           />
         </div>
 
-        <div className="col-span-2">
+        <div className="md:col-span-2">
           <FieldLabel>Taxable (₹)</FieldLabel>
           <div className={roCls + " text-right"}>
             {row._filled || row.qty ? FMT2(taxable) : "—"}
           </div>
         </div>
 
-        <div className="col-span-2">
+        <div className="md:col-span-2">
           <FieldLabel>GST Amt (₹)</FieldLabel>
           <div className={roCls + " text-right"}>
             {row._filled || row.qty ? FMT2(gstAmt) : "—"}
           </div>
         </div>
 
-        <div className="col-span-2">
+        <div className="md:col-span-2">
           <FieldLabel>Total (₹)</FieldLabel>
           <div
             className={
@@ -819,7 +1067,8 @@ function AddItemSelector({
           </div>
         </div>
 
-        <div className="col-span-1 flex justify-start">
+        {/* Action Button: Full width on mobile, narrow on desktop */}
+        <div className="col-span-2 mt-2 flex justify-end sm:col-span-1 md:col-span-1 md:mt-0 md:justify-start">
           <button
             type="button"
             onClick={handleAdd}
@@ -832,19 +1081,21 @@ function AddItemSelector({
                   : "Add item"
             }
             className={[
-              "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
+              "flex h-10 w-full items-center justify-center rounded-lg transition-all duration-200 md:h-9 md:w-9 md:rounded-full",
               hasItem && row.qty
                 ? "bg-green-500 text-white shadow-md hover:scale-105 hover:bg-green-600 active:scale-95"
                 : "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-600",
             ].join(" ")}
           >
             <Icon.Check />
+            <span className="ml-2 font-semibold md:hidden">Add Item</span>
           </button>
         </div>
       </div>
     </div>
   );
 }
+
 /* ─────────────────────────────────────────────
    ADD ITEM DRAWER
 ───────────────────────────────────────────── */
