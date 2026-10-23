@@ -81,10 +81,13 @@ export default function SignIn() {
         navigate("/select-company");
         return;
       }
-
       // Employee → employee panel only (do NOT stay on admin)
       if (result.role === "Employee") {
-        const base = roleRedirectMap.Employee;
+        const base = (import.meta.env.VITE_EMPLOYEE_URL || "").replace(
+          /\/$/,
+          "",
+        );
+
         if (!base) {
           console.error("VITE_EMPLOYEE_URL is not set");
           return;

@@ -9,6 +9,8 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ChevronRightIcon,
+  ChevronDoubleDownIcon, 
+  ChevronDoubleUpIcon, 
 } from "@heroicons/react/24/outline";
 import { useNavigate, useParams } from "react-router";
 import clsx from "clsx";
@@ -1842,7 +1844,7 @@ export default function BOMFormPage() {
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-10">
           <div className="lg:col-span-7">
             <Card className="h-full p-3">
-              <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
+                           <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="dark:text-dark-100 text-lg font-medium text-gray-800">
@@ -1854,12 +1856,25 @@ export default function BOMFormPage() {
                         : "Tree view of BOM items"}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outlined" onClick={handleExpandAll}>
-                      Expand All
+                  {/* 👇 UPDATED: Icon-only on mobile, text on desktop */}
+                  <div className="flex shrink-0 gap-2">
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleExpandAll}
+                      className="flex size-9 items-center justify-center p-0 sm:size-auto sm:px-4 sm:py-2"
+                      title="Expand All"
+                    >
+                      <ChevronDoubleDownIcon className="size-5 sm:hidden" />
+                      <span className="hidden sm:inline">Expand All</span>
                     </Button>
-                    <Button variant="outlined" onClick={handleCollapseAll}>
-                      Collapse All
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleCollapseAll}
+                      className="flex size-9 items-center justify-center p-0 sm:size-auto sm:px-4 sm:py-2"
+                      title="Collapse All"
+                    >
+                      <ChevronDoubleUpIcon  className="size-5 sm:hidden" />
+                      <span className="hidden sm:inline">Collapse All</span>
                     </Button>
                   </div>
                 </div>

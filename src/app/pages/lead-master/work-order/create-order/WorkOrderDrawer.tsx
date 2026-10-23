@@ -520,15 +520,16 @@ function SummaryItem({
   return (
     <div
       className={[
-        "flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700",
+        "flex items-start gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700",
         borderLeft ? "sm:border-l" : "",
       ].join(" ")}
     >
-      <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase">
+      <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase">
         {label}
       </span>
 
-      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+      {/* 👇 Added min-w-0, flex-1, and break-all to prevent long text from overflowing */}
+      <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
         {value !== undefined && value !== null && value !== "" ? value : "-"}
       </span>
     </div>
