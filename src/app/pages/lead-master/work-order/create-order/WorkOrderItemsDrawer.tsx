@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
-import { Button, Input, Table, TBody, Td, Th, THead, Tr } from "@/components/ui";
+import {
+  Button,
+  Input,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from "@/components/ui";
 import { Get, toasterrormsg } from "@/ApiHelper";
 
 import type { WorkOrder } from "../shared/types";
@@ -126,57 +135,73 @@ export default function WorkOrderItemsDrawer({
 
         {/* Body: ye area drawer ki bachi hui height leta hai, table iske andar scroll hota hai */}
         <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
+          {/* 👇 The container handles the horizontal scroll */}
           <div className="dark:border-dark-500 min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200">
-       <Table hoverable className="w-full min-w-[800px] table-fixed text-left">
-  <THead className="sticky top-0 z-10">
-    <Tr>
-      <Th className="w-14 text-center">SR No</Th>
-      <Th className="w-24">Item Code</Th>
-      <Th className="w-auto">Item Name</Th>
-      <Th className="w-24">HSN Code</Th>
-      <Th className="w-32">Item Location</Th>
-      <Th className="w-36">Item Category</Th>
-      <Th className="w-16 text-right">Qty</Th>
-    </Tr>
-  </THead>
-  <TBody>
-    {loading ? (
-      <Tr>
-        <Td colSpan={7} className="py-8 text-center text-sm text-gray-400">
-          Loading items...
-        </Td>
-      </Tr>
-    ) : filteredItems.length === 0 ? (
-      <Tr>
-        <Td colSpan={7} className="py-8 text-center text-sm text-gray-400">
-          {items.length === 0
-            ? "No items found for this model."
-            : "No matching items."}
-        </Td>
-      </Tr>
-    ) : (
-      filteredItems.map((it, index) => (
-        <Tr key={it.id ?? index}>
-          <Td className="text-center align-top text-gray-400">{index + 1}</Td>
-          <Td className="align-top break-words">{it.itemCode || "—"}</Td>
-          <Td className="align-top break-words whitespace-normal">
-            {it.itemName || it.item || "—"}
-          </Td>
-          <Td className="align-top break-words">{it.hsnCode || it.hsn || "—"}</Td>
-          <Td className="align-top break-words whitespace-normal">
-            {it.itemLocation || "—"}
-          </Td>
-          <Td className="align-top break-words whitespace-normal">
-            {it.itemCategory || "—"}
-          </Td>
-          <Td className="align-top text-right font-semibold">
-            {Number(it.qty) || 0}
-          </Td>
-        </Tr>
-      ))
-    )}
-  </TBody>
-</Table>
+            {/* 👇 w-max makes the table as wide as its content, min-w-full keeps it full width if content is small */}
+            <Table hoverable className="w-max min-w-full text-left">
+              <THead className="sticky top-0 z-10">
+                <Tr>
+                  <Th className="w-14 text-center whitespace-nowrap">SR No</Th>
+                  <Th className="whitespace-nowrap">Item Code</Th>
+                  <Th className="whitespace-nowrap">Item Name</Th>
+                  <Th className="whitespace-nowrap">HSN Code</Th>
+                  <Th className="whitespace-nowrap">Item Location</Th>
+                  <Th className="whitespace-nowrap">Item Category</Th>
+                  <Th className="text-right whitespace-nowrap">Qty</Th>
+                </Tr>
+              </THead>
+              <TBody>
+                {loading ? (
+                  <Tr>
+                    <Td
+                      colSpan={7}
+                      className="py-8 text-center text-sm text-gray-400"
+                    >
+                      Loading items...
+                    </Td>
+                  </Tr>
+                ) : filteredItems.length === 0 ? (
+                  <Tr>
+                    <Td
+                      colSpan={7}
+                      className="py-8 text-center text-sm text-gray-400"
+                    >
+                      {items.length === 0
+                        ? "No items found for this model."
+                        : "No matching items."}
+                    </Td>
+                  </Tr>
+                ) : (
+                  filteredItems.map((it, index) => (
+                    <Tr key={it.id ?? index}>
+                      <Td className="text-center align-top whitespace-nowrap text-gray-400">
+                        {index + 1}
+                      </Td>
+                      {/* 👇 Added pr-6 to give spacing between long codes */}
+                      <Td className="pr-6 align-top whitespace-nowrap">
+                        {it.itemCode || "—"}
+                      </Td>
+                      {/* 👇 Added pr-6 to give spacing between long names */}
+                      <Td className="pr-6 align-top whitespace-nowrap">
+                        {it.itemName || it.item || "—"}
+                      </Td>
+                      <Td className="pr-6 align-top whitespace-nowrap">
+                        {it.hsnCode || it.hsn || "—"}
+                      </Td>
+                      <Td className="pr-6 align-top whitespace-nowrap">
+                        {it.itemLocation || "—"}
+                      </Td>
+                      <Td className="pr-6 align-top whitespace-nowrap">
+                        {it.itemCategory || "—"}
+                      </Td>
+                      <Td className="text-right align-top font-semibold whitespace-nowrap">
+                        {Number(it.qty) || 0}
+                      </Td>
+                    </Tr>
+                  ))
+                )}
+              </TBody>
+            </Table>
           </div>
 
           {/* Total Qty: scroll ke bahar, hamesha dikhta rahega */}
@@ -187,7 +212,6 @@ export default function WorkOrderItemsDrawer({
             </div>
           )}
         </div>
-
         {/* Footer */}
         <div className="dark:border-dark-500 dark:bg-dark-800 flex flex-shrink-0 justify-end border-t border-gray-100 bg-gray-50 px-5 py-4">
           <Button variant="outlined" color="secondary" onClick={close}>

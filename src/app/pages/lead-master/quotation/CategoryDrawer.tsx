@@ -1078,58 +1078,58 @@ export function QuotationDrawer({
                 </div>
               </div>
 
-              <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
                 <div className="grid grid-cols-1 sm:grid-cols-2">
                   {/* Row 1: Quotation No & City */}
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Quotation No
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {qNo || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       City
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {city || "-"}
                     </span>
                   </div>
 
                   {/* Row 2: Customer Name & Address */}
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Customer
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {customerName || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Address
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {address || "-"}
                     </span>
                   </div>
 
                   {/* Row 3: Mobile & Model */}
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Mobile
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {mobile || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Model
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {modelOptions?.find((item) => item.id === model)?.label ||
                         model ||
                         "-"}
@@ -1137,19 +1137,19 @@ export function QuotationDrawer({
                   </div>
 
                   {/* Row 4: Email & Remark */}
-                  <div className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 px-4 py-2.5">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Email
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {email || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 px-4 py-2.5 sm:border-l dark:border-gray-700">
-                    <span className="min-w-28 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                  <div className="flex items-start gap-3 px-4 py-2.5 sm:border-l dark:border-gray-700">
+                    <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Remark
                     </span>
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
                       {remark || "-"}
                     </span>
                   </div>

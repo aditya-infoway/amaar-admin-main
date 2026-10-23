@@ -9,6 +9,8 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ChevronRightIcon,
+  ChevronDoubleDownIcon, 
+  ChevronDoubleUpIcon, 
 } from "@heroicons/react/24/outline";
 import { useNavigate, useParams } from "react-router";
 import clsx from "clsx";
@@ -337,6 +339,128 @@ function BOMTreeList({
   );
 }
 
+// function BOMTreeNode({
+//   item,
+//   level,
+//   isLast,
+//   highlightId,
+//   expanded,
+//   onToggle,
+//   onPick,
+//   onRemove,
+// }: Omit<TreeProps, "items"> & { item: BOMItem; isLast: boolean }) {
+//   const hasChildren = item.children.length > 0;
+//   const isOpen = !!expanded[item.id];
+//   const isHighlighted = highlightId === item.id;
+
+//   return (
+//     <li className="relative" style={{ minHeight: ROW_H }}>
+//       {level > 0 && (
+//         <>
+//           <span
+//             className="dark:bg-dark-500 absolute bg-gray-300"
+//             style={{
+//               left: -INDENT + 10,
+//               top: 0,
+//               width: 1,
+//               height: isLast ? TICK_Y : "100%",
+//             }}
+//           />
+//           <span
+//             className="dark:bg-dark-500 absolute bg-gray-300"
+//             style={{
+//               left: -INDENT + 10,
+//               top: TICK_Y,
+//               width: INDENT - 10,
+//               height: 1,
+//             }}
+//           />
+//         </>
+//       )}
+
+//       <div
+//         onClick={() => onPick(item)}
+//         className={clsx(
+//           "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 pl-1 transition",
+//           isHighlighted
+//             ? "bg-primary-50 ring-primary-400 dark:bg-primary-900/30 ring-1 ring-inset"
+//             : "dark:hover:bg-dark-600 hover:bg-gray-50",
+//         )}
+//         style={{ minHeight: ROW_H }}
+//       >
+//         <button
+//           type="button"
+//           onClick={(e) => {
+//             e.stopPropagation();
+//             if (hasChildren) onToggle(item.id);
+//           }}
+//           className="flex size-5 shrink-0 items-center justify-center"
+//         >
+//           {hasChildren ? (
+//             <ChevronDownIcon
+//               className={clsx(
+//                 "size-4 text-gray-400 transition-transform",
+//                 !isOpen && "-rotate-90",
+//               )}
+//             />
+//           ) : (
+//             <span className="dark:bg-dark-500 block size-1 rounded-full bg-gray-300" />
+//           )}
+//         </button>
+
+//         <span
+//           className={clsx(
+//             "size-5 shrink-0",
+//             hasChildren ? "text-primary-600" : "text-gray-400",
+//           )}
+//         >
+//           {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+//         </span>
+
+//         <div className="flex min-w-0 flex-1 items-baseline gap-2">
+//           <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+//             {item.itemCode}
+//           </span>
+//           <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+//             {item.itemName}
+//           </span>
+//         </div>
+
+//         <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
+//           Qty: {item.quantity}
+//           <span className="text-primary-600 dark:text-primary-400 ml-2">
+//             Wt: {computeTotalWeight(item).toFixed(2)} kg
+//           </span>
+//         </span>
+//         <button
+//           type="button"
+//           onClick={(e) => {
+//             e.stopPropagation();
+//             onRemove(item.id);
+//           }}
+//           className="shrink-0 text-gray-300 opacity-0 transition group-hover:opacity-100 hover:text-red-500"
+//         >
+//           <XMarkIcon className="size-4" />
+//         </button>
+//       </div>
+
+//       {hasChildren && isOpen && (
+//         <BOMTreeList
+//           items={item.children}
+//           level={level + 1}
+//           highlightId={highlightId}
+//           expanded={expanded}
+//           onToggle={onToggle}
+//           onPick={onPick}
+//           onRemove={onRemove}
+//         />
+//       )}
+//     </li>
+//   );
+// }
+
+
+
 function BOMTreeNode({
   item,
   level,
@@ -379,64 +503,73 @@ function BOMTreeNode({
       <div
         onClick={() => onPick(item)}
         className={clsx(
-          "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 pl-1 transition",
+          // 👇 Replaced flex-wrap with w-max min-w-full to force expansion
+          "group flex w-max min-w-full cursor-pointer items-center gap-2 rounded-md py-2 pr-4 pl-1 transition",
           isHighlighted
             ? "bg-primary-50 ring-primary-400 dark:bg-primary-900/30 ring-1 ring-inset"
             : "dark:hover:bg-dark-600 hover:bg-gray-50",
         )}
         style={{ minHeight: ROW_H }}
       >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (hasChildren) onToggle(item.id);
-          }}
-          className="flex size-5 shrink-0 items-center justify-center"
-        >
-          {hasChildren ? (
-            <ChevronDownIcon
-              className={clsx(
-                "size-4 text-gray-400 transition-transform",
-                !isOpen && "-rotate-90",
-              )}
-            />
-          ) : (
-            <span className="dark:bg-dark-500 block size-1 rounded-full bg-gray-300" />
-          )}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (hasChildren) onToggle(item.id);
+            }}
+            className="flex size-5 shrink-0 items-center justify-center"
+          >
+            {hasChildren ? (
+              <ChevronDownIcon
+                className={clsx(
+                  "size-4 text-gray-400 transition-transform",
+                  !isOpen && "-rotate-90",
+                )}
+              />
+            ) : (
+              <span className="dark:bg-dark-500 block size-1 rounded-full bg-gray-300" />
+            )}
+          </button>
 
-        <span
-          className={clsx(
-            "size-5 shrink-0",
-            hasChildren ? "text-primary-600" : "text-gray-400",
-          )}
-        >
-          {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
-        </span>
+          <span
+            className={clsx(
+              "size-5 shrink-0",
+              hasChildren ? "text-primary-600" : "text-gray-400",
+            )}
+          >
+            {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+          </span>
+        </div>
 
-        <div className="flex min-w-0 flex-1 items-baseline gap-2">
-          <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+        {/* 👇 Removed flex-wrap and truncate. Added whitespace-nowrap and pr-4 */}
+        <div className="flex flex-1 items-baseline gap-2 pr-4 whitespace-nowrap">
+          <span className="dark:text-dark-50 text-sm font-medium text-gray-900">
             {item.itemCode}
           </span>
-          <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+          <span className="dark:text-dark-300 text-xs text-gray-500">
             {item.itemName}
           </span>
         </div>
 
-        <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
-          Qty: {item.quantity}
-          <span className="text-primary-600 dark:text-primary-400 ml-2">
+        {/* Qty and Weight */}
+        <div className="flex shrink-0 items-center gap-2 pl-4">
+          <span className="dark:text-dark-300 text-xs font-semibold text-gray-600">
+            Qty: {item.quantity}
+          </span>
+          <span className="text-primary-600 dark:text-primary-400 text-xs font-semibold">
             Wt: {computeTotalWeight(item).toFixed(2)} kg
           </span>
-        </span>
+        </div>
+
+        {/* 👇 Removed ml-auto so it sits right next to the weight, keeping the row tight */}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onRemove(item.id);
           }}
-          className="shrink-0 text-gray-300 opacity-0 transition group-hover:opacity-100 hover:text-red-500"
+          className="shrink-0 text-gray-300 opacity-100 transition hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
         >
           <XMarkIcon className="size-4" />
         </button>
@@ -1711,7 +1844,7 @@ export default function BOMFormPage() {
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-10">
           <div className="lg:col-span-7">
             <Card className="h-full p-3">
-              <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
+                           <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="dark:text-dark-100 text-lg font-medium text-gray-800">
@@ -1723,12 +1856,25 @@ export default function BOMFormPage() {
                         : "Tree view of BOM items"}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outlined" onClick={handleExpandAll}>
-                      Expand All
+                  {/* 👇 UPDATED: Icon-only on mobile, text on desktop */}
+                  <div className="flex shrink-0 gap-2">
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleExpandAll}
+                      className="flex size-9 items-center justify-center p-0 sm:size-auto sm:px-4 sm:py-2"
+                      title="Expand All"
+                    >
+                      <ChevronDoubleDownIcon className="size-5 sm:hidden" />
+                      <span className="hidden sm:inline">Expand All</span>
                     </Button>
-                    <Button variant="outlined" onClick={handleCollapseAll}>
-                      Collapse All
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleCollapseAll}
+                      className="flex size-9 items-center justify-center p-0 sm:size-auto sm:px-4 sm:py-2"
+                      title="Collapse All"
+                    >
+                      <ChevronDoubleUpIcon  className="size-5 sm:hidden" />
+                      <span className="hidden sm:inline">Collapse All</span>
                     </Button>
                   </div>
                 </div>

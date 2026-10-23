@@ -308,8 +308,9 @@ export default function QcPage() {
               <hr className="dark:border-dark-400 my-5 border-dashed border-gray-300" />
 
               {/* ---- Entry row ---- */}
-              <div className="flex items-end gap-4">
-                <div className="min-w-0 flex-1">
+                            {/* ---- Entry row ---- */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:flex lg:items-end">
+                <div className="min-w-0 lg:flex-1">
                   <Input
                     label="Item Code"
                     value={currentItem?.itemCode || ""}
@@ -317,7 +318,7 @@ export default function QcPage() {
                     placeholder="Item code"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 lg:flex-1">
                   <Input
                     label="Item Name"
                     value={currentItem?.itemName || ""}
@@ -325,7 +326,7 @@ export default function QcPage() {
                     placeholder="Item name"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 lg:flex-1">
                   <Input
                     label="In Qty"
                     value={currentItem ? String(currentItem.inQty) : ""}
@@ -333,7 +334,7 @@ export default function QcPage() {
                     placeholder="In qty"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 lg:flex-1">
                   <Input
                     label="Verify Qty (Manual)"
                     type="number"
@@ -344,7 +345,7 @@ export default function QcPage() {
                     disabled={!currentItem}
                   />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 lg:flex-1">
                   <Input
                     label="R.Qty"
                     value={rQty}
@@ -352,15 +353,18 @@ export default function QcPage() {
                     placeholder="Auto"
                   />
                 </div>
-                <Button
-                  type="button"
-                  color="success"
-                  className="h-9 w-9 shrink-0 p-0 text-lg"
-                  onClick={handleAdd}
-                  title="Verify item"
-                >
-                  ✓
-                </Button>
+                {/* Full width on mobile for easy tapping, auto width on desktop */}
+                <div className="w-full lg:w-auto">
+                  <Button
+                    type="button"
+                    color="success"
+                    className="h-9 w-full text-lg lg:w-9 lg:shrink-0 lg:p-0"
+                    onClick={handleAdd}
+                    title="Verify item"
+                  >
+                    ✓
+                  </Button>
+                </div>
               </div>
             </>
           )}
