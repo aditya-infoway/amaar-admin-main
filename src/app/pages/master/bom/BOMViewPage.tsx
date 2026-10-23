@@ -141,6 +141,103 @@ function BOMTreeList({ items, level, expanded, onToggle }: TreeProps) {
   );
 }
 
+// function BOMTreeNode({
+//   item,
+//   level,
+//   isLast,
+//   expanded,
+//   onToggle,
+// }: Omit<TreeProps, "items"> & { item: BOMItem; isLast: boolean }) {
+//   const hasChildren = item.children.length > 0;
+//   const isOpen = !!expanded[item.id];
+
+//   return (
+//     <li className="relative" style={{ minHeight: ROW_H }}>
+//       {level > 0 && (
+//         <>
+//           <span
+//             className="dark:bg-dark-500 absolute bg-gray-300"
+//             style={{
+//               left: -INDENT + 10,
+//               top: 0,
+//               width: 1,
+//               height: isLast ? TICK_Y : "100%",
+//             }}
+//           />
+//           <span
+//             className="dark:bg-dark-500 absolute bg-gray-300"
+//             style={{
+//               left: -INDENT + 10,
+//               top: TICK_Y,
+//               width: INDENT - 10,
+//               height: 1,
+//             }}
+//           />
+//         </>
+//       )}
+
+//       <div
+//         className="group dark:hover:bg-dark-600 flex items-center gap-2 rounded-md py-2 pr-2 pl-1 hover:bg-gray-50"
+//         style={{ minHeight: ROW_H }}
+//       >
+//         <button
+//           type="button"
+//           onClick={() => hasChildren && onToggle(item.id)}
+//           className="flex size-5 shrink-0 items-center justify-center"
+//         >
+//           {hasChildren ? (
+//             <ChevronDownIcon
+//               className={clsx(
+//                 "size-4 text-gray-400 transition-transform",
+//                 !isOpen && "-rotate-90",
+//               )}
+//             />
+//           ) : (
+//             <span className="dark:bg-dark-500 block size-1 rounded-full bg-gray-300" />
+//           )}
+//         </button>
+
+//         <span
+//           className={clsx(
+//             "size-5 shrink-0",
+//             hasChildren ? "text-primary-600" : "text-gray-400",
+//           )}
+//         >
+//           {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
+//         </span>
+
+//         <div className="flex min-w-0 flex-1 items-baseline gap-2">
+//           <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
+//             {item.itemCode}
+//           </span>
+//           <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+//             {item.itemName}
+//           </span>
+//         </div>
+
+//         <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
+//           Qty: {item.quantity}
+//         </span>
+//         {item.unit && (
+//           <span className="dark:text-dark-400 shrink-0 text-xs text-gray-400">
+//             {item.unit}
+//           </span>
+//         )}
+//       </div>
+
+//       {hasChildren && isOpen && (
+//         <BOMTreeList
+//           items={item.children}
+//           level={level + 1}
+//           expanded={expanded}
+//           onToggle={onToggle}
+//         />
+//       )}
+//     </li>
+//   );
+// }
+
+
 function BOMTreeNode({
   item,
   level,
@@ -177,7 +274,8 @@ function BOMTreeNode({
       )}
 
       <div
-        className="group dark:hover:bg-dark-600 flex items-center gap-2 rounded-md py-2 pr-2 pl-1 hover:bg-gray-50"
+        // 👇 Replaced flex-wrap with w-max min-w-full to force expansion
+        className="group dark:hover:bg-dark-600 flex w-max min-w-full items-center gap-2 rounded-md py-2 pr-4 pl-1 hover:bg-gray-50"
         style={{ minHeight: ROW_H }}
       >
         <button
@@ -206,16 +304,17 @@ function BOMTreeNode({
           {hasChildren ? <FolderIcon /> : <DocumentTextIcon />}
         </span>
 
-        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+        {/* 👇 Removed truncate, added whitespace-nowrap and pr-4 */}
+        <div className="flex flex-1 items-baseline gap-2 pr-4 whitespace-nowrap">
           <span className="dark:text-dark-50 shrink-0 text-sm font-medium text-gray-900">
             {item.itemCode}
           </span>
-          <span className="dark:text-dark-300 truncate text-xs text-gray-500">
+          <span className="dark:text-dark-300 text-xs text-gray-500">
             {item.itemName}
           </span>
         </div>
 
-        <span className="dark:text-dark-300 shrink-0 text-xs font-semibold text-gray-600">
+        <span className="dark:text-dark-300 shrink-0 pl-4 text-xs font-semibold text-gray-600">
           Qty: {item.quantity}
         </span>
         {item.unit && (

@@ -9,6 +9,7 @@ interface AuthAction {
     | "INITIALIZE"
     | "LOGIN_REQUEST"
     | "LOGIN_SUCCESS"
+    | "LOGIN_DONE"
     | "LOGIN_ERROR"
     | "LOGOUT"
     | "SESSION_ESTABLISHED";
@@ -71,6 +72,11 @@ const reducerHandlers: Record<
     pendingToken: action.payload?.pendingToken ?? null,
     pendingEmail: action.payload?.pendingEmail ?? null,
     user: action.payload?.user ?? null,
+  }),
+
+  LOGIN_DONE: (state) => ({
+    ...state,
+    isLoading: false,
   }),
 
   LOGIN_ERROR: (state, action) => ({
@@ -199,12 +205,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.isAuthenticated]);
 
   // STEP 1: login validate — OTP nahi
-  const login = async (credentials: { email: string; password: string }) => {
+  // STEP 1: login validate (no OTP). Super Admin continues to company select;
+  // other roles are redirected out by SignIn using the returned data.
+  const login = async (credentials: {
+    email: string;
+    password: string;
+    role: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     dispatch({ type: "LOGIN_REQUEST" });
     try {
       const response = await Post(
         "superadmin/login",
-        { email: credentials.email, password: credentials.password },
+        {
+          email: credentials.email,
+          password: credentials.password,
+          role: credentials.role,
+          latitude: credentials.latitude,
+          longitude: credentials.longitude,
+        },
         false,
       );
       const result = response.data;
@@ -213,23 +233,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(result.message || "Login failed");
       }
 
-      // ✅ CHANGE #2 — companyId/companyName bhi destructure kiya
-      const { token, email, companyId, companyName } = result.data;
+      const data = result.data;
+      const role = data.role ?? credentials.role;
 
-      window.localStorage.setItem(PENDING_TOKEN_KEY, token);
-      window.localStorage.setItem(PENDING_EMAIL_KEY, email);
-      setSession(token); // axios Authorization header set karega
-
-      toastsuccessmsg(result.message);
-
+      window.localStorage.setItem(PENDING_TOKEN_KEY, data.token);
+      window.localStorage.setItem(PENDING_EMAIL_KEY, data.email);
+      setSession(data.token);
       dispatch({
         type: "LOGIN_SUCCESS",
         payload: {
-          pendingToken: token,
-          pendingEmail: email,
-          user: { companyId, companyName, email } as unknown as User,
+          pendingToken: data.token,
+          pendingEmail: data.email,
+          user: {
+            role,
+            companyId: data.companyId,
+            companyName: data.companyName,
+            employeeId: data.employeeId,
+            employeeName: data.employeeName,
+            email: data.email,
+          } as unknown as User,
         },
       });
+
+      toastsuccessmsg(result.message);
+      return { ...data, role };
     } catch (err: any) {
       const message =
         err?.response?.data?.message || err.message || "Login failed";
@@ -240,7 +267,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // STEP 2: company select/create hone ke baad final auth
-  const completeAuth = (companyId: string) => {
+   const completeAuth = (companyId: string, userOverride?: User) => {
+    const finalUser = userOverride ?? state.user;
     const token =
       state.pendingToken || window.localStorage.getItem(PENDING_TOKEN_KEY);
 
@@ -254,12 +282,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem("authToken", token);
     window.localStorage.setItem(COMPANY_ID_KEY, companyId);
     window.localStorage.setItem("authToken", token); // (duplicate line, already existed)
-    window.localStorage.setItem("user", JSON.stringify(state.user));
+window.localStorage.setItem("user", JSON.stringify(finalUser));
     resetExpiry(); // was setExpiry() — wrong name, causes ReferenceError
     window.localStorage.removeItem(PENDING_TOKEN_KEY);
     window.localStorage.removeItem(PENDING_EMAIL_KEY);
 
-    dispatch({ type: "SESSION_ESTABLISHED", payload: { user: state.user } });
+    dispatch({ type: "SESSION_ESTABLISHED", payload: { user: finalUser } });
   };
 
   const logout = async () => {
@@ -271,6 +299,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem(PENDING_TOKEN_KEY);
     window.localStorage.removeItem(PENDING_EMAIL_KEY);
     window.localStorage.removeItem(EXPIRES_AT_KEY); // add alongside the other removeItem calls
+     window.localStorage.removeItem("financialYearId");
+    window.localStorage.removeItem("companyDetailsId");
     dispatch({ type: "LOGOUT" });
   };
 

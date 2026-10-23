@@ -120,7 +120,7 @@ export default function DebitNoteVendorDocsPage() {
                 rows.map((r) => (
                   <tr
                     key={r.id}
-                    className="dark:border-dark-500 border-t border-gray-200"
+                    className="dark:border-dark-500 border-t border-gray-200  whitespace-nowrap"
                   >
                     <td className={td}>{r.docNo}</td>
                     <td className={td}>{fmtDate(r.docDate)}</td>
