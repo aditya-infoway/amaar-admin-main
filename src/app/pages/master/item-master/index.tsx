@@ -80,20 +80,47 @@ export default function ItemMasterListPage() {
         "Max Qty": "maxQty",
         "Opening Stock": "openingStock",
         "Stock Value": "stockValue",
-        "Auto Generate Barcode": "barcodeType", // ← change this
-        "Generate Barcode": "barcodeType",
+        "Generate Barcode": "generateBarcodeInput", // Temporary field for checking
       } as const;
 
-      const importedData = await importFromExcel<Partial<ItemMaster>>(
-        file,
-        columnMapping,
-      );
+      // 1. Import raw data
+      const rawData = await importFromExcel<any>(file, columnMapping);
+
+      // 2. Sanitize data and apply barcode rule
+      const sanitizedData = rawData.map((item: any) => {
+        const shouldGenerate =
+          String(item.generateBarcodeInput || "")
+            .trim()
+            .toLowerCase() === "yes";
+
+        return {
+          ...item,
+          openingStock:
+            item.openingStock !== undefined && item.openingStock !== ""
+              ? Number(item.openingStock)
+              : 0,
+          stockValue:
+            item.stockValue !== undefined && item.stockValue !== ""
+              ? Number(item.stockValue)
+              : 0,
+          minQty: item.minQty ? Number(item.minQty) : 0,
+          maxQty: item.maxQty ? Number(item.maxQty) : 0,
+
+          // ✅ Send generateBarcode instead of barcodeType
+          generateBarcode: shouldGenerate ? 1 : 0,
+          barcode: "",
+
+          generateBarcodeInput: undefined,
+        };
+      });
 
       const response = await Post(
         "master/itemmaster/bulk-import",
-        { items: importedData },
+        { items: sanitizedData },
         false,
       );
+
+      // ... rest of the response handling
 
       if (response.data?.success) {
         toastsuccessmsg(
@@ -170,7 +197,7 @@ export default function ItemMasterListPage() {
     }
   };
 
-  const handleDeleteMany = async (rows: { original: ItemMaster }[]) => {
+    const handleDeleteMany = async (rows: { original: ItemMaster }[]) => {
     try {
       await Promise.all(
         rows.map((r) =>
