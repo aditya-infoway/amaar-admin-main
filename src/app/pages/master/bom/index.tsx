@@ -8,23 +8,25 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-
+import * as XLSX from "xlsx";
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
+import { Button } from "@/components/ui/Button";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
-import { Get, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
-import { exportToExcel, exportToPdf } from "../shared/export";
+import { Get, Post, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import { exportToExcel, exportToPdf, importFromExcel } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
 import { statusOptions } from "../shared/constants";
+import { downloadBomImportTemplate } from "../shared/bomImportTemplate";
 import { columns, exportColumns } from "./columns";
-import { emptyBOM2, mapApiBOM2ToBOM2, BOM2 } from "./data";
+import { mapApiBOM2ToBOM2, BOM2 } from "./data";
 import clsx from "clsx";
-import { Boxes, GitBranch } from "lucide-react";
-
+import { Boxes, GitBranch, Upload, Download, X } from "lucide-react";
+import { createPortal } from "react-dom";
 export default function BOM2Page() {
   const navigate = useNavigate();
 
@@ -41,6 +43,160 @@ export default function BOM2Page() {
   const [data, setData] = useState<BOM2[]>([]);
   const [subBomData, setSubBomData] = useState<BOM2[]>([]);
 
+  // ---- Import Excel state ----
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const readBomExcel = async (
+    file: File,
+    mapping: Record<string, string>,
+  ): Promise<any[]> => {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json<any>(ws, { defval: "", raw: true });
+
+    const norm = (s: string) => String(s).trim().toLowerCase();
+    const map: Record<string, string> = {};
+    Object.entries(mapping).forEach(([k, v]) => (map[norm(k)] = v));
+
+    return json.map((row) => {
+      const out: any = {};
+      Object.keys(row).forEach((h) => {
+        const key = map[norm(h)];
+        if (key) out[key] = row[h];
+      });
+      return out;
+    });
+  };
+  const closeImportModal = () => {
+    setImportOpen(false);
+    setImportFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleImportExcel = async () => {
+    if (!importFile) return toasterrormsg("Please select a file first.");
+    const file = importFile;
+    setImporting(true);
+    try {
+      const columnMapping = {
+        Parent: "parentCode",
+        Item: "parentName",
+        "S. No.": "serialNo",
+        Child: "childCode",
+        "Child Name": "childName",
+        UOM: "uom",
+        QPV: "qty",
+        L: "length",
+        W: "width",
+        T: "thickness",
+      } as const;
+
+      const rawData = await readBomExcel(file, columnMapping);
+
+      const clean = (v: any) => String(v ?? "").trim();
+      const num = (v: any) =>
+        v === undefined || v === null || v === "" ? 0 : Number(v) || 0;
+
+      // 1. Clean rows (blank rows skip)
+      const rows = rawData
+        .filter((r: any) => clean(r.parentCode) && clean(r.childCode))
+        .map((r: any) => ({
+          parentCode: clean(r.parentCode),
+          parentName: clean(r.parentName),
+          serialNo: num(r.serialNo),
+          childCode: clean(r.childCode),
+          childName: clean(r.childName),
+          uom: clean(r.uom),
+          qty: num(r.qty) || 1,
+          length: num(r.length),
+          width: num(r.width),
+          thickness: num(r.thickness),
+        }));
+
+      if (rows.length === 0) {
+        return toasterrormsg("No valid rows found in the file.");
+      }
+
+      // 2. Root parent dhundo (jo kisi ka child nahi hai)
+      const childSet = new Set(rows.map((r) => r.childCode));
+      const parentCodes = Array.from(new Set(rows.map((r) => r.parentCode)));
+      const roots = parentCodes.filter((code) => !childSet.has(code));
+
+      if (roots.length === 0) {
+        return toasterrormsg(
+          "Root parent not found. Please check Parent / Child codes.",
+        );
+      }
+
+      // 3. Parent -> children map
+      const childrenMap = new Map<string, typeof rows>();
+      rows.forEach((r) => {
+        if (!childrenMap.has(r.parentCode)) childrenMap.set(r.parentCode, []);
+        childrenMap.get(r.parentCode)!.push(r);
+      });
+
+      const parentNameMap = new Map<string, string>();
+      rows.forEach((r) => {
+        if (!parentNameMap.has(r.parentCode)) {
+          parentNameMap.set(r.parentCode, r.parentName);
+        }
+      });
+
+      // 4. Har root ke liye pura tree (saare descendants) collect karo
+      const boms = roots.map((rootCode) => {
+        const components: typeof rows = [];
+        const visited = new Set<string>();
+        const queue = [rootCode];
+
+        while (queue.length) {
+          const current = queue.shift()!;
+          if (visited.has(current)) continue;
+          visited.add(current);
+          (childrenMap.get(current) || []).forEach((child) => {
+            components.push(child);
+            queue.push(child.childCode);
+          });
+        }
+
+        return {
+          bomCode: rootCode,
+          bomName: parentNameMap.get(rootCode) || rootCode,
+          itemCode: rootCode,
+          quantity: 1,
+          unit: "NO",
+          status: "Active",
+          components,
+        };
+      });
+
+      const response = await Post("master/bom/bulk-import", { boms }, false);
+
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "BOMs imported successfully.",
+        );
+        closeImportModal();
+        fetchAll();
+      } else {
+        const errors = response.data?.data;
+        toasterrormsg(
+          Array.isArray(errors) && errors.length > 0
+            ? `Import rejected. ${errors
+                .slice(0, 3)
+                .map((e: any) => `Row ${e.row}: ${e.reason}`)
+                .join(" | ")}${errors.length > 3 ? " ..." : ""}`
+            : response.data?.message || "Import failed.",
+        );
+      }
+    } catch (error) {
+      toasterrormsg("Failed to import Excel file. Please check the format.");
+    } finally {
+      setImporting(false);
+    }
+  };
   // ---- Fetch BOM2 items ----
   const fetchAll = async () => {
     setLoading(true);
@@ -164,6 +320,16 @@ export default function BOM2Page() {
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((v) => !v)}
           onCreate={() => navigate("/master/item-master/bom/create")}
+          importButton={
+            <Button
+              variant="outlined"
+              className="h-9 gap-2 rounded-md px-3 text-sm"
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload className="size-4" />
+              <span>Import Excel</span>
+            </Button>
+          }
           onExportExcel={() =>
             exportToExcel(filteredData, exportColumns, "bom2")
           }
@@ -198,6 +364,17 @@ export default function BOM2Page() {
               />
             </div>
           }
+        />
+
+        {/* Hidden file input for import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={(e) => {
+            setImportFile(e.target.files?.[0] ?? null);
+          }}
         />
 
         {/* Always visible tabs – BOM / Sub BOM */}
@@ -238,6 +415,7 @@ export default function BOM2Page() {
             )}
           </button>
         </div>
+
         <MasterTable
           table={table}
           columnCount={columns.length}
@@ -250,6 +428,56 @@ export default function BOM2Page() {
           }
         />
       </div>
+
+      {/* Import Modal */}
+      {importOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto bg-black/50 px-4 pt-10">
+            <div className="dark:bg-dark-700 w-full max-w-2xl rounded-lg bg-white shadow-xl">
+              <div className="dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <h3 className="text-lg font-semibold">Import BOM</h3>
+                <button type="button" onClick={closeImportModal}>
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              <div className="space-y-5 p-6">
+                <button
+                  type="button"
+                  onClick={() => downloadBomImportTemplate()}
+                  className="text-primary-600 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Download className="size-4" /> Download sample template
+                </button>
+
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="dark:border-dark-400 flex min-h-50 cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-gray-300 p-10 text-sm"
+                >
+                  <Upload className="size-6" />
+                  <span className="text-sm">
+                    {importFile
+                      ? importFile.name
+                      : "Select an Excel / CSV file"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="dark:border-dark-500 flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+                <Button variant="outlined" onClick={closeImportModal}>
+                  Close
+                </Button>
+                <Button
+                  onClick={handleImportExcel}
+                  disabled={!importFile || importing}
+                >
+                  {importing ? "Importing..." : "Import"}
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </Page>
   );
 }
