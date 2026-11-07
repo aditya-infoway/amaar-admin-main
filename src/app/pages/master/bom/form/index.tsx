@@ -9,8 +9,8 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ChevronRightIcon,
-  ChevronDoubleDownIcon, 
-  ChevronDoubleUpIcon, 
+  ChevronDoubleDownIcon,
+  ChevronDoubleUpIcon,
 } from "@heroicons/react/24/outline";
 import { useNavigate, useParams } from "react-router";
 import clsx from "clsx";
@@ -184,15 +184,26 @@ function countAll(items: BOMItem[]): number {
   return items.reduce((acc, item) => acc + 1 + countAll(item.children), 0);
 }
 
+// function computeTotalWeight(item: BOMItem): number {
+//   const ownWeight = parseFloat(item.weight || "0") || 0;
+//   const childrenWeight = item.children.reduce(
+//     (sum, child) => sum + computeTotalWeight(child),
+//     0,
+//   );
+//   return ownWeight + childrenWeight;
+// }
 function computeTotalWeight(item: BOMItem): number {
-  const ownWeight = parseFloat(item.weight || "0") || 0;
-  const childrenWeight = item.children.reduce(
+  // No children: its own weight (unit weight x its own Qty, already saved)
+  if (item.children.length === 0) {
+    return parseFloat(item.weight || "0") || 0;
+  }
+
+  // Has children: just the sum of all children, no multiplication
+  return item.children.reduce(
     (sum, child) => sum + computeTotalWeight(child),
     0,
   );
-  return ownWeight + childrenWeight;
 }
-
 // 👇 NEW: recursively filters a BOMItem tree by search query, keeping a
 // node if it matches OR if any of its descendants match (so a matching
 // deep child still shows its ancestor chain, same pattern search trees
@@ -458,8 +469,6 @@ function BOMTreeList({
 //     </li>
 //   );
 // }
-
-
 
 function BOMTreeNode({
   item,
@@ -1844,7 +1853,7 @@ export default function BOMFormPage() {
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-10">
           <div className="lg:col-span-7">
             <Card className="h-full p-3">
-                           <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
+              <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="dark:text-dark-100 text-lg font-medium text-gray-800">
@@ -1858,8 +1867,8 @@ export default function BOMFormPage() {
                   </div>
                   {/* 👇 UPDATED: Icon-only on mobile, text on desktop */}
                   <div className="flex shrink-0 gap-2">
-                    <Button 
-                      variant="outlined" 
+                    <Button
+                      variant="outlined"
                       onClick={handleExpandAll}
                       className="flex size-9 items-center justify-center p-0 sm:size-auto sm:px-4 sm:py-2"
                       title="Expand All"
@@ -1867,13 +1876,13 @@ export default function BOMFormPage() {
                       <ChevronDoubleDownIcon className="size-5 sm:hidden" />
                       <span className="hidden sm:inline">Expand All</span>
                     </Button>
-                    <Button 
-                      variant="outlined" 
+                    <Button
+                      variant="outlined"
                       onClick={handleCollapseAll}
                       className="flex size-9 items-center justify-center p-0 sm:size-auto sm:px-4 sm:py-2"
                       title="Collapse All"
                     >
-                      <ChevronDoubleUpIcon  className="size-5 sm:hidden" />
+                      <ChevronDoubleUpIcon className="size-5 sm:hidden" />
                       <span className="hidden sm:inline">Collapse All</span>
                     </Button>
                   </div>
