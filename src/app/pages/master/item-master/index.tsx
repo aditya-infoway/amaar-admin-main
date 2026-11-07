@@ -22,7 +22,7 @@ import { columns, exportColumns } from "./columns";
 import { ItemMaster, mapApiItemMasterToItemMaster } from "./data";
 import { Upload, Download, X } from "lucide-react";
 import { downloadItemImportTemplate } from "./shared/itemImportTemplate";
-
+import { createPortal } from "react-dom";
 export default function ItemMasterListPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<ItemMaster[]>([]);
@@ -317,47 +317,52 @@ export default function ItemMasterListPage() {
           bordered
         />
       </div>
-      {importOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="dark:bg-dark-700 w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-5 py-3">
-              <h3 className="font-semibold">Import Items</h3>
-              <button onClick={closeImportModal}>
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="space-y-4 p-5">
-              <button
-                type="button"
-                onClick={() => downloadItemImportTemplate()}
-                className="text-primary-600 flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <Download className="size-4" /> Download sample template
-              </button>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-8 text-sm"
-              >
-                <Upload className="size-6" />
-                <span>
-                  {importFile ? importFile.name : "Select an Excel / CSV file"}
-                </span>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 border-t px-5 py-3">
-              <Button variant="outlined" onClick={closeImportModal}>
-                Close
-              </Button>
-              <Button
-                onClick={handleImportExcel}
-                disabled={!importFile || importing}
-              >
-                {importing ? "Importing..." : "Import"}
-              </Button>
-            </div>
+  {importOpen &&
+  createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto bg-black/50 px-4 pt-10">
+      <div className="dark:bg-dark-700 w-full max-w-2xl rounded-lg bg-white shadow-xl">
+        <div className="dark:border-dark-500 flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h3 className="text-lg font-semibold">Import Items</h3>
+          <button type="button" onClick={closeImportModal}>
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <div className="space-y-5 p-6">
+          <button
+            type="button"
+            onClick={() => downloadItemImportTemplate()}
+            className="text-primary-600 flex cursor-pointer items-center gap-2 text-sm"
+          >
+            <Download className="size-4" /> Download sample template
+          </button>
+
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="dark:border-dark-400 flex min-h-50 cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-gray-300 p-10 text-sm"
+          >
+            <Upload className="size-6" />
+            <span className="text-sm">
+              {importFile ? importFile.name : "Select an Excel / CSV file"}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="dark:border-dark-500 flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+          <Button variant="outlined" onClick={closeImportModal}>
+            Close
+          </Button>
+          <Button
+            onClick={handleImportExcel}
+            disabled={!importFile || importing}
+          >
+            {importing ? "Importing..." : "Import"}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )}
     </Page>
   );
 }
