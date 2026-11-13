@@ -1691,79 +1691,64 @@ export default function BOMFormPage() {
   };
 
   // Actual create / update after user confirms in the popup
-  const handleConfirmSaveBOM = async () => {
-    setIsBomConfirmOpen(false);
 
-    // Root item of the tree = Finished Goods
-    const finishedGoodsItemId = bomItems[0]?.refItemId
-      ? Number(bomItems[0].refItemId)
-      : null;
+const handleConfirmSaveBOM = async () => {
+  setIsBomConfirmOpen(false);
 
-    // Frontend validation
-    if (!finishedGoodsItemId) {
-      toasterrormsg(
-        "Finished Goods Item is missing. Please add a root item first.",
+  // BOM Name dropdown se selected Finished Goods ID
+  const selectedFinishedGoodsItemId = finishedGoodsItemId
+    ? Number(finishedGoodsItemId)
+    : null;
+
+  // Frontend validation
+  if (!selectedFinishedGoodsItemId) {
+    toasterrormsg("Please select Finished Goods Item.");
+    return;
+  }
+
+  try {
+    const payload = {
+      ...(isEditMode && { bomId: Number(id) }),
+      bomName,
+      bomCode,
+      status: bomStatus,
+      finishedGoodsItemId: selectedFinishedGoodsItemId,
+      items: bomItems,
+    };
+
+    const response = isEditMode
+      ? await Put("master/bom/update", payload, false)
+      : await Post("master/bom/create", payload, false);
+
+    if (response.data?.success) {
+      toastsuccessmsg(
+        response.data?.message ||
+          `BOM ${isEditMode ? "updated" : "created"} successfully.`,
       );
-      return;
-    }
 
-    try {
-      if (isEditMode) {
-        const payload = {
-          bomId: Number(id),
-          bomName,
-          bomCode,
-          status: bomStatus,
-          finishedGoodsItemId,
-          items: bomItems,
-        };
+      setIsBOMDirty(false);
+      setDirty(false);
 
-        const response = await Put("master/bom/update", payload, false);
-
-        if (response.data?.success) {
-          toastsuccessmsg(
-            response.data?.message || "BOM updated successfully.",
-          );
-          setIsBOMDirty(false);
-          setDirty(false);
-          setTimeout(() => {
-            navigate("/master/item-master/bom");
-          }, 0);
-        } else {
-          toasterrormsg(response.data?.message || "Failed to update BOM.");
-        }
-        return;
-      }
-
-      const payload = {
-        bomName,
-        bomCode,
-        status: bomStatus,
-        finishedGoodsItemId,
-        items: bomItems,
-      };
-
-      const response = await Post("master/bom/create", payload, false);
-
-      if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "BOM created successfully.");
-        setIsBOMDirty(false);
-        setDirty(false);
-        setTimeout(() => {
-          navigate("/master/item-master/bom");
-        }, 0);
-      } else {
-        toasterrormsg(response.data?.message || "Failed to create BOM.");
-      }
-    } catch (error) {
-      console.error("BOM save error:", error);
+      setTimeout(() => {
+        navigate("/master/item-master/bom");
+      }, 0);
+    } else {
       toasterrormsg(
-        isEditMode
-          ? "Something went wrong while updating BOM."
-          : "Something went wrong while creating BOM.",
+        response.data?.message ||
+          `Failed to ${isEditMode ? "update" : "create"} BOM.`,
       );
     }
-  };
+  } catch (error) {
+    console.error("BOM save error:", error);
+
+    toasterrormsg(
+      isEditMode
+        ? "Something went wrong while updating BOM."
+        : "Something went wrong while creating BOM.",
+    );
+  }
+};
+
   // Imported BOM that still has no BOM Name/Code: Active/Inactive is locked
   const isStatusLocked = wasPending && !bomCode;
   const currentStatusOption = statusOptions.find(
