@@ -115,7 +115,7 @@ export function EnquiryDrawer({
     const loadFinishedGoods = async () => {
       try {
         const response = await Get(
-          "master/itemmaster/finished-goods/list",
+          "master/itemmaster/finished-goods/list?withBom=1",
           {},
           false,
         );
@@ -274,27 +274,27 @@ export function EnquiryDrawer({
   };
 
   // Stage 1: validate the form, then send the OTP
- const onSubmitForm = handleSubmit(async (values) => {
-  setPendingValues(values);
+  const onSubmitForm = handleSubmit(async (values) => {
+    setPendingValues(values);
 
-  const newEmail = values.email.trim().toLowerCase();
-  const oldEmail = (enquiry?.email || "").trim().toLowerCase();
-  const needsOtp = !isEditing || newEmail !== oldEmail;
+    const newEmail = values.email.trim().toLowerCase();
+    const oldEmail = (enquiry?.email || "").trim().toLowerCase();
+    const needsOtp = !isEditing || newEmail !== oldEmail;
 
-  // editing with the same email → save directly, no OTP
-  if (!needsOtp) {
-    await saveEnquiry(values);
-    return;
-  }
+    // editing with the same email → save directly, no OTP
+    if (!needsOtp) {
+      await saveEnquiry(values);
+      return;
+    }
 
-  // already verified (e.g. an earlier save failed) → skip the OTP
-  if (verifiedEmail === values.email.trim()) {
-    await saveEnquiry(values);
-    return;
-  }
+    // already verified (e.g. an earlier save failed) → skip the OTP
+    if (verifiedEmail === values.email.trim()) {
+      await saveEnquiry(values);
+      return;
+    }
 
-  await sendOtp(values);
-});
+    await sendOtp(values);
+  });
 
   // Stage 2: verify the OTP on the backend, then save
   const handleVerifyOtp = async () => {
@@ -547,7 +547,11 @@ export function EnquiryDrawer({
                   color="primary"
                   disabled={sendingOtp || saving}
                 >
-                 {saving ? "Saving..." : isEditing ? "Verify & Update" : "Verify & Save"}
+                  {saving
+                    ? "Saving..."
+                    : isEditing
+                      ? "Verify & Update"
+                      : "Verify & Save"}
                 </Button>
               </div>
             </form>

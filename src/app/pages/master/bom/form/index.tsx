@@ -937,7 +937,8 @@ export default function BOMFormPage() {
   const [bomName, setBomName] = useState<string>("");
   const [bomCode, setBomCode] = useState<string>("");
   const [bomStatus, setBomStatus] = useState<string>("active");
-
+ 
+  const [wasPending, setWasPending] = useState<boolean>(false);
   const isLoadingFieldsRef = useRef(false);
 
   const [isBOMDirty, setIsBOMDirty] = useState(false);
@@ -1027,6 +1028,7 @@ export default function BOMFormPage() {
           setBomName(data.bomName || "");
           setBomCode(data.bomCode || "");
           setBomStatus(data.status || "active");
+                    setWasPending(data.setupStatus === "pending");
           setBomItems(data.items || []);
           setExpandedNodes(
             Object.fromEntries(
@@ -1762,7 +1764,11 @@ export default function BOMFormPage() {
       );
     }
   };
-
+  // Imported BOM that still has no BOM Name/Code: Active/Inactive is locked
+  const isStatusLocked = wasPending && !bomCode;
+  const currentStatusOption = statusOptions.find(
+    (item) => item.id === bomStatus,
+  ) || { id: "active", label: "Active" };
   if (loading) {
     return (
       <Page title={isEditMode ? "Edit BOM" : "Create BOM"}>
@@ -1793,8 +1799,20 @@ export default function BOMFormPage() {
 
         <Card className="mb-6 p-3">
           <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
-            <h3 className="dark:text-dark-100 text-lg font-medium text-gray-800">
+                      <h3 className="dark:text-dark-100 flex items-center gap-3 text-lg font-medium text-gray-800">
               BOM Details
+              {isEditMode && (
+                <span
+                  className={clsx(
+                    "rounded px-2 py-0.5 text-xs font-medium",
+                    isStatusLocked
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-green-100 text-green-800",
+                  )}
+                >
+                  {isStatusLocked ? "Pending" : "Complete"}
+                </span>
+              )}
             </h3>
           </div>
 
@@ -1831,22 +1849,25 @@ export default function BOMFormPage() {
               placeholder="Auto generated "
               className="dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
             />
-            <Listbox
-              data={statusOptions}
-              value={
-                statusOptions.find((item) => item.id === bomStatus) || {
-                  id: "active",
-                  label: "Active",
-                }
-              }
-              onChange={(item) => {
-                setBomStatus(item.id);
-                setIsBOMDirty(true);
-              }}
-              label="Status"
-              placeholder="Select status"
-              displayField="label"
-            />
+                      <div>
+              <Listbox
+                data={isStatusLocked ? [currentStatusOption] : statusOptions}
+                value={currentStatusOption}
+                onChange={(item) => {
+                  if (isStatusLocked) return;
+                  setBomStatus(item.id);
+                  setIsBOMDirty(true);
+                }}
+                label="Status"
+                placeholder="Select status"
+                displayField="label"
+              />
+              {isStatusLocked && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Select BOM Name first to change Active / Inactive.
+                </p>
+              )}
+            </div>
           </div>
         </Card>
 
