@@ -71,10 +71,14 @@ interface OptionItem {
   id: string;
   label: string;
 }
-
+interface CategoryOptionItem extends OptionItem {
+  itemCodeType: string;
+}
 // Group ke saath uski category bhi rakhni hai filtering ke liye
 interface GroupOptionItem extends OptionItem {
   itemCategoryId: string;
+  groupId: string; // asli main group id
+  subGroupId: string; // sub group select kiya ho to uski id, warna ""
 }
 
 export default function ItemMasterFormPage() {
@@ -83,7 +87,12 @@ export default function ItemMasterFormPage() {
 
   const isEdit = Boolean(id);
 
-  const [categoryOptions, setCategoryOptions] = useState<OptionItem[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOptionItem[]>(
+    [],
+  );
+  const [itemCodeLocked, setItemCodeLocked] = useState(false); // auto category me true
+  const [loadingCode, setLoadingCode] = useState(false);
+  const codeRequestRef = useRef(0); // purane (late aaye) response ko ignore karne ke liye
   const [allGroupOptions, setAllGroupOptions] = useState<GroupOptionItem[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -118,7 +127,7 @@ export default function ItemMasterFormPage() {
   }, [isDirty, setDirty]);
 
   const stockMapping = watch("stockMapping");
-  const barcodeType = watch("barcodeType");
+  // const barcodeType = watch("barcodeType");
   const selectedCategoryId = watch("itemCategoryId");
 
   // ---- Item Category — dynamic from Item Category master ----
@@ -132,6 +141,7 @@ export default function ItemMasterFormPage() {
           list.map((c: any) => ({
             id: String(c.itemCategoryId),
             label: c.categoryName,
+            itemCodeType: c.itemCodeType || "manual",
           })),
         );
       } catch (err) {
@@ -143,18 +153,42 @@ export default function ItemMasterFormPage() {
   }, []);
 
   // ---- Group — dynamic from Item Group master (poori list, category ke saath) ----
+  // useEffect(() => {
+  //   (async () => {
+  //     try {
+  //       setLoadingGroups(true);
+  //       const res = await Get("master/itemgroup/list", {}, false);
+  //       const list = res?.data?.data || [];
+  //       setAllGroupOptions(
+  //         list.map((g: any) => ({
+  //           id: String(g.itemGroupId),
+  //           label: g.groupName,
+  //           itemCategoryId:
+  //             g.itemCategoryId != null ? String(g.itemCategoryId) : "",
+  //         })),
+  //       );
+  //     } catch (err) {
+  //       toasterrormsg("Failed to load groups");
+  //     } finally {
+  //       setLoadingGroups(false);
+  //     }
+  //   })();
+  // }, []);
+  // ---- Group + Sub Group — main groups aur sub groups dono ----
   useEffect(() => {
     (async () => {
       try {
         setLoadingGroups(true);
-        const res = await Get("master/itemgroup/list", {}, false);
+        const res = await Get("master/subgroup/parents", {}, false);
         const list = res?.data?.data || [];
         setAllGroupOptions(
           list.map((g: any) => ({
-            id: String(g.itemGroupId),
-            label: g.groupName,
+            id: String(g.id), // "G-1" (main group) ya "S-3" (sub group)
+            label: g.label,
             itemCategoryId:
               g.itemCategoryId != null ? String(g.itemCategoryId) : "",
+            groupId: String(g.groupId),
+            subGroupId: g.parentSubGroupId ? String(g.parentSubGroupId) : "",
           })),
         );
       } catch (err) {
@@ -164,7 +198,6 @@ export default function ItemMasterFormPage() {
       }
     })();
   }, []);
-
   // ---- Location — dynamic from Location Master ----
   useEffect(() => {
     (async () => {
@@ -214,7 +247,12 @@ export default function ItemMasterFormPage() {
             itemCategoryId: item.itemCategoryId
               ? String(item.itemCategoryId)
               : "",
-            groupId: item.groupId ? String(item.groupId) : "",
+                     groupId: item.subGroupId
+              ? `S-${item.subGroupId}`
+              : item.groupId
+                ? `G-${item.groupId}`
+                : "",
+            
             unit: item.unit || "",
             taxSlab: item.taxSlab || "",
             openingStock:
@@ -248,39 +286,78 @@ export default function ItemMasterFormPage() {
   }, [id, isEdit, reset]);
 
   // ---- Barcode type switch — generate karte hi API call ----
-  const handleBarcodeTypeChange = async (type: "manual" | "generate") => {
-    setValue("barcodeType", type, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
+  // const handleBarcodeTypeChange = async (type: "manual" | "generate") => {
+  //   setValue("barcodeType", type, {
+  //     shouldValidate: true,
+  //     shouldDirty: true,
+  //   });
 
-    if (type === "generate") {
-      setGeneratingBarcode(true);
+  //   if (type === "generate") {
+  //     setGeneratingBarcode(true);
 
-      try {
-        const res = await Get("master/itemmaster/generate-barcode", {}, false);
+  //     try {
+  //       const res = await Get("master/itemmaster/generate-barcode", {}, false);
 
-        const nextBarcode = res?.data?.data?.barcode || "";
+  //       const nextBarcode = res?.data?.data?.barcode || "";
 
-        setValue("barcode", nextBarcode, {
+  //       setValue("barcode", nextBarcode, {
+  //         shouldValidate: true,
+  //         shouldDirty: true,
+  //       });
+  //     } catch (err) {
+  //       toasterrormsg("Failed to generate barcode");
+  //     } finally {
+  //       setGeneratingBarcode(false);
+  //     }
+  //   } else {
+  //     setValue("barcode", "", {
+  //       shouldValidate: true,
+  //       shouldDirty: true,
+  //     });
+
+  //     clearErrors("barcode");
+  //   }
+  // };
+  // ---- Category select hone par item code laao (sirf Create me) ----
+  const handleCategoryCodeChange = async (categoryId: string) => {
+    if (isEdit) return;
+
+    const wasLocked = itemCodeLocked;
+    const requestId = ++codeRequestRef.current;
+    setLoadingCode(true);
+
+    try {
+      const res = await Get(
+        `master/itemmaster/next-code/${categoryId}`,
+        {},
+        false,
+      );
+      if (requestId !== codeRequestRef.current) return; // naya category select ho chuka
+
+      const info = res?.data?.data;
+
+      if (info?.itemCodeType === "auto") {
+        setItemCodeLocked(true);
+        setValue("itemCode", info.itemCode || "", {
           shouldValidate: true,
           shouldDirty: true,
         });
-      } catch (err) {
-        toasterrormsg("Failed to generate barcode");
-      } finally {
-        setGeneratingBarcode(false);
+      } else {
+        setItemCodeLocked(false);
+        // Auto se Manual me aaye to purana auto code hatao. User ka khud ka typed code na chhedo.
+        if (wasLocked) {
+          setValue("itemCode", "", { shouldDirty: true });
+        }
+        clearErrors("itemCode");
       }
-    } else {
-      setValue("barcode", "", {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-
-      clearErrors("barcode");
+    } catch (err) {
+      if (requestId !== codeRequestRef.current) return;
+      setItemCodeLocked(false);
+      toasterrormsg("Failed to load item code");
+    } finally {
+      if (requestId === codeRequestRef.current) setLoadingCode(false);
     }
   };
-
   const extractErrorMessage = (res: any, fallback: string): string => {
     const data = res?.data ?? res;
     if (data?.message && typeof data.message === "string") return data.message;
@@ -288,15 +365,104 @@ export default function ItemMasterFormPage() {
     return fallback;
   };
 
-  const onSubmit = async (data: ItemMasterFormValues) => {
+  // const onSubmit = async (data: ItemMasterFormValues) => {
+  //   try {
+  //     isSavingRef.current = true;
+  //     setSubmitting(true);
+
+  //     const payload = {
+  //       ...data,
+  //       itemCategoryId: Number(data.itemCategoryId),
+  //       groupId: Number(data.groupId),
+  //       minQty: data.stockMapping ? data.minQty : null,
+  //       maxQty: data.stockMapping ? data.maxQty : null,
+  //       thickness: data.thickness ? Number(data.thickness) : null,
+  //       length: data.length ? Number(data.length) : null,
+  //       width: data.width ? Number(data.width) : null,
+  //       weight: data.weight ? Number(data.weight) : null,
+  //     };
+
+  //     let res;
+
+  //     if (isEdit && id) {
+  //       res = await Put(
+  //         "master/itemmaster/update",
+  //         {
+  //           itemId: Number(id),
+  //           ...payload,
+  //         },
+  //         false,
+  //       );
+
+  //       if (res?.data?.status === 400 || res?.data?.success === false) {
+  //         isSavingRef.current = false;
+  //         toasterrormsg(extractErrorMessage(res, "Something went wrong."));
+  //         return;
+  //       }
+
+  //       toastsuccessmsg(extractErrorMessage(res, "Item updated successfully"));
+  //     } else {
+  //       // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+  //       const companyId = localStorage.getItem("companyId") || "";
+
+  //       const createPayload = {
+  //         ...payload,
+  //         createdBy: Number(companyId),
+  //         createdType: "Super Admin",
+  //       };
+
+  //       res = await Post("master/itemmaster/create", createPayload, false);
+
+  //       if (res?.data?.status === 400 || res?.data?.success === false) {
+  //         isSavingRef.current = false;
+  //         toasterrormsg(extractErrorMessage(res, "Something went wrong."));
+  //         return;
+  //       }
+
+  //       toastsuccessmsg(extractErrorMessage(res, "Item created successfully"));
+  //     }
+
+  //     reset(data);
+  //     setDirty(false);
+
+  //     setTimeout(() => {
+  //       isSavingRef.current = false;
+  //       navigate("/master/item-master");
+  //     }, 0);
+  //   } catch (err: any) {
+  //     isSavingRef.current = false;
+  //     toasterrormsg(
+  //       extractErrorMessage(
+  //         err?.response,
+  //         "Something went wrong. Please try again.",
+  //       ),
+  //     );
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
+ 
+   const onSubmit = async (data: ItemMasterFormValues) => {
     try {
       isSavingRef.current = true;
       setSubmitting(true);
 
+      // Barcode temporarily disabled, isliye backend ko mat bhejo
+           // Barcode temporarily disabled, isliye backend ko mat bhejo
+      const formData: Partial<ItemMasterFormValues> = { ...data };
+      delete formData.barcodeType;
+      delete formData.barcode;
+
+      // "G-1" / "S-3" ko decode karke asli groupId + subGroupId nikalo
+      const selectedGroup = allGroupOptions.find((g) => g.id === data.groupId);
+
       const payload = {
-        ...data,
+        ...formData,
         itemCategoryId: Number(data.itemCategoryId),
-        groupId: Number(data.groupId),
+        groupId: Number(selectedGroup?.groupId),
+        subGroupId: selectedGroup?.subGroupId
+          ? Number(selectedGroup.subGroupId)
+          : null,
         minQty: data.stockMapping ? data.minQty : null,
         maxQty: data.stockMapping ? data.maxQty : null,
         thickness: data.thickness ? Number(data.thickness) : null,
@@ -304,7 +470,6 @@ export default function ItemMasterFormPage() {
         width: data.width ? Number(data.width) : null,
         weight: data.weight ? Number(data.weight) : null,
       };
-
       let res;
 
       if (isEdit && id) {
@@ -325,7 +490,7 @@ export default function ItemMasterFormPage() {
 
         toastsuccessmsg(extractErrorMessage(res, "Item updated successfully"));
       } else {
-        // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+        // ===== companyId localStorage se, createdType default "Super Admin" =====
         const companyId = localStorage.getItem("companyId") || "";
 
         const createPayload = {
@@ -394,6 +559,66 @@ export default function ItemMasterFormPage() {
                 Basic Information
               </h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Controller
+                  control={control}
+                  name="itemCategoryId"
+                  rules={{ required: "Item category is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <Combobox
+                      data={categoryOptions}
+                      value={
+                        categoryOptions.find((item) => item.id === value) ||
+                        null
+                      }
+                      onChange={(item: any) => {
+                        onChange(item.id);
+                        // Category badalte hi purani Group selection clear karo
+                        setValue("groupId", "", { shouldValidate: false });
+                        clearErrors("groupId");
+                        handleCategoryCodeChange(item.id);
+                      }}
+                      label="Item Category"
+                      placeholder={
+                        loadingCategories
+                          ? "Loading..."
+                          : "Select item category"
+                      }
+                      displayField="label"
+                      error={errors.itemCategoryId?.message}
+                      searchFields={["label"]}
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="groupId"
+                  rules={{ required: "Group is required" }}
+                  render={({ field: { value, onChange } }) => (
+                    <Combobox
+                      data={filteredGroupOptions}
+                      value={
+                        filteredGroupOptions.find(
+                          (item) => item.id === value,
+                        ) || null
+                      }
+                      onChange={(item: any) => onChange(item.id)}
+                      label="Group"
+                      placeholder={
+                        !selectedCategoryId
+                          ? "Select item category first"
+                          : loadingGroups
+                            ? "Loading..."
+                            : filteredGroupOptions.length === 0
+                              ? "No groups in this category"
+                              : "Select group"
+                      }
+                      displayField="label"
+                      error={errors.groupId?.message}
+                      searchFields={["label"]}
+                      disabled={!selectedCategoryId || loadingGroups}
+                    />
+                  )}
+                />
                 <Input
                   {...register("itemCode", {
                     required: "Item code is required",
@@ -407,7 +632,17 @@ export default function ItemMasterFormPage() {
                     },
                   })}
                   label="Item Code"
-                  placeholder="Enter item code"
+                  placeholder={
+                    loadingCode
+                      ? "Loading code..."
+                      : itemCodeLocked
+                        ? "Auto generated"
+                        : "Enter item code"
+                  }
+                  readOnly={itemCodeLocked}
+                  className={
+                    itemCodeLocked ? "cursor-not-allowed opacity-70" : ""
+                  }
                   error={errors.itemCode?.message}
                 />
                 <Input
@@ -477,67 +712,8 @@ export default function ItemMasterFormPage() {
                 />
 
                 {/* Item Category — dynamic */}
-                <Controller
-                  control={control}
-                  name="itemCategoryId"
-                  rules={{ required: "Item category is required" }}
-                  render={({ field: { value, onChange } }) => (
-                    <Combobox
-                      data={categoryOptions}
-                      value={
-                        categoryOptions.find((item) => item.id === value) ||
-                        null
-                      }
-                      onChange={(item: any) => {
-                        onChange(item.id);
-                        // Category badalte hi purani Group selection clear karo
-                        setValue("groupId", "", { shouldValidate: false });
-                        clearErrors("groupId");
-                      }}
-                      label="Item Category"
-                      placeholder={
-                        loadingCategories
-                          ? "Loading..."
-                          : "Select item category"
-                      }
-                      displayField="label"
-                      error={errors.itemCategoryId?.message}
-                      searchFields={["label"]}
-                    />
-                  )}
-                />
 
                 {/* Group — sirf selected category ke groups, category select na ho to disabled */}
-                <Controller
-                  control={control}
-                  name="groupId"
-                  rules={{ required: "Group is required" }}
-                  render={({ field: { value, onChange } }) => (
-                    <Combobox
-                      data={filteredGroupOptions}
-                      value={
-                        filteredGroupOptions.find(
-                          (item) => item.id === value,
-                        ) || null
-                      }
-                      onChange={(item: any) => onChange(item.id)}
-                      label="Group"
-                      placeholder={
-                        !selectedCategoryId
-                          ? "Select item category first"
-                          : loadingGroups
-                            ? "Loading..."
-                            : filteredGroupOptions.length === 0
-                              ? "No groups in this category"
-                              : "Select group"
-                      }
-                      displayField="label"
-                      error={errors.groupId?.message}
-                      searchFields={["label"]}
-                      disabled={!selectedCategoryId || loadingGroups}
-                    />
-                  )}
-                />
 
                 <Controller
                   control={control}
@@ -766,7 +942,7 @@ export default function ItemMasterFormPage() {
               </div>
             </section> */}
 
-            <section>
+            {/* <section>
               <h3 className="dark:text-dark-100 mb-4 text-lg font-medium text-gray-800">
                 Barcode Setup
               </h3>
@@ -827,7 +1003,7 @@ export default function ItemMasterFormPage() {
                   </div>
                 )}
               </div>
-            </section>
+            </section> */}
 
             <div className="dark:border-dark-500 flex justify-end gap-3 border-t border-gray-200 pt-4">
               <Button

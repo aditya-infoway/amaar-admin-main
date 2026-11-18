@@ -103,9 +103,16 @@ export default function ItemCategoryPage() {
 
   // ---- Save (create or update) via API ----
   const handleSave = async (item: ItemCategory) => {
+    const isAuto = item.itemCodeType === "auto";
+
     const payload: any = {
       categoryName: item.categoryName,
       status: item.status,
+      // Item code settings (manual me prefix/suffix/serialNo khali jayenge)
+      itemCodeType: item.itemCodeType || "manual",
+      prefix: isAuto ? item.prefix || "" : "",
+      suffix: isAuto ? item.suffix || "" : "",
+      serialNo: isAuto ? item.serialNo || "" : "",
     };
 
     try {
@@ -126,7 +133,7 @@ export default function ItemCategoryPage() {
           );
         }
       } else {
-        // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+        // ===== companyId localStorage se, createdType default "Super Admin" =====
         const companyId = localStorage.getItem("companyId") || "";
         payload.createdBy = Number(companyId);
         payload.createdType = "Super Admin";

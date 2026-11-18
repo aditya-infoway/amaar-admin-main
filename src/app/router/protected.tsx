@@ -159,6 +159,14 @@ const protectedRoutes: RouteObject = {
                     ).default,
                   }),
                 },
+  {
+                  path: "sub-group",
+                  lazy: async () => ({
+                    Component: (
+                      await import("@/app/pages/master/item-master/sub-group")
+                    ).default,
+                  }),
+                },
 
                 {
                   path: "item-location",
