@@ -171,6 +171,14 @@ export const master: NavigationTree = {
           transKey: "Item Group",
           icon: "itemGroup.list",
         },
+         {
+          id: "itemSubGroup.list",
+          type: "item",
+          path: "/master/item-master/sub-group",
+          title: "Sub Group",
+          transKey: "Sub Group",
+          icon: "itemGroup.list",
+        },
 
          {
           id: "itemBom.bom",

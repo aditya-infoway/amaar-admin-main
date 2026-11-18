@@ -12,7 +12,7 @@ import { Listbox } from "@/components/shared/form/StyledListbox";
 import { Button, Input } from "@/components/ui";
 import { Get } from "@/ApiHelper";
 import { statusOptions } from "../shared/constants";
-import { ItemCategory } from "./data";
+import { ItemCategory, emptyItemCategory, buildItemCode } from "./data";
 
 interface ItemCategoryDrawerProps {
   isOpen: boolean;
@@ -20,6 +20,11 @@ interface ItemCategoryDrawerProps {
   itemCategory: ItemCategory | null;
   onSave: (itemCategory: ItemCategory) => void;
 }
+
+const itemCodeOptions = [
+  { value: "manual", label: "Manual" },
+  { value: "auto", label: "Auto" },
+] as const;
 
 export function ItemCategoryDrawer({
   isOpen,
@@ -37,10 +42,21 @@ export function ItemCategoryDrawer({
     reset,
     setError,
     clearErrors,
+    watch,
     formState: { errors },
   } = useForm<ItemCategory>({
-    values: itemCategory || undefined,
+    values: itemCategory
+      ? { ...emptyItemCategory(), ...itemCategory }
+      : emptyItemCategory(),
   });
+
+  const itemCodeType = watch("itemCodeType");
+  const prefix = watch("prefix");
+  const suffix = watch("suffix");
+  const serialNo = watch("serialNo");
+
+  const isAuto = itemCodeType === "auto";
+  const previewCode = buildItemCode(prefix, suffix, serialNo);
 
   const handleClose = () => {
     reset();
@@ -60,7 +76,7 @@ export function ItemCategoryDrawer({
           (item) =>
             item.categoryName?.trim().toLowerCase() ===
               name.trim().toLowerCase() &&
-            String(item.itemCategoryId) !== String(itemCategory?.id || "")
+            String(item.itemCategoryId) !== String(itemCategory?.id || ""),
         );
         return !isTaken;
       }
@@ -83,7 +99,16 @@ export function ItemCategoryDrawer({
       return;
     }
 
-    onSave({ ...data, id: itemCategory?.id || "" });
+    const auto = data.itemCodeType === "auto";
+
+    onSave({
+      ...data,
+      // Manual me kuch save nahi hoga
+      prefix: auto ? data.prefix?.trim() || "" : "",
+      suffix: auto ? data.suffix?.trim() || "" : "",
+      serialNo: auto ? data.serialNo?.trim() || "" : "",
+      id: itemCategory?.id || "",
+    });
     handleClose();
   };
 
@@ -142,6 +167,73 @@ export function ItemCategoryDrawer({
                 error={errors.categoryName?.message}
                 disabled={checkingName}
               />
+
+              {/* Item Code type */}
+              <div>
+                <label className="dark:text-dark-100 mb-2 block text-sm font-medium text-gray-700">
+                  Item Code
+                </label>
+                <div className="flex items-center gap-6">
+                  {itemCodeOptions.map((opt) => (
+                    <label
+                      key={opt.value}
+                      className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm text-gray-800"
+                    >
+                      <input
+                        type="radio"
+                        value={opt.value}
+                        {...register("itemCodeType")}
+                        className="size-4 cursor-pointer accent-primary-600"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sirf Auto me: user khud prefix/suffix/serial enter karega */}
+              {isAuto && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <Input
+                      {...register("prefix", {
+                        required: "Required",
+                      })}
+                      label="Prefix"
+                      placeholder="A"
+                      error={errors.prefix?.message}
+                    />
+                    <Input
+                      {...register("suffix")}
+                      label="Suffix"
+                      placeholder="B"
+                      error={errors.suffix?.message}
+                    />
+                    <Input
+                      {...register("serialNo", {
+                        required: "Required",
+                        pattern: {
+                          value: /^\d+$/,
+                          message: "Numbers only",
+                        },
+                      })}
+                      label="Serial No."
+                      placeholder="00001"
+                      inputMode="numeric"
+                      error={errors.serialNo?.message}
+                    />
+                  </div>
+
+                  {previewCode && (
+                    <p className="dark:text-dark-200 text-sm text-gray-600">
+                      Preview:{" "}
+                      <span className="font-semibold text-primary-600">
+                        {previewCode}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Status */}
               <Controller
