@@ -25,12 +25,31 @@ export const columns: ColumnDef<ItemCategory>[] = [
     cell: TextCell,
   },
   {
+    id: "itemCodeType",
+    accessorKey: "itemCodeType",
+    header: "Code Type",
+    cell: (info) => {
+      const value = info.getValue<string>();
+      if (!value) return "—";
+      return value === "auto" ? "Auto" : "Manual";
+    },
+  },
+  {
+    id: "itemCode",
+    accessorKey: "itemCode",
+    header: "Item Code",
+    cell: (info) => {
+      const value = info.getValue<string>();
+      return value ? value : "—";
+    },
+  },
+  {
     id: "createdBy",
     accessorKey: "createdBy",
     header: "Created By",
     cell: TextCell,
   },
-   {
+  {
     id: "createdType",
     accessorKey: "createdType",
     header: "Created Type",
@@ -63,6 +82,13 @@ export const columns: ColumnDef<ItemCategory>[] = [
 
 export const exportColumns: ExportColumn<ItemCategory>[] = [
   { key: "categoryName", header: "Item Category Name" },
+  {
+    key: "itemCodeType",
+    header: "Code Type",
+    format: (value: unknown) =>
+      value === "auto" ? "Auto" : value === "manual" ? "Manual" : "",
+  },
+  { key: "itemCode", header: "Item Code" },
   { key: "createdBy", header: "Created By" },
   { key: "createdType", header: "Created Type" },
   {
