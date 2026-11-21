@@ -678,12 +678,15 @@ export default function ModelPrice() {
                       Current Date <span className="text-red-500">*</span>
                     </label>
                     <DatePicker
-                      placeholder="Select date"
+                      placeholder="DD-MM-YYYY"
+                      options={{ dateFormat: "d-m-Y" }}
                       value={[dayjs(modelData.currentDate).toDate()]}
                       onChange={(dates: any) =>
                         setModelData({
                           ...modelData,
-                          currentDate: dayjs(dates[0]).format("YYYY-MM-DD"),
+                          currentDate: dates?.[0]
+                            ? dayjs(dates[0]).format("YYYY-MM-DD")
+                            : dayjs().format("YYYY-MM-DD"),
                         })
                       }
                       className="w-full"

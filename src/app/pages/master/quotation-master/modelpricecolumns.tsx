@@ -36,11 +36,11 @@ export interface ModelPriceItem {
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
-const typeBadgeClass: Record<string, string> = {
-  BOM: "bg-blue-500/15 text-blue-500",
-  Manual: "bg-amber-500/15 text-amber-500",
-  Quotation: "bg-emerald-500/15 text-emerald-500",
-};
+// const typeBadgeClass: Record<string, string> = {
+//   BOM: "bg-blue-500/15 text-blue-500",
+//   Manual: "bg-amber-500/15 text-amber-500",
+//   Quotation: "bg-emerald-500/15 text-emerald-500",
+// };
 
 // ─── COLUMNS ────────────────────────────────────────────────────────────────
 
@@ -65,35 +65,35 @@ export const columns: ColumnDef<ModelPriceItem>[] = [
     header: "Date",
     cell: (info) => formatDateDDMMYYYY(info.getValue<string>()),
   },
-  {
-    id: "types",
-    accessorFn: (row) => (row.types || []).join(", "),
-    header: "Type",
-    cell: ({ row }) => {
-      const types = row.original.types || [];
-      if (types.length === 0) return "—";
-      return (
-        <div className="flex flex-wrap gap-1">
-          {types.map((t) => (
-            <span
-              key={t}
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                typeBadgeClass[t] || "bg-gray-500/15 text-gray-500"
-              }`}
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      );
-    },
-  },
-  {
-    id: "components",
-    accessorFn: (row) => row.componentCount ?? row.components?.length ?? 0,
-    header: "Components",
-    cell: (info) => `${info.getValue<number>()} Items`,
-  },
+  //   {
+  //     id: "types",
+  //     accessorFn: (row) => (row.types || []).join(", "),
+  //     header: "Type",
+  //     cell: ({ row }) => {
+  //       const types = row.original.types || [];
+  //       if (types.length === 0) return "—";
+  //       return (
+  //         <div className="flex flex-wrap gap-1">
+  //           {types.map((t) => (
+  //             <span
+  //               key={t}
+  //               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+  //                 typeBadgeClass[t] || "bg-gray-500/15 text-gray-500"
+  //               }`}
+  //             >
+  //               {t}
+  //             </span>
+  //           ))}
+  //         </div>
+  //       );
+  //     },
+  //   },
+  //   {
+  //     id: "components",
+  //     accessorFn: (row) => row.componentCount ?? row.components?.length ?? 0,
+  //     header: "Components",
+  //     cell: (info) => `${info.getValue<number>()} Items`,
+  //   },
   {
     id: "totalValue",
     accessorKey: "totalValue",
@@ -114,7 +114,5 @@ export const columns: ColumnDef<ModelPriceItem>[] = [
 export const exportColumns: ExportColumn<ModelPriceItem>[] = [
   { key: "modelName", header: "Model Name" },
   { key: "currentDate", header: "Date" },
-  { key: "typesText", header: "Type" },
-  { key: "componentCount", header: "Components" },
   { key: "totalValue", header: "Total Value" },
 ];
