@@ -15,6 +15,7 @@ import { Get } from "@/ApiHelper";
 import { statusOptions } from "../shared/constants";
 import { ItemGroup } from "./data";
 
+
 interface OptionItem {
   id: string;
   label: string;
@@ -37,6 +38,7 @@ export function ItemGroupDrawer({
   const [checkingName, setCheckingName] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<OptionItem[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  
 
   const {
     register,

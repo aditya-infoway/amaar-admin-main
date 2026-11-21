@@ -13,7 +13,14 @@ import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
 import { Listbox } from "@/components/shared/form/StyledListbox";
 import { fuzzyFilter } from "@/utils/react-table/fuzzyFilter";
-import { Get, Post, Put, Delete, toastsuccessmsg, toasterrormsg } from "@/ApiHelper";
+import {
+  Get,
+  Post,
+  Put,
+  Delete,
+  toastsuccessmsg,
+  toasterrormsg,
+} from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
@@ -21,6 +28,7 @@ import { statusOptions } from "../shared/constants";
 import { ItemGroupDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
 import { emptyItemGroup, mapApiItemGroupToItemGroup, ItemGroup } from "./data";
+import { ItemGroupTreeModal } from "./ItemGroupTreeModal";
 
 export default function ItemGroupPage() {
   const [data, setData] = useState<ItemGroup[]>([]);
@@ -34,9 +42,13 @@ export default function ItemGroupPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filterName, setFilterName] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewing, setViewing] = useState<ItemGroup | null>(null);
 
   // naya state
-  const [categoryOptions, setCategoryOptions] = useState<{ id: string; label: string }[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<
+    { id: string; label: string }[]
+  >([]);
 
   // ---- Fetch item categories once, for merging category names ----
   const fetchCategories = async () => {
@@ -44,7 +56,10 @@ export default function ItemGroupPage() {
       const res = await Get("master/itemcategory/list", {}, false);
       const list = res?.data?.data || [];
       setCategoryOptions(
-        list.map((c: any) => ({ id: String(c.itemCategoryId), label: c.categoryName }))
+        list.map((c: any) => ({
+          id: String(c.itemCategoryId),
+          label: c.categoryName,
+        })),
       );
     } catch (error) {
       // ignore, table will show "-" for category
@@ -57,7 +72,9 @@ export default function ItemGroupPage() {
     try {
       const response = await Get("master/itemgroup/list", {}, false);
       if (response.data?.success) {
-        const mapped = (response.data.data || []).map(mapApiItemGroupToItemGroup);
+        const mapped = (response.data.data || []).map(
+          mapApiItemGroupToItemGroup,
+        );
         setData(mapped);
       } else {
         toasterrormsg(response.data?.message || "Failed to fetch item groups.");
@@ -81,7 +98,8 @@ export default function ItemGroupPage() {
       .map((item) => ({
         ...item,
         categoryName:
-          categoryOptions.find((c) => c.id === item.itemCategoryId)?.label || "",
+          categoryOptions.find((c) => c.id === item.itemCategoryId)?.label ||
+          "",
       }))
       .filter((item) => {
         if (
@@ -95,55 +113,65 @@ export default function ItemGroupPage() {
   }, [data, categoryOptions, filterName, filterStatus]);
 
   // ---- Save (create or update) via API ----
- // ---- Save (create or update) via API ----
-const handleSave = async (item: ItemGroup) => {
-  const payload: any = {
-    groupName: item.groupName,
-    itemCategoryId: Number(item.itemCategoryId),
-    status: item.status,
-  };
+  // ---- Save (create or update) via API ----
+  const handleSave = async (item: ItemGroup) => {
+    const payload: any = {
+      groupName: item.groupName,
+      itemCategoryId: Number(item.itemCategoryId),
+      status: item.status,
+    };
 
-  try {
-    if (item.id) {
-      const response = await Put(
-        "master/itemgroup/update",
-        { itemGroupId: Number(item.id), ...payload },
-        false
-      );
-      if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "Item group updated successfully.");
-        fetchAll();
+    try {
+      if (item.id) {
+        const response = await Put(
+          "master/itemgroup/update",
+          { itemGroupId: Number(item.id), ...payload },
+          false,
+        );
+        if (response.data?.success) {
+          toastsuccessmsg(
+            response.data?.message || "Item group updated successfully.",
+          );
+          fetchAll();
+        } else {
+          toasterrormsg(
+            response.data?.message || "Failed to update item group.",
+          );
+        }
       } else {
-        toasterrormsg(response.data?.message || "Failed to update item group.");
-      }
-    } else {
-      // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
-      const companyId = localStorage.getItem("companyId") || "";
-      payload.createdBy = Number(companyId);
-      payload.createdType = "Super Admin";
+        // ===== companyId localStorage se, createdType default "Super Admin" ===== 👈 add
+        const companyId = localStorage.getItem("companyId") || "";
+        payload.createdBy = Number(companyId);
+        payload.createdType = "Super Admin";
 
-      const response = await Post("master/itemgroup/create", payload, false);
-      if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "Item group created successfully.");
-        fetchAll();
-      } else {
-        toasterrormsg(response.data?.message || "Failed to create item group.");
+        const response = await Post("master/itemgroup/create", payload, false);
+        if (response.data?.success) {
+          toastsuccessmsg(
+            response.data?.message || "Item group created successfully.",
+          );
+          fetchAll();
+        } else {
+          toasterrormsg(
+            response.data?.message || "Failed to create item group.",
+          );
+        }
       }
+    } catch (error) {
+      toasterrormsg("Something went wrong while saving the item group.");
     }
-  } catch (error) {
-    toasterrormsg("Something went wrong while saving the item group.");
-  }
-};
+  };
 
   const handleDeleteOne = async (row: ItemGroup) => {
     try {
       const response = await Delete(
         "master/itemgroup/delete",
         { itemGroupId: Number(row.id) },
-        false
+        false,
       );
       if (response.data?.success) {
-        toastsuccessmsg(response.data?.message || "Item group deleted successfully.");
+        toastsuccessmsg(
+          response.data?.message || "Item group deleted successfully.",
+        );
         setData((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         toasterrormsg(response.data?.message || "Failed to delete item group.");
@@ -160,9 +188,9 @@ const handleSave = async (item: ItemGroup) => {
           Delete(
             "master/itemgroup/delete",
             { itemGroupId: Number(r.original.id) },
-            false
-          )
-        )
+            false,
+          ),
+        ),
       );
       const ids = new Set(rows.map((r) => r.original.id));
       setData((prev) => prev.filter((item) => !ids.has(item.id)));
@@ -183,6 +211,10 @@ const handleSave = async (item: ItemGroup) => {
       openEditDrawer: (row: ItemGroup) => {
         setEditing(row);
         setDrawerOpen(true);
+      },
+      viewRow: (row: ItemGroup) => {
+        setViewing(row);
+        setViewOpen(true);
       },
       deleteRow: (row) => handleDeleteOne(row.original),
       deleteRows: (rows) => handleDeleteMany(rows),
@@ -263,6 +295,12 @@ const handleSave = async (item: ItemGroup) => {
         close={() => setDrawerOpen(false)}
         itemGroup={editing}
         onSave={handleSave}
+      />
+
+      <ItemGroupTreeModal
+        isOpen={viewOpen}
+        close={() => setViewOpen(false)}
+        group={viewing}
       />
     </Page>
   );

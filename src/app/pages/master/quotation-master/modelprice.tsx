@@ -184,22 +184,29 @@ export default function ModelPrice() {
     type: string,
     createMasterId: number | null,
     finishedGoodsItemId: number | null,
+    groupId: number | null = null,
+    subGroupId: number | null = null,
   ) => {
-    console.log("FETCH AUTO:", { type, createMasterId, finishedGoodsItemId });
     if (!type || !createMasterId) return { weight: "", rate: "" };
     if (type === "Manual") return { weight: "", rate: "" };
 
-    if (type === "BOM" && !finishedGoodsItemId) {
-      toasterrormsg("Please select Finished Goods first.");
-      return { weight: "", rate: "" };
+    if (type === "BOM") {
+      if (!finishedGoodsItemId) {
+        toasterrormsg("Please select Finished Goods first.");
+        return { weight: "", rate: "" };
+      }
+      if (!groupId) return { weight: "", rate: "" };
     }
 
     try {
       const params: any = { type, createMasterId };
-      if (type === "BOM") params.finishedGoodsItemId = finishedGoodsItemId;
+      if (type === "BOM") {
+        params.finishedGoodsItemId = finishedGoodsItemId;
+        params.groupId = groupId;
+        if (subGroupId) params.subGroupId = subGroupId;
+      }
 
       const res = await Get(`${BASE}/auto-fetch`, params, false);
-      console.log("AUTO-FETCH RESPONSE:", params, res?.data);
 
       if (res?.data?.success === false) {
         toasterrormsg(res?.data?.message || "Auto fetch failed");
@@ -237,16 +244,11 @@ export default function ModelPrice() {
     setSelectedGroup([]);
 
     const { currentRow: cr, modelData: md } = latest.current;
-    console.log(
-      "TYPE CHANGE:",
-      typeName,
-      "itemId:",
-      cr.itemId,
-      "fgId:",
-      md.finishedGoodsItemId,
-    );
 
-    if (!typeName || typeName === "Manual" || !cr.itemId) return;
+    // BOM: weight comes only after Group is selected
+    // Manual: user types both
+    if (!typeName || typeName === "Manual" || typeName === "BOM") return;
+    if (!cr.itemId) return;
 
     const auto = await fetchAutoValues(
       typeName,
@@ -257,13 +259,12 @@ export default function ModelPrice() {
     setCurrentRow((prev: any) => ({
       ...prev,
       weight: auto.weight,
-      // BOM: rate manual, so keep whatever user typed
-      rate: typeName === "BOM" ? prev.rate : auto.rate,
+      rate: auto.rate,
     }));
   };
 
   const handleItemChange = async (selectedVal: any) => {
-    setSelectedItem(selectedVal ?? []); // raw value, so Combobox shows it
+    setSelectedItem(selectedVal ?? []);
 
     const selected = pickFirst(selectedVal);
     if (!selected) {
@@ -284,7 +285,9 @@ export default function ModelPrice() {
     }));
 
     const { currentRow: cr, modelData: md } = latest.current;
-    if (!cr.type || cr.type === "Manual") return;
+
+    // BOM weight depends on Group, not on Item
+    if (!cr.type || cr.type === "Manual" || cr.type === "BOM") return;
 
     const auto = await fetchAutoValues(
       cr.type,
@@ -295,7 +298,7 @@ export default function ModelPrice() {
     setCurrentRow((prev: any) => ({
       ...prev,
       weight: auto.weight,
-      rate: cr.type === "BOM" ? prev.rate : auto.rate,
+      rate: auto.rate,
     }));
   };
 
@@ -403,7 +406,7 @@ export default function ModelPrice() {
     });
   };
 
-  const handleGroupChange = (selectedVal: any) => {
+  const handleGroupChange = async (selectedVal: any) => {
     setSelectedGroup(selectedVal ?? []);
 
     const selected = pickFirst(selectedVal);
@@ -413,15 +416,34 @@ export default function ModelPrice() {
         group: "",
         groupId: null,
         subGroupId: null,
+        weight: "",
       }));
       return;
     }
+
+    const gId = selected.groupId || null;
+    const sgId = selected.subGroupId || null;
+
     setCurrentRow((prev: any) => ({
       ...prev,
       group: selected.name,
-      groupId: selected.groupId || null,
-      subGroupId: selected.subGroupId || null,
+      groupId: gId,
+      subGroupId: sgId,
+      weight: "",
     }));
+
+    const { currentRow: cr, modelData: md } = latest.current;
+    if (cr.type !== "BOM") return;
+
+    const auto = await fetchAutoValues(
+      "BOM",
+      cr.itemId ?? 0,
+      md.finishedGoodsItemId,
+      gId,
+      sgId,
+    );
+
+    setCurrentRow((prev: any) => ({ ...prev, weight: auto.weight }));
   };
 
   const handleAddRowToGrid = () => {
