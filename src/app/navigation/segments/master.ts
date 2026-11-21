@@ -119,6 +119,13 @@ export const master: NavigationTree = {
           title: "Create Pricing",
           transKey: "Create Pricing",
         },
+         {
+          id: "master.quotation-master.modelprice",
+          type: "item",
+          path: "/master/quotation-master/modelprice",
+          title: "Model Pricing",
+          transKey: "Model Pricing",
+        },
       ],
     },
 
