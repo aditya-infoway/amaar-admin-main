@@ -262,7 +262,7 @@ export function QuotationDrawer({
 
     fetchModels();
   }, [isOpen]);
-
+ 
   // Tipper / Trailer dropdown = Model Price (vehicle type ke hisaab se)
   useEffect(() => {
     if (!isOpen) return;

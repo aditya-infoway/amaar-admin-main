@@ -17,6 +17,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui";
 import { Get } from "@/ApiHelper";
 import { ItemGroup } from "./data";
+import { PlusIcon, MinusIcon } from "@heroicons/react/24/outline";
 
 interface SubRow {
   id: string;
@@ -104,31 +105,37 @@ function Node({ node, isOpen, toggle }: NodeProps) {
 
   return (
     <li>
-      <div className="dark:bg-dark-600 dark:border-dark-400 max-w-[200px] min-w-[150px] rounded-xl border border-gray-200 bg-white px-4 py-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-        <div className="bg-primary-100 text-primary-600 dark:bg-primary-500/20 mx-auto mb-2 flex size-8 items-center justify-center rounded-full">
-          <FolderIcon className="size-4" />
+      <div className="group hover:border-primary-300 dark:border-dark-400 dark:bg-dark-700 relative max-w-[210px] min-w-[160px] rounded-xl border border-gray-300 bg-white px-5 py-4 text-center shadow-[0_4px_12px_rgba(0,0,0,0.10)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.14)] dark:shadow-lg">
+        {/* Icon */}
+        <div className="bg-primary-50 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400 mx-auto mb-3 flex size-10 items-center justify-center rounded-xl transition-colors">
+          <FolderIcon className="size-5" />
         </div>
-        <p className="dark:text-dark-50 text-sm font-semibold break-words text-gray-800">
+
+        {/* Subgroup Name */}
+        <p className="text-sm font-semibold break-words text-gray-800 dark:text-gray-100">
           {node.row.name}
         </p>
-        <div className="mt-1.5 flex items-center justify-center gap-1.5">
+
+        {/* Status and Children */}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           {node.row.status && (
             <span
               className={clsx(
-                "rounded-full px-2 py-0.5 text-[10px] font-medium capitalize",
+                "rounded-full px-3 py-1 text-[10px] font-semibold capitalize",
                 statusBadge(active),
               )}
             >
               {node.row.status}
             </span>
           )}
+
           {hasKids && (
             <button
               type="button"
               onClick={() => toggle(node.row.id)}
-              className="bg-primary-50 text-primary-600 dark:bg-primary-500/10 flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium"
+              className="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 dark:border-dark-400 dark:bg-dark-600 inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[10px] font-medium text-gray-600 dark:text-gray-300"
             >
-              {node.children.length} sub
+              {node.children.length} subgroups
               {open ? (
                 <ChevronDownIcon className="size-3" />
               ) : (
@@ -321,18 +328,37 @@ export function ItemGroupTreeModal({ isOpen, close, group }: Props) {
           {/* Toolbar */}
           {tree.length > 0 && (
             <div className="dark:border-dark-500 flex flex-wrap items-center justify-end gap-2 border-b border-gray-200 px-4 py-3 sm:px-5">
-              <Button onClick={() => setExpanded(new Set(collectParentIds(tree)))}>
-                Expand all
-              </Button>
-              <Button onClick={() => setExpanded(new Set())}>
-                Collapse all
-              </Button>
+              {/* Expand All */}
+              <button
+                type="button"
+                onClick={() => setExpanded(new Set(collectParentIds(tree)))}
+                title="Expand All"
+                aria-label="Expand All"
+                className="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 dark:border-dark-400 dark:bg-dark-600 flex size-9 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition dark:text-gray-300"
+              >
+                <PlusIcon className="size-5" />
+              </button>
+
+              {/* Collapse All */}
+              <button
+                type="button"
+                onClick={() => setExpanded(new Set())}
+                title="Collapse All"
+                aria-label="Collapse All"
+                className="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 dark:border-dark-400 dark:bg-dark-600 flex size-9 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition dark:text-gray-300"
+              >
+                <MinusIcon className="size-5" />
+              </button>
+
+              {/* Tree View */}
               <Button
                 color={view === "tree" ? "primary" : undefined}
                 onClick={() => setView("tree")}
               >
                 Tree
               </Button>
+
+              {/* List View */}
               <Button
                 color={view === "list" ? "primary" : undefined}
                 onClick={() => setView("list")}
@@ -351,18 +377,23 @@ export function ItemGroupTreeModal({ isOpen, close, group }: Props) {
                   <ul>
                     <li>
                       {/* Main group (top) */}
-                      <div className="from-primary-600 to-primary-500 min-w-[200px] rounded-2xl bg-gradient-to-br px-6 py-4 text-center text-white shadow-lg">
-                        <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-white/20">
+                      <div className="dark:border-dark-400 dark:bg-dark-700 min-w-[220px] rounded-2xl border border-gray-300 bg-white px-6 py-4 text-center shadow-md transition-all">
+                        <div className="dark:bg-dark-500 mx-auto mb-2 flex size-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:text-gray-200">
                           <Squares2X2Icon className="size-5" />
                         </div>
-                        <p className="text-[10px] tracking-widest uppercase opacity-80">
+
+                        <p className="text-[10px] font-semibold tracking-widest text-gray-500 uppercase dark:text-gray-400">
                           {group?.categoryName || "Main Group"}
                         </p>
-                        <p className="text-base font-bold">
+
+                        <p className="mt-1 text-base font-bold text-gray-900 dark:text-white">
                           {group?.groupName}
                         </p>
-                      </div>
 
+                        <span className="dark:bg-dark-500 mt-2 inline-block rounded-full bg-gray-100 px-3 py-1 text-[10px] font-medium text-gray-600 dark:text-gray-300">
+                          Main Group
+                        </span>
+                      </div>
                       {tree.length > 0 && (
                         <ul>
                           {tree.map((n) => (
@@ -382,14 +413,24 @@ export function ItemGroupTreeModal({ isOpen, close, group }: Props) {
             ) : (
               <div>
                 {/* Main group header row */}
-                <div className="from-primary-600 to-primary-500 mb-3 flex items-center gap-3 rounded-xl bg-gradient-to-br px-4 py-3 text-white">
-                  <Squares2X2Icon className="size-5" />
+                <div className="dark:border-dark-400 dark:bg-dark-700 mb-4 flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                  <div className="dark:bg-dark-500 flex size-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:text-gray-200">
+                    <Squares2X2Icon className="size-5" />
+                  </div>
+
                   <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-80">
+                    <p className="text-[10px] font-semibold tracking-widest text-gray-500 uppercase dark:text-gray-400">
                       {group?.categoryName || "Main Group"}
                     </p>
-                    <p className="font-bold">{group?.groupName}</p>
+
+                    <p className="font-bold text-gray-900 dark:text-white">
+                      {group?.groupName}
+                    </p>
                   </div>
+
+                  <span className="dark:bg-dark-500 ml-auto rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+                    Main Group
+                  </span>
                 </div>
                 {tree.map((n) => (
                   <ListNode
@@ -410,7 +451,7 @@ export function ItemGroupTreeModal({ isOpen, close, group }: Props) {
             )}
             {!loading && tree.length === 0 && (
               <p className="dark:text-dark-200 mt-6 text-center text-sm text-gray-500">
-                    No sub groups found in this group.
+                No sub groups found in this group.
               </p>
             )}
           </div>
