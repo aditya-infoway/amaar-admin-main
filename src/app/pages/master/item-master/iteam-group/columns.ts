@@ -8,6 +8,7 @@ import { createRowActions } from "../shared/createRowActions";
 import { StatusCell, TextCell } from "../shared/tableCells";
 import { ItemGroup } from "./data";
 import { ExportColumn } from "../shared/export";
+import { createElement } from "react";
 
 const RowActions = createRowActions<ItemGroup>("itemgroup");
 
@@ -30,6 +31,19 @@ export const columns: ColumnDef<ItemGroup>[] = [
     header: "Item Group Name",
     cell: TextCell,
   },
+
+  {
+  accessorKey: "type",
+  header: "Group Type",
+  cell: ({ getValue }) => {
+    const isDefault = getValue<string>() === "default";
+    return createElement(
+      "span",
+      { className: isDefault ? "text-primary-600 font-medium" : "" },
+      isDefault ? "Default" : "Manual",
+    );
+  },
+},
    {
     id: "createdBy",
     accessorKey: "createdBy",

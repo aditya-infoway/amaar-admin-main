@@ -128,10 +128,9 @@ export default function ModelPrice() {
   // ─── LOAD DROPDOWNS ──────────────────────────────────────────────────────
   const fetchDropdowns = useCallback(async () => {
     try {
-      const [fgRes, itemRes, groupRes] = await Promise.all([
+      const [fgRes, itemRes] = await Promise.all([
         Get(`${BASE}/finished-goods`, {}, false),
         Get(`${BASE}/items`, {}, false),
-        Get(`${BASE}/groups`, {}, false),
       ]);
 
       if (fgRes?.data?.data) {
@@ -158,21 +157,40 @@ export default function ModelPrice() {
           })),
         );
       }
-
-      if (groupRes?.data?.data) {
-        setGroupOptions(
-          (groupRes.data.data || []).map((r: any) => ({
-            id: r.id,
-            name: r.label,
-            groupId: r.groupId,
-            subGroupId: r.subGroupId,
-          })),
-        );
-      }
     } catch (e: any) {
       toasterrormsg(e?.response?.data?.message || "Failed to load dropdowns");
     }
   }, []);
+
+  // groups depend on the selected Finished Goods' BOM
+  const fetchGroups = useCallback(async (fgId: number | null) => {
+    if (!fgId) {
+      setGroupOptions([]);
+      return;
+    }
+    try {
+      const res = await Get(
+        `${BASE}/groups`,
+        { finishedGoodsItemId: fgId },
+        false,
+      );
+      setGroupOptions(
+        (res?.data?.data || []).map((r: any) => ({
+          id: r.id,
+          name: r.label,
+          groupId: r.groupId,
+          subGroupId: r.subGroupId,
+        })),
+      );
+    } catch (e: any) {
+      setGroupOptions([]);
+      toasterrormsg(e?.response?.data?.message || "Failed to load groups");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGroups(modelData.finishedGoodsItemId);
+  }, [modelData.finishedGoodsItemId, fetchGroups]);
 
   useEffect(() => {
     fetchList();
@@ -324,6 +342,14 @@ export default function ModelPrice() {
 
   const handleFinishedGoodsChange = (selectedVal: any) => {
     setSelectedModel(selectedVal ?? []);
+    setSelectedGroup([]);
+    setCurrentRow((prev: any) => ({
+      ...prev,
+      group: "",
+      groupId: null,
+      subGroupId: null,
+      weight: prev.type === "BOM" ? "" : prev.weight,
+    }));
   };
 
   const handleOpenEdit = async (rowArg: any) => {

@@ -29,6 +29,21 @@ import { ItemGroupDrawer } from "./CategoryDrawer";
 import { columns, exportColumns } from "./columns";
 import { emptyItemGroup, mapApiItemGroupToItemGroup, ItemGroup } from "./data";
 import { ItemGroupTreeModal } from "./ItemGroupTreeModal";
+import {
+  HomeIcon,
+  Cog6ToothIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
+import { Tab, TabGroup, TabList } from "@headlessui/react";
+import clsx from "clsx";
+
+const tabClass = ({ selected }: { selected: boolean }) =>
+  clsx(
+    "shrink-0 cursor-pointer space-x-2 border-b-2 px-3 py-2 font-medium whitespace-nowrap outline-none",
+    selected
+      ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
+      : "dark:hover:text-dark-100 dark:focus:text-dark-100 border-transparent text-gray-600 hover:text-gray-800 focus:text-gray-800 dark:text-gray-300",
+  );
 
 export default function ItemGroupPage() {
   const [data, setData] = useState<ItemGroup[]>([]);
@@ -44,6 +59,7 @@ export default function ItemGroupPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [viewOpen, setViewOpen] = useState(false);
   const [viewing, setViewing] = useState<ItemGroup | null>(null);
+  const [filterType, setFilterType] = useState("all");
 
   // naya state
   const [categoryOptions, setCategoryOptions] = useState<
@@ -108,16 +124,16 @@ export default function ItemGroupPage() {
         )
           return false;
         if (filterStatus && item.status !== filterStatus) return false;
+        if (filterType !== "all" && item.type !== filterType) return false;
         return true;
       });
-  }, [data, categoryOptions, filterName, filterStatus]);
+  }, [data, categoryOptions, filterName, filterStatus, filterType]);
 
-  // ---- Save (create or update) via API ----
   // ---- Save (create or update) via API ----
   const handleSave = async (item: ItemGroup) => {
     const payload: any = {
       groupName: item.groupName,
-      itemCategoryId: Number(item.itemCategoryId),
+      itemCategoryId: item.itemCategoryId ? Number(item.itemCategoryId) : null,
       status: item.status,
     };
 
@@ -182,6 +198,11 @@ export default function ItemGroupPage() {
   };
 
   const handleDeleteMany = async (rows: { original: ItemGroup }[]) => {
+    const deletable = rows.filter((r) => r.original.type !== "default");
+    if (deletable.length === 0) {
+      toasterrormsg("Default item groups cannot be deleted.");
+      return;
+    }
     try {
       await Promise.all(
         rows.map((r) =>
@@ -278,6 +299,36 @@ export default function ItemGroupPage() {
             </div>
           }
         />
+
+        <TabGroup
+          selectedIndex={
+            filterType === "all" ? 0 : filterType === "manual" ? 1 : 2
+          }
+          onChange={(index) =>
+            setFilterType(
+              index === 0 ? "all" : index === 1 ? "manual" : "default",
+            )
+          }
+        >
+          <div className="hide-scrollbar mt-4 overflow-x-auto px-(--margin-x)">
+            <div className="border-gray-150 dark:border-dark-500 w-max min-w-full border-b-2">
+              <TabList className="-mb-0.5 flex">
+                <Tab className={tabClass}>
+                  <HomeIcon className="inline-block size-4.5" />
+                  <span>All</span>
+                </Tab>
+                <Tab className={tabClass}>
+                  <Cog6ToothIcon className="inline-block size-4.5" />
+                  <span>Manual</span>
+                </Tab>
+                <Tab className={tabClass}>
+                  <CheckCircleIcon className="inline-block size-4.5" />
+                  <span>Default</span>
+                </Tab>
+              </TabList>
+            </div>
+          </div>
+        </TabGroup>
 
         <MasterTable
           table={table}

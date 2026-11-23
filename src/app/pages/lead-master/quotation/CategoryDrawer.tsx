@@ -107,11 +107,19 @@ export function QuotationDrawer({
   const [city, setCity] = useState("");
   const [model, setModel] = useState("");
   const [remark, setRemark] = useState("");
+  const [vehicleModelData, setVehicleModelData] = useState<{
+    vehicleType: "tipper" | "trailer";
+    options: DropdownOption[];
+  }>({ vehicleType: "trailer", options: [] });
 
   // Vehicle type controls whether Main Chassis dropdown is shown
   const [vehicleType, setVehicleType] = useState<"tipper" | "trailer">(
     "trailer",
   );
+  const vehicleModels =
+    vehicleModelData.vehicleType === vehicleType
+      ? vehicleModelData.options
+      : [];
 
   // 17 technical spec dropdowns, in the order shown on the sketch
   const [trailer, setTrailer] = useState<DropdownOption[]>([]);
@@ -255,6 +263,60 @@ export function QuotationDrawer({
     fetchModels();
   }, [isOpen]);
 
+  // Tipper / Trailer dropdown = Model Price (vehicle type ke hisaab se)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+
+    const fetchVehicleModels = async () => {
+      try {
+        const response = await Get(
+          "quotation/vehicle-models",
+          { vehicleType },
+          false,
+        );
+        if (cancelled) return; // purana response ignore
+
+        const list = response?.data?.data || [];
+
+        const options: DropdownOption[] = list.map((m: any) => ({
+          id: String(m.modelPriceId),
+          label: m.label,
+          price: Number(m.totalValue) || 0,
+        }));
+
+        setVehicleModelData({ vehicleType, options });
+
+        setTrailer((prev) => {
+          const keep = prev[0]
+            ? options.find((o) => o.id === prev[0].id)
+            : undefined;
+          if (keep) return [keep];
+
+          if (isEditing && (quotation as any)?.vehicleType === vehicleType) {
+            const saved = options.find(
+              (o) => String(o.id) === String((quotation as any).trailer),
+            );
+            return saved ? [saved] : [];
+          }
+
+          return [];
+        });
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Vehicle models error:", error);
+      }
+    };
+
+    fetchVehicleModels();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, vehicleType, isEditing, quotation?.id]);
+
   const mastersReady =
     createMasterData.length > 0 && createPricingData.length > 0;
 
@@ -277,12 +339,6 @@ export function QuotationDrawer({
       setRemark((quotation as any).remark || "");
 
       setVehicleType((quotation as any).vehicleType || "trailer");
-      setTrailer(
-        toSelection(
-          getMasterOptions("Trailer Detail"),
-          (quotation as any).trailer,
-        ),
-      );
 
       setChassis(
         toSelection(
@@ -1010,6 +1066,41 @@ export function QuotationDrawer({
     }
   };
 
+  const handleVehicleModelChange = (value: any) => {
+    const selected = Array.isArray(value) ? value[0] : value;
+
+    if (!selected) {
+      setTrailer([]);
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.trailer;
+        return next;
+      });
+      return;
+    }
+
+    const selectedId = typeof selected === "object" ? selected.id : selected;
+    const matched = vehicleModels.find(
+      (o) => String(o.id) === String(selectedId),
+    );
+
+    setTrailer(matched ? [matched] : []);
+
+    if (matched) {
+      const price = Number(matched.price);
+      setErrors((prev) => {
+        const next = { ...prev };
+        if (!Number.isFinite(price) || price <= 0) {
+          next.trailer =
+            "Price not set. Please set the price in Model Price first.";
+        } else {
+          delete next.trailer;
+        }
+        return next;
+      });
+    }
+  };
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-100" onClose={handleClose}>
@@ -1078,14 +1169,14 @@ export function QuotationDrawer({
                 </div>
               </div>
 
-                          <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="dark:border-dark-500 rounded-lg border border-gray-200 dark:border-gray-600">
                 <div className="grid grid-cols-1 sm:grid-cols-2">
                   {/* Row 1: Quotation No & City */}
                   <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Quotation No
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {qNo || "-"}
                     </span>
                   </div>
@@ -1093,7 +1184,7 @@ export function QuotationDrawer({
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       City
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {city || "-"}
                     </span>
                   </div>
@@ -1103,7 +1194,7 @@ export function QuotationDrawer({
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Customer
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {customerName || "-"}
                     </span>
                   </div>
@@ -1111,7 +1202,7 @@ export function QuotationDrawer({
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Address
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {address || "-"}
                     </span>
                   </div>
@@ -1121,7 +1212,7 @@ export function QuotationDrawer({
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Mobile
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {mobile || "-"}
                     </span>
                   </div>
@@ -1129,7 +1220,7 @@ export function QuotationDrawer({
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Model
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {modelOptions?.find((item) => item.id === model)?.label ||
                         model ||
                         "-"}
@@ -1141,7 +1232,7 @@ export function QuotationDrawer({
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Email
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {email || "-"}
                     </span>
                   </div>
@@ -1149,7 +1240,7 @@ export function QuotationDrawer({
                     <span className="min-w-28 shrink-0 text-xs font-medium tracking-wide text-gray-400 uppercase dark:text-gray-500">
                       Remark
                     </span>
-                    <span className="min-w-0 flex-1 break-all text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <span className="min-w-0 flex-1 text-sm font-medium break-all text-gray-800 dark:text-gray-200">
                       {remark || "-"}
                     </span>
                   </div>
@@ -1182,7 +1273,7 @@ export function QuotationDrawer({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {/* 1 - Trailer / Tipper (label switches with Vehicle Type) */}
                 <div>
-                  <Combobox
+                  {/* <Combobox
                     data={getMasterOptions("Trailer Detail")}
                     displayField="label"
                     value={trailer[0] || null}
@@ -1208,7 +1299,25 @@ export function QuotationDrawer({
                   />
                   {errors.trailer && (
                     <p className="text-error mt-1 text-xs">{errors.trailer}</p>
-                  )}
+                  )} */}
+
+                  <Combobox
+                    data={vehicleModels}
+                    displayField="label"
+                    value={trailer[0] || null}
+                    onChange={handleVehicleModelChange}
+                    placeholder={
+                      vehicleType === "tipper"
+                        ? "Select Tipper"
+                        : "Select Trailer"
+                    }
+                    label={
+                      vehicleType === "tipper"
+                        ? "Select Tipper"
+                        : "Select Trailer"
+                    }
+                    searchFields={["label"]}
+                  />
                 </div>
 
                 {/* 2 - Main Chassis (shown for both Tipper and Trailer) */}
