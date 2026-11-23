@@ -691,7 +691,7 @@ export default function ModelPrice() {
             leaveFrom="translate-x-0"
             leaveTo="translate-x-full"
           >
-            <DialogPanel className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-350 transform-gpu flex-col bg-white shadow-2xl transition-transform duration-200">
+            <DialogPanel className="dark:bg-dark-700 fixed top-0 right-0 flex h-full w-full max-w-400 transform-gpu flex-col bg-white shadow-2xl transition-transform duration-200">
               <div className="bg-primary-600 dark:bg-primary-700 flex items-center justify-between px-6 py-4">
                 <h2 className="text-lg font-semibold text-white">
                   {modelData.modelPriceId
@@ -707,9 +707,9 @@ export default function ModelPrice() {
                 </button>
               </div>
 
-              <div className="grow space-y-6 overflow-y-auto p-6">
+              <div className="grow space-y-4 overflow-y-auto p-3 sm:space-y-6 sm:p-6">
                 {/* Header */}
-                <div className="grid grid-cols-2 gap-4 border-b border-gray-200 pb-4 dark:border-gray-700">
+                <div className="grid grid-cols-1 gap-3 border-b border-gray-200 pb-4 sm:grid-cols-2 sm:gap-4 dark:border-gray-700">
                   <div>
                     <Combobox
                       data={finishedGoodsOptions}
@@ -743,7 +743,7 @@ export default function ModelPrice() {
                 </div>
 
                 {/* Row entry */}
-                <div className="grid grid-cols-12 items-end gap-3">
+                <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-14">
                   <div className="col-span-3">
                     <Combobox
                       data={itemOptions}
@@ -791,7 +791,7 @@ export default function ModelPrice() {
                     </div>
                   </div>
 
-                  <div className="col-span-1">
+                  <div className="col-span-2">
                     <label className="mb-1 block text-xs text-gray-500">
                       Weight
                     </label>
@@ -813,7 +813,7 @@ export default function ModelPrice() {
                     />
                   </div>
 
-                  <div className="col-span-1">
+                  <div className="col-span-2">
                     <label className="mb-1 block text-xs text-gray-500">
                       Rate
                     </label>
@@ -857,8 +857,8 @@ export default function ModelPrice() {
                 </div>
 
                 {/* Grid */}
-                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                  <table className="w-full text-left text-sm">
+                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                  <table className="w-full min-w-[650px] text-left text-sm">
                     <thead className="dark:bg-dark-800 bg-gray-100">
                       <tr>
                         <th className="px-4 py-2 font-medium">Item</th>
