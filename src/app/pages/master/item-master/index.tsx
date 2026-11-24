@@ -23,6 +23,27 @@ import { ItemMaster, mapApiItemMasterToItemMaster } from "./data";
 import { Upload, Download, X } from "lucide-react";
 import { downloadItemImportTemplate } from "./shared/itemImportTemplate";
 import { createPortal } from "react-dom";
+import { uomOptions, taxSlabOptions } from "../shared/constants";
+
+// Excel ke text ko dropdown option se match karo (id ya label, case/space ignore)
+const normalizeOption = (v: unknown) =>
+  String(v ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+const resolveOption = (
+  options: { id: string; label: string }[],
+  value: unknown,
+) => {
+  const key = normalizeOption(value);
+  if (!key) return null;
+  return (
+    options.find(
+      (o) => normalizeOption(o.id) === key || normalizeOption(o.label) === key,
+    ) || null
+  );
+};
 export default function ItemMasterListPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<ItemMaster[]>([]);
@@ -55,20 +76,35 @@ export default function ItemMasterListPage() {
     setImportFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
-
-  const handleImportExcel = async () => {
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await Get("master/itemmaster/template-lists", {}, false);
+      if (!response.data?.success) {
+        return toasterrormsg(response.data?.message || "Failed to load template data.");
+      }
+      await downloadItemImportTemplate({
+        categories: response.data.data?.categories || [],
+        locations: response.data.data?.locations || [],
+        units: uomOptions.map((o) => o.label),
+        taxSlabs: taxSlabOptions.map((o) => o.label),
+      });
+    } catch (error) {
+      toasterrormsg("Could not download the template.");
+    }
+  };
+    const handleImportExcel = async () => {
     if (!importFile) return toasterrormsg("Please select a file first.");
     const file = importFile;
     setImporting(true);
     try {
       const columnMapping = {
+        "Item Category": "categoryName",
+        Group: "groupName",
         "Item Code": "itemCode",
         "Item Name": "itemName",
         "Short Name": "shortName",
         "HSN Code": "hsnCode",
         "Item Location": "itemLocation",
-        "Item Category": "categoryName",
-        Group: "groupName",
         "Unit / UOM": "unit",
         "Thickness (mm)": "thickness",
         "Length (mm)": "length",
@@ -80,21 +116,28 @@ export default function ItemMasterListPage() {
         "Max Qty": "maxQty",
         "Opening Stock": "openingStock",
         "Stock Value": "stockValue",
-        "Generate Barcode": "generateBarcodeInput", // Temporary field for checking
       } as const;
 
       // 1. Import raw data
       const rawData = await importFromExcel<any>(file, columnMapping);
 
-      // 2. Sanitize data and apply barcode rule
-      const sanitizedData = rawData.map((item: any) => {
-        const shouldGenerate =
-          String(item.generateBarcodeInput || "")
-            .trim()
-            .toLowerCase() === "yes";
+      // 2. Sanitize data + Unit / Tax Slab ko dropdown ke id me badlo
+      const rowErrors: string[] = [];
+
+      const sanitizedData = rawData.map((item: any, index: number) => {
+        const rowNum = index + 2; // Excel me header row 1 hai
+        const unitOption = resolveOption(uomOptions, item.unit);
+        const taxOption = resolveOption(taxSlabOptions, item.taxSlab);
+
+        if (item.unit && !unitOption)
+          rowErrors.push(`Row ${rowNum}: Unit "${item.unit}" is not valid`);
+        if (item.taxSlab && !taxOption)
+          rowErrors.push(`Row ${rowNum}: Tax Slab "${item.taxSlab}" is not valid`);
 
         return {
           ...item,
+          unit: unitOption ? unitOption.id : (item.unit ?? ""),
+          taxSlab: taxOption ? taxOption.id : (item.taxSlab ?? ""),
           openingStock:
             item.openingStock !== undefined && item.openingStock !== ""
               ? Number(item.openingStock)
@@ -105,22 +148,28 @@ export default function ItemMasterListPage() {
               : 0,
           minQty: item.minQty ? Number(item.minQty) : 0,
           maxQty: item.maxQty ? Number(item.maxQty) : 0,
-
-          // ✅ Send generateBarcode instead of barcodeType
-          generateBarcode: shouldGenerate ? 1 : 0,
-          barcode: "",
-
-          generateBarcodeInput: undefined,
         };
       });
 
+      if (rowErrors.length > 0) {
+        toasterrormsg(
+          `Import rejected. ${rowErrors.slice(0, 3).join(" | ")}${rowErrors.length > 3 ? " ..." : ""}`,
+        );
+        return;
+      }
+
+      // ===== companyId localStorage se, createdType default "Super Admin" =====
+      const companyId = localStorage.getItem("companyId") || "";
+
       const response = await Post(
         "master/itemmaster/bulk-import",
-        { items: sanitizedData },
+        {
+          items: sanitizedData,
+          createdBy: Number(companyId),
+          createdType: "Super Admin",
+        },
         false,
       );
-
-      // ... rest of the response handling
 
       if (response.data?.success) {
         toastsuccessmsg(
@@ -331,7 +380,7 @@ export default function ItemMasterListPage() {
         <div className="space-y-5 p-6">
           <button
             type="button"
-            onClick={() => downloadItemImportTemplate()}
+       onClick={handleDownloadTemplate}
             className="text-primary-600 flex cursor-pointer items-center gap-2 text-sm"
           >
             <Download className="size-4" /> Download sample template
