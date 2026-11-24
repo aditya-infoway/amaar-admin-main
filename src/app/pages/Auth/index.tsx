@@ -1,6 +1,11 @@
 // Import Dependencies
 import { useNavigate } from "react-router";
-import { EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import {
+  EnvelopeIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  LockClosedIcon,
+} from "@heroicons/react/24/outline";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
@@ -28,7 +33,7 @@ export default function SignIn() {
     localStorage.getItem("companyLogo") || APP_LOGO,
   );
   const [selectedRole, setSelectedRole] = useState(roles[0]); // default Super Admin
-
+  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -183,12 +188,28 @@ export default function SignIn() {
                     <Input
                       label="Password"
                       placeholder="Enter Password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       prefix={
                         <LockClosedIcon
                           className="size-5 text-gray-500"
                           strokeWidth="1"
                         />
+                      }
+                      suffix={
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="pointer-events-auto text-gray-500 hover:text-gray-700"
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
+                        >
+                          {showPassword ? (
+                            <EyeSlashIcon className="size-5" strokeWidth="1" />
+                          ) : (
+                            <EyeIcon className="size-5" strokeWidth="1" />
+                          )}
+                        </button>
                       }
                       className="focus:border-primary border-gray-300 bg-white text-gray-800"
                       {...register("password")}

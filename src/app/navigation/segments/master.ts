@@ -103,6 +103,12 @@ export const master: NavigationTree = {
       path: "/lead-master/enquiry",
       title: "Create Enquiry",
     },
+      {
+      id: "todayfollowups",
+      type: "item",
+      title: "Today Followups",
+      path: "followups/todayfollowups",
+    },
     {
       id: "leadMaster.quotation",
       type: "item",

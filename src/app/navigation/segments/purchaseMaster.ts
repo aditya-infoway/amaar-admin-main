@@ -40,6 +40,32 @@ export const purchaseMaster: NavigationTree = {
       title: "Body Register",
       icon: "purchase_master.purchaseGrr",
     },
+ { id: "divider-stockmaster", type: "divider" },
+    {
+      id: "master.stockMaster-label",
+      type: "title",
+      title: "Stock Master",
+    },
+     {
+      id: "stock_report.stockReport",
+      type: "item",
+      path: "/stock-report/list",
+      title: "Stock Report",
+      icon: "stock_report.stockReport",
+    },
+    {
+      id: "stock_report.stockAlert",
+      type: "item",
+      path: "/stock-report/alert",
+      title: "Stock Alert",
+      icon: "stock_report.stockReport",
+    },
+     { id: "divider-salesmaster", type: "divider" },
+    {
+      id: "master.salesMaster-label",
+      type: "title",
+      title: "Sales Master",
+    },
     {
       id: "purchase_master.sales-register",
       type: "item",
@@ -47,5 +73,6 @@ export const purchaseMaster: NavigationTree = {
       title: "Sales Register",
       icon: "purchase_master.purchaseGrr",
     },
+    
   ],
 };

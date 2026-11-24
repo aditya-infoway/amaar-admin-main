@@ -11,7 +11,7 @@ import {
 
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui";
-import { Get, toasterrormsg } from "@/ApiHelper";
+import { Get, GetBlob, toasterrormsg } from "@/ApiHelper";
 import { exportToExcel, exportToPdf } from "../shared/export";
 import { MasterTable } from "../shared/MasterTable";
 import { MasterToolbar } from "../shared/MasterToolbar";
@@ -56,7 +56,46 @@ export default function CashReceiptPage() {
       setLoading(false);
     }
   };
+const handlePrint = async (row: CashReceipt) => {
 
+  const win = window.open("", "_blank");
+if (win) {
+  win.document.write(`
+    <html>
+      <head><title>Generating PDF...</title></head>
+      <body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;color:#475569;background:#f8fafc;">
+        <div style="text-align:center">
+          <div style="width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#1e40af;border-radius:50%;margin:0 auto 12px;animation:s 0.8s linear infinite"></div>
+          <div>Generating receipt, please wait...</div>
+        </div>
+        <style>@keyframes s{to{transform:rotate(360deg)}}</style>
+      </body>
+    </html>
+  `);
+} // popup blocker se bachne ke liye
+  try {
+    const res = await GetBlob(`payment/cash-receipt/print/${row.id}`);
+    const blob = new Blob([res.data], { type: "application/pdf" });
+
+    // PDF ki jagah JSON error aaya ho to uska message dikhao
+    if (res.data.type && res.data.type !== "application/pdf") {
+      const text = await res.data.text();
+      let msg = "Unable to print cash receipt.";
+      try {
+        msg = JSON.parse(text)?.message || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const url = URL.createObjectURL(blob);
+    if (win) win.location.href = url;
+    else window.open(url, "_blank");
+  } catch (err: any) {
+    win?.close();
+    console.error(err);
+    toasterrormsg(err?.message || "Unable to print cash receipt.");
+  }
+};
   useEffect(() => {
     fetchCashReceipts();
   }, []);
@@ -83,6 +122,7 @@ export default function CashReceiptPage() {
         setEditing(row);
         setDrawerOpen(true);
       },
+        printRow: handlePrint,
       // Note: delete/edit ke liye backend endpoints abhi nahi banaye
     },
     onGlobalFilterChange: setGlobalFilter,

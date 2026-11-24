@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-
+import { PrinterIcon } from "@heroicons/react/24/outline";
+import type { MouseEvent } from "react";
 import {
   SelectCell,
   SelectHeader,
@@ -12,7 +13,7 @@ import { CashReceipt } from "../shared/types";
 
 // const RowActions = createRowActions<CashReceipt>("cashReceipt");
 const TYPE_BADGE_STYLES: Record<string, string> = {
-  CR:"bg-indigo-100 text-indigo-700",
+  CR: "bg-indigo-100 text-indigo-700",
   SICR: "bg-amber-100 text-amber-700",
   // naya code aaye to yahin ek line add karo
 };
@@ -24,9 +25,31 @@ const TypeCell = (info: CellContext<CashReceipt, unknown>) => {
   return createElement(
     "span",
     { className: `rounded-full px-2 py-0.5 text-xs font-medium ${style}` },
-    type
+    type,
   );
 };
+// TODO: apna actual print logic yahan lagao
+const ActionsCell = (info: CellContext<CashReceipt, unknown>) =>
+  createElement(
+    "div",
+    { className: "flex items-center gap-2" },
+    createElement(
+      "button",
+      {
+        type: "button",
+        title: "Print",
+        "aria-label": "Print",
+        onClick: (e: MouseEvent) => {
+          e.stopPropagation();
+          (info.table.options.meta as any)?.printRow?.(info.row.original);
+        },
+        className:
+          "rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-primary-600 dark:text-dark-200 dark:hover:bg-dark-600",
+      },
+      createElement(PrinterIcon, { className: "size-5" }),
+    ),
+  );
+
 export const columns: ColumnDef<CashReceipt>[] = [
   {
     id: "select",
@@ -40,7 +63,13 @@ export const columns: ColumnDef<CashReceipt>[] = [
     header: "Voucher No",
     cell: TextCell,
   },
-  { id: "type", accessorKey: "type", header: "Type", cell: TypeCell, enableSorting: false },
+  {
+    id: "type",
+    accessorKey: "type",
+    header: "Type",
+    cell: TypeCell,
+    enableSorting: false,
+  },
   {
     id: "cashAccount",
     accessorKey: "cashAccount",
@@ -66,11 +95,11 @@ export const columns: ColumnDef<CashReceipt>[] = [
   //   cell: (info) => <span className="uppercase">{info.getValue<string>()}</span>,
   // },
   {
-  id: "paymentMode",
-  accessorKey: "paymentMode",
-  header: "Mode",
-  cell: (info) => String(info.getValue() ?? "").toUpperCase(),
-},
+    id: "paymentMode",
+    accessorKey: "paymentMode",
+    header: "Mode",
+    cell: (info) => String(info.getValue() ?? "").toUpperCase(),
+  },
   {
     id: "date",
     accessorKey: "date",
@@ -80,17 +109,17 @@ export const columns: ColumnDef<CashReceipt>[] = [
       return value ? new Date(value).toLocaleDateString() : "—";
     },
   },
-  // {
-  //   id: "actions",
-  //   header: "Actions",
-  //   cell: RowActions,
-  //   enableSorting: false,
-  // },
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ActionsCell,
+    enableSorting: false,
+  },
 ];
 
 export const exportColumns: ExportColumn<CashReceipt>[] = [
   { key: "voucherNo", header: "Voucher No" },
-    { key: "type", header: "Type" },
+  { key: "type", header: "Type" },
   { key: "cashAccount", header: "Cash Account" },
   { key: "oppAccount", header: "Opp. Account" },
   { key: "amount", header: "Amount" },

@@ -4,7 +4,10 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import {
   BuildingOffice2Icon,
   EnvelopeIcon,
+  EyeIcon,
+  EyeSlashIcon,
   GlobeAltIcon,
+  LockClosedIcon,
   PhoneIcon,
 } from "@heroicons/react/24/outline";
 import { XMarkIcon } from "@heroicons/react/20/solid";
@@ -33,7 +36,22 @@ export default function General() {
   const [fetching, setFetching] = useState(true);
   const [icon, setIcon] = useState<File | null>(null);
   const [existingIconUrl, setExistingIconUrl] = useState<string>("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
+  const [passwordData, setPasswordData] = useState({
+    email: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPassword, setShowPassword] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+
+  const toggleShow = (field: keyof typeof showPassword) =>
+    setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
   const {
     register,
     handleSubmit,
@@ -193,7 +211,59 @@ export default function General() {
       setLoading(false);
     }
   };
+  const handleChangePassword = async () => {
+    const { email, currentPassword, newPassword, confirmPassword } =
+      passwordData;
 
+    if (!email || !currentPassword || !newPassword || !confirmPassword) {
+      toasterrormsg("All fields are required.");
+      return;
+    }
+
+    if (newPassword.length < 4 || newPassword.length > 24) {
+      toasterrormsg("Password must be between 4 and 24 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toasterrormsg("New password and confirm password do not match.");
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      toasterrormsg("New password must be different from current password.");
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    try {
+      const response = await Post(
+        "superadmin/company-details/change-password",
+        passwordData,
+        true,
+      );
+
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message || "Password changed successfully.",
+        );
+
+        setPasswordData({
+          email: "",
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        toasterrormsg(response.data?.message || "Failed to change password.");
+      }
+    } catch (error: any) {
+      toasterrormsg(error?.response?.data?.message || "Something went wrong.");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
   if (fetching) {
     return (
       <div className="w-full max-w-3xl 2xl:max-w-5xl">
@@ -640,7 +710,92 @@ export default function General() {
             />
           </div>
         </div>
+        <div className="dark:bg-dark-500 my-7 h-px bg-gray-200" />
 
+        {/* Change Password */}
+        <div>
+          <p className="dark:text-dark-100 text-base font-medium text-gray-800">
+            Change Password
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 [&_.prefix]:pointer-events-none">
+            <Input
+              label="Email ID"
+              type="email"
+              placeholder="Enter registered email"
+              className="rounded-xl"
+              prefix={<EnvelopeIcon className="size-4.5" />}
+              value={passwordData.email}
+              onChange={(e) =>
+                setPasswordData((prev) => ({ ...prev, email: e.target.value }))
+              }
+            />
+
+            {(
+              [
+                {
+                  field: "currentPassword",
+                  label: "Current Password",
+                  placeholder: "Enter current password",
+                },
+                {
+                  field: "newPassword",
+                  label: "New Password",
+                  placeholder: "Enter new password",
+                },
+                {
+                  field: "confirmPassword",
+                  label: "Confirm New Password",
+                  placeholder: "Confirm new password",
+                },
+              ] as const
+            ).map(({ field, label, placeholder }) => (
+              <Input
+                key={field}
+                label={label}
+                type={showPassword[field] ? "text" : "password"}
+                placeholder={placeholder}
+                className="rounded-xl"
+                autoComplete="new-password"
+                prefix={<LockClosedIcon className="size-4.5" />}
+                suffix={
+                  <button
+                    type="button"
+                    onClick={() => toggleShow(field)}
+                    className="pointer-events-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    aria-label={
+                      showPassword[field] ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showPassword[field] ? (
+                      <EyeSlashIcon className="size-4.5" />
+                    ) : (
+                      <EyeIcon className="size-4.5" />
+                    )}
+                  </button>
+                }
+                value={passwordData[field]}
+                onChange={(e) =>
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    [field]: e.target.value,
+                  }))
+                }
+              />
+            ))}
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="button"
+              color="primary"
+              disabled={passwordLoading}
+              onClick={handleChangePassword}
+            >
+              {passwordLoading ? "Changing..." : "Change Password"}
+            </Button>
+          </div>
+        </div>
         <div className="mt-8 flex justify-end space-x-3">
           <Button type="button" className="min-w-[7rem]" disabled={loading}>
             Cancel
