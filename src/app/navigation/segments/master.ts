@@ -1,201 +1,143 @@
-import { baseNavigationObj } from "../baseNavigation";
+// import { baseNavigationObj } from "../baseNavigation";
 import { NavigationTree } from "@/@types/navigation";
+import { baseNavigationObj } from "../baseNavigation";
 
 export const master: NavigationTree = {
   ...baseNavigationObj["master"],
   childs: [
-    // {
-    //   id: "master.showroom",
-    //   type: "collapse",
-    //   path: "/master/showroom",
-    //   title: "Showroom Master",
-    //   transKey: "Showroom Master",
-    //   icon: "master.showroom",
-    //   childs: [
-    //     {
-    //       id: "master.category",
-    //       type: "item",
-    //       path: "/master/category",
-    //       title: "Category",
-    //       transKey: "nav.master.category",
-    //       icon: "master.category",
-    //     },
-    //     {
-    //       id: "master.productSeries",
-    //       type: "item",
-    //       path: "/master/product-series",
-    //       title: "Product Series",
-    //       transKey: "nav.master.productSeries",
-    //       icon: "master.productSeries",
-    //     },
-    //     {
-    //       id: "master.model",
-    //       type: "item",
-    //       path: "/master/model",
-    //       title: "Model",
-    //       transKey: "nav.master.model",
-    //       icon: "master.model",
-    //     },
-    //     {
-    //       id: "master.variant",
-    //       type: "item",
-    //       path: "/master/variant",
-    //       title: "Variant",
-    //       transKey: "nav.master.variant",
-    //       icon: "master.variant",
-    //     },
-    //     {
-    //       id: "master.variantStructure",
-    //       type: "item",
-    //       path: "/master/variant-structure",
-    //       title: "Variant Structure",
-    //       transKey: "nav.master.variantStructure",
-    //       icon: "master.variantStructure",
-    //     },
-       
-    //   ],
-    // },
-
-    // Separate Brand dropdown
-    // {
-    //   id: "master.brand",
-    //   type: "collapse",
-    //   path: "/master/brand",
-    //   title: "Brand",
-    //   transKey: "Brand",
-    //   icon: "master.brand",
-    //   childs: [
-    //     {
-    //       id: "master.brand.bodyType",
-    //       type: "item",
-    //       path: "/master/brand/body-type",
-    //       title: "Body Type",
-    //       transKey: "Body Type",
-    //     },
-    //     {
-    //       id: "master.brand.axleBrand",
-    //       type: "item",
-    //       path: "/master/brand/axle-brand",
-    //       title: "Axle Brand",
-    //       transKey: "Axle Brand",
-    //     },
-    //     {
-    //       id: "master.brand.hydraulicBrand",
-    //       type: "item",
-    //       path: "/master/brand/hydraulic-brand",
-    //       title: "Hydraulic Brand",
-    //       transKey: "Hydraulic Brand",
-    //     },
-    //     {
-    //       id: "master.brand.tyreBrand",
-    //       type: "item",
-    //       path: "/master/brand/tyre-brand",
-    //       title: "Tyre Brand",
-    //       transKey: "Tyre Brand",
-    //     },
-    //   ],
-    // },
-
-    // Separate Quotation Master dropdown
+    // Quotation Master section (pehla section, upar divider nahi)
     {
-      id: "master.quotationMaster",
-      type: "collapse",
-      path: "/master/quotation-master",
+      id: "master.quotationMaster-label",
+      type: "title",
       title: "Quotation Master",
-      transKey: "Quotation Master",
-      icon: "master.quotationMaster",
-      childs: [
-        {
-          id: "master.quotation-master.createmaster",
-          type: "item",
-          path: "/master/quotation-master/createmaster",
-          title: "Create Master",
-          transKey: "Create Master",
-        },
-        {
-          id: "master.quotation-master.createpricing",
-          type: "item",
-          path: "/master/quotation-master/createpricing",
-          title: "Create Pricing",
-          transKey: "Create Pricing",
-        },
-         {
-          id: "master.quotation-master.modelprice",
-          type: "item",
-          path: "/master/quotation-master/modelprice",
-          title: "Model Pricing",
-          transKey: "Model Pricing",
-        },
-      ],
+    },
+    {
+      id: "master.quotation-master.createmaster",
+      type: "item",
+      path: "/master/quotation-master/createmaster",
+      title: "Create Master",
+      transKey: "Create Master",
+    },
+    {
+      id: "master.quotation-master.createpricing",
+      type: "item",
+      path: "/master/quotation-master/createpricing",
+      title: "Create Pricing",
+      transKey: "Create Pricing",
+    },
+    {
+      id: "master.quotation-master.modelprice",
+      type: "item",
+      path: "/master/quotation-master/modelprice",
+      title: "Model Pricing",
+      transKey: "Model Pricing",
     },
 
-      {
-      id: "master.itemMaster",
-      type: "collapse",
-      path: "/master/item-master",
+    // Item Master section
+    { id: "divider-itemmaster", type: "divider" },
+    {
+      id: "master.itemMaster-label",
+      type: "title",
       title: "Item Master",
-      transKey: "Item Master",
-      icon: "itemMaster.list",
+    },
+    {
+      id: "itemMaster.list",
+      type: "item",
+      path: "/master/item-master/item-list",
+      title: "Item Master",
+      transKey: "nav.itemMaster.list",
+    },
+    {
+      id: "itemBarcode.list",
+      type: "item",
+      path: "/master/item-master/barcode-manager",
+      title: "Barcode Manager",
+      transKey: "Barcode Manager",
+    },
+    {
+      id: "itemlocation.list",
+      type: "item",
+      path: "/master/item-master/item-location",
+      title: "Item Location",
+      transKey: "Item Location",
+    },
+    {
+      id: "itemCategory.list",
+      type: "item",
+      path: "/master/item-master/item-category",
+      title: "Item Category",
+      transKey: "Item Category",
+    },
+    {
+      id: "itemGroup.list",
+      type: "item",
+      path: "/master/item-master/item-group",
+      title: "Item Group",
+      transKey: "Item Group",
+    },
+    {
+      id: "itemSubGroup.list",
+      type: "item",
+      path: "/master/item-master/sub-group",
+      title: "Sub Group",
+      transKey: "Sub Group",
+    },
+    {
+      id: "itemBom.bom",
+      type: "item",
+      path: "/master/item-master/bom",
+      title: "BOM",
+      transKey: "BOM",
+    },
 
-      childs: [
-        {
-          id: "itemMaster.list",
-          type: "item",
-          path: "/master/item-master/item-list",
-          title: "Item Master",
-          transKey: "nav.itemMaster.list",
-          icon: "itemMaster.list",
-        },
-        {
-          id: "itemBarcode.list",
-          type: "item",
-          path: "/master/item-master/barcode-manager",
-          title: "Barcode Manager",
-          transKey: "Barcode Manager",
-          icon: "itemBarcode.list",
-        },
-         {
-          id: "itemlocation.list",
-          type: "item",
-          path: "/master/item-master/item-location",
-          title: "Item Location",
-          transKey: "Item Location",
-          icon: "itemlocation.list",
-        },
-        {
-          id: "itemCategory.list",
-          type: "item",
-          path: "/master/item-master/item-category",
-          title: "Item Category",
-          transKey: "Item Category",
-          icon: "itemCategory.list",
-        },
-        {
-          id: "itemGroup.list",
-          type: "item",
-          path: "/master/item-master/item-group",
-          title: "Item Group",
-          transKey: "Item Group",
-          icon: "itemGroup.list",
-        },
-         {
-          id: "itemSubGroup.list",
-          type: "item",
-          path: "/master/item-master/sub-group",
-          title: "Sub Group",
-          transKey: "Sub Group",
-          icon: "itemGroup.list",
-        },
-
-         {
-          id: "itemBom.bom",
-          type: "item",
-          path: "/master/item-master/bom",
-          title: "BOM",
-          transKey: "BOM",
-          icon: "itemBom.bom",
-        },
-      ],
+    // Lead Master section
+    { id: "divider-leadmaster", type: "divider" },
+    {
+      id: "master.leadMaster-label",
+      type: "title",
+      title: "Lead Master",
+    },
+    {
+      id: "leadMaster.enquiry",
+      type: "item",
+      path: "/lead-master/enquiry",
+      title: "Create Enquiry",
+    },
+    {
+      id: "leadMaster.quotation",
+      type: "item",
+      path: "/lead-master/quotation",
+      title: "Quotation",
+    },
+    {
+      id: "leadMaster.sales-order",
+      type: "item",
+      path: "/lead-master/sales-order",
+      title: "Sales Order",
+    },
+    {
+      id: "leadMaster.work-order.create-order",
+      type: "item",
+      path: "/lead-master/work-order/create-order",
+      title: "Create Order",
+    },
+    {
+      id: "leadMaster.work-order.work-proccess",
+      type: "item",
+      path: "/lead-master/work-order/work-proccess",
+      title: "Work Process",
+    },
+    {
+      id: "leadMaster.work-order.material-availability",
+      type: "item",
+      path: "/lead-master/work-order/material-availability",
+      title: "Material Availability",
+    },
+    {
+      id: "leadMaster.work-order.indent",
+      type: "item",
+      path: "/lead-master/work-order/indent",
+      title: "Indent",
     },
   ],
 };

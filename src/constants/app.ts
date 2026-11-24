@@ -10,7 +10,7 @@ export const GHOST_ENTRY_PATH = "/login";
 export const SELECT_COMPANY_PATH = "/select-company";
 
 // Navigation Types
-export type NavigationType = "root" | "group" | "collapse" | "item" | "divider";
+export type NavigationType = "root" | "group" | "collapse" | "item" | "divider" | "title";
 
 export const COLORS = [
   "neutral",

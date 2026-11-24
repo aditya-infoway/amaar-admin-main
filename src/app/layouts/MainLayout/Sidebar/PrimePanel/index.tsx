@@ -17,7 +17,11 @@ export interface PrimePanelProps {
   close: () => void;
 }
 
-export function PrimePanel({ currentSegment, pathname, close }: PrimePanelProps) {
+export function PrimePanel({
+  currentSegment,
+  pathname,
+  close,
+}: PrimePanelProps) {
   const { cardSkin } = useThemeContext();
   const { t } = useTranslation();
 
@@ -38,8 +42,8 @@ export function PrimePanel({ currentSegment, pathname, close }: PrimePanelProps)
           cardSkin === "shadow" ? "dark:bg-dark-750" : "dark:bg-dark-900",
         )}
       >
-        <div className="relative flex h-16 w-full shrink-0 items-center justify-between pl-4 pr-1 rtl:pl-1 rtl:pr-4">
-          <p className="truncate text-base tracking-wider text-gray-800 dark:text-dark-100">
+        <div className="relative flex h-16 w-full shrink-0 items-center justify-between pr-1 pl-4 rtl:pr-4 rtl:pl-1">
+          <p className="dark:text-dark-100 truncate text-base tracking-wider text-gray-800">
             {title}
           </p>
           <Button
@@ -52,7 +56,11 @@ export function PrimePanel({ currentSegment, pathname, close }: PrimePanelProps)
           </Button>
         </div>
         {currentSegment?.childs && (
-          <Menu nav={currentSegment.childs} pathname={pathname} />
+          <Menu
+            key={currentSegment.id}
+            nav={currentSegment.childs}
+            pathname={pathname}
+          />
         )}
       </div>
     </div>

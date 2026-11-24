@@ -9,6 +9,7 @@ import { CollapsibleItem } from "./CollapsibleItem";
 import { Accordion } from "@/components/ui";
 import { MenuItem } from "./MenuItem";
 import { Divider } from "./Divider";
+import { SectionTitle } from "./SectionTitle";
 import { NavigationTree } from "@/@types/navigation";
 
 // ----------------------------------------------------------------------
@@ -61,6 +62,8 @@ export function Menu({ nav, pathname }: MenuProps) {
                 return <MenuItem key={item.path} data={item} />;
               case "divider":
                 return <Divider key={item.id} />;
+              case "title":
+                return <SectionTitle key={item.id} data={item} />;
               default:
                 return null;
             }
