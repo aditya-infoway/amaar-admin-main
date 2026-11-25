@@ -672,9 +672,9 @@ export default function ItemMasterFormPage() {
                 <Input
                   {...register("hsnCode", {
                     required: "HSN Code is required",
-                    pattern: {
-                      value: /^\d{4,8}$/,
-                      message: "HSN Code must be 4 to 8 digits",
+                     pattern: {
+                      value: /^\d{4,24}$/,
+                      message: "HSN Code must be 4 to 24 digits",
                     },
                   })}
                   label="HSN Code"
