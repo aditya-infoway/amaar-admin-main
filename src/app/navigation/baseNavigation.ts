@@ -53,7 +53,7 @@ export const baseNavigationObj: Record<string, NavigationTree> = {
     id: "accountingMaster",
     type: "collapse",
     path: "/accounting-master",
-    title: "Accounting Master",
+    title: "Accounting ",
     icon: "accountingMaster",
   },
 
@@ -61,7 +61,7 @@ export const baseNavigationObj: Record<string, NavigationTree> = {
     id: "purchaseMaster",
     type: "collapse",
     path: "/purchase-master",
-    title: "Purchase Master",
+    title: "Transaction ",
     icon: "purchaseMaster",
   },
 
@@ -77,7 +77,7 @@ export const baseNavigationObj: Record<string, NavigationTree> = {
     id: "userMaster",
     type: "collapse",
     path: "/user-master",
-    title: "User Master",
+    title: "User ",
     icon: "userMaster",
   },
 

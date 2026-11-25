@@ -9,7 +9,7 @@ export const master: NavigationTree = {
     {
       id: "master.quotationMaster-label",
       type: "title",
-      title: "Quotation Master",
+      title: "Quotation ",
     },
     {
       id: "master.quotation-master.createmaster",
@@ -38,7 +38,7 @@ export const master: NavigationTree = {
     {
       id: "master.itemMaster-label",
       type: "title",
-      title: "Item Master",
+      title: "Item ",
     },
     {
       id: "itemMaster.list",
@@ -95,7 +95,7 @@ export const master: NavigationTree = {
     {
       id: "master.leadMaster-label",
       type: "title",
-      title: "Lead Master",
+      title: "Lead ",
     },
     {
       id: "leadMaster.enquiry",

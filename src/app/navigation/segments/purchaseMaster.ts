@@ -4,6 +4,12 @@ import { NavigationTree } from "@/@types/navigation";
 export const purchaseMaster: NavigationTree = {
   ...baseNavigationObj["purchaseMaster"],
   childs: [
+
+    {
+      id: "master.purchasemaster-label",
+      type: "title",
+      title: "Purchase ",
+    },
     {
       id: "purchase_master.purchaseRegister",
       type: "item",
@@ -33,18 +39,12 @@ export const purchaseMaster: NavigationTree = {
       title: "Purchase QC",
       icon: "purchase_master.purchaseGrr",
     },
-    {
-      id: "purchase_master.bodyregister",
-      type: "item",
-      path: "/purchase-master/body-register",
-      title: "Body Register",
-      icon: "purchase_master.purchaseGrr",
-    },
+   
  { id: "divider-stockmaster", type: "divider" },
     {
       id: "master.stockMaster-label",
       type: "title",
-      title: "Stock Master",
+      title: "Stock ",
     },
      {
       id: "stock_report.stockReport",
@@ -64,13 +64,20 @@ export const purchaseMaster: NavigationTree = {
     {
       id: "master.salesMaster-label",
       type: "title",
-      title: "Sales Master",
+      title: "Sales ",
     },
     {
       id: "purchase_master.sales-register",
       type: "item",
       path: "/purchase-master/sales-register",
       title: "Sales Register",
+      icon: "purchase_master.purchaseGrr",
+    },
+     {
+      id: "purchase_master.bodyregister",
+      type: "item",
+      path: "/purchase-master/body-register",
+      title: "Body Register",
       icon: "purchase_master.purchaseGrr",
     },
     
