@@ -937,7 +937,7 @@ export default function BOMFormPage() {
   const [bomName, setBomName] = useState<string>("");
   const [bomCode, setBomCode] = useState<string>("");
   const [bomStatus, setBomStatus] = useState<string>("active");
- 
+
   const [wasPending, setWasPending] = useState<boolean>(false);
   const isLoadingFieldsRef = useRef(false);
 
@@ -1028,7 +1028,7 @@ export default function BOMFormPage() {
           setBomName(data.bomName || "");
           setBomCode(data.bomCode || "");
           setBomStatus(data.status || "active");
-                    setWasPending(data.setupStatus === "pending");
+          setWasPending(data.setupStatus === "pending");
           setBomItems(data.items || []);
           setExpandedNodes(
             Object.fromEntries(
@@ -1494,40 +1494,55 @@ export default function BOMFormPage() {
     const parentNode = findNodeById(bomItems, selectedParentId);
     let serialCounter = parentNode ? parentNode.children.length + 1 : 1;
 
-    const cloneTree = (items: BOMItem[]): BOMItem[] => {
-      return items
-        .map((item) => {
-          const isDuplicate = parentNode?.children.some(
-            (child) =>
-              child.itemCode.toLowerCase() === item.itemCode.toLowerCase(),
-          );
+    // const cloneTree = (items: BOMItem[]): BOMItem[] => {
+    //   return items
+    //     .map((item) => {
+    //       const isDuplicate = parentNode?.children.some(
+    //         (child) =>
+    //           child.itemCode.toLowerCase() === item.itemCode.toLowerCase(),
+    //       );
 
-          if (isDuplicate && items === selectedItems) {
-            return null as any;
-          }
+    //       if (isDuplicate && items === selectedItems) {
+    //         return null as any;
+    //       }
 
-          const newId =
-            Date.now().toString() + Math.random().toString(36).slice(2, 6);
+    //       const newId =
+    //         Date.now().toString() + Math.random().toString(36).slice(2, 6);
 
-          return {
-            ...item,
-            id: newId,
-            serialNo: String(serialCounter++),
-            quantity: item.quantity || "1",
-            source: "subbom",
-            children: item.children?.length ? cloneTree(item.children) : [],
-          };
-        })
-        .filter(Boolean);
-    };
+    //       return {
+    //         ...item,
+    //         id: newId,
+    //         serialNo: String(serialCounter++),
+    //         quantity: item.quantity || "1",
+    //         source: "subbom",
+    //         children: item.children?.length ? cloneTree(item.children) : [],
+    //       };
+    //     })
+    //     .filter(Boolean);
+    // };
+
+    const cloneTree = (items: BOMItem[]): BOMItem[] =>
+      items.map((item): BOMItem => {
+        const newId =
+          Date.now().toString() + Math.random().toString(36).slice(2, 6);
+
+        return {
+          ...item,
+          id: newId,
+          serialNo: String(serialCounter++),
+          quantity: item.quantity || "1",
+          source: "subbom",
+          children: item.children?.length ? cloneTree(item.children) : [],
+        };
+      });
 
     const newItems = cloneTree(selectedItems);
 
-    if (newItems.length === 0) {
-      toasterrormsg("Selected items are already present in this BOM.");
-      setPendingSubBomItems(null);
-      return;
-    }
+    // if (newItems.length === 0) {
+    //   toasterrormsg("Selected items are already present in this BOM.");
+    //   setPendingSubBomItems(null);
+    //   return;
+    // }
 
     let updatedItems = [...bomItems];
     newItems.forEach((item) => {
@@ -1626,18 +1641,18 @@ export default function BOMFormPage() {
       return;
     }
 
-    const parentNode = findNodeById(bomItems, selectedParentId);
-    const isDuplicateSibling = parentNode?.children.some(
-      (child) =>
-        child.itemCode.toLowerCase() === newItem.itemCode.toLowerCase(),
-    );
+    // const parentNode = findNodeById(bomItems, selectedParentId);
+    // const isDuplicateSibling = parentNode?.children.some(
+    //   (child) =>
+    //     child.itemCode.toLowerCase() === newItem.itemCode.toLowerCase(),
+    // );
 
-    if (isDuplicateSibling) {
-      toasterrormsg(
-        `"${newItem.itemCode}" is already added under this parent.`,
-      );
-      return;
-    }
+    // if (isDuplicateSibling) {
+    //   toasterrormsg(
+    //     `"${newItem.itemCode}" is already added under this parent.`,
+    //   );
+    //   return;
+    // }
 
     const ancestorChain = findPathToNode(bomItems, selectedParentId) || [];
     const createsCycle = ancestorChain.some(
@@ -1692,62 +1707,62 @@ export default function BOMFormPage() {
 
   // Actual create / update after user confirms in the popup
 
-const handleConfirmSaveBOM = async () => {
-  setIsBomConfirmOpen(false);
+  const handleConfirmSaveBOM = async () => {
+    setIsBomConfirmOpen(false);
 
-  // BOM Name dropdown se selected Finished Goods ID
-  const selectedFinishedGoodsItemId = finishedGoodsItemId
-    ? Number(finishedGoodsItemId)
-    : null;
+    // BOM Name dropdown se selected Finished Goods ID
+    const selectedFinishedGoodsItemId = finishedGoodsItemId
+      ? Number(finishedGoodsItemId)
+      : null;
 
-  // Frontend validation
-  if (!selectedFinishedGoodsItemId) {
-    toasterrormsg("Please select Finished Goods Item.");
-    return;
-  }
+    // Frontend validation
+    if (!selectedFinishedGoodsItemId) {
+      toasterrormsg("Please select Finished Goods Item.");
+      return;
+    }
 
-  try {
-    const payload = {
-      ...(isEditMode && { bomId: Number(id) }),
-      bomName,
-      bomCode,
-      status: bomStatus,
-      finishedGoodsItemId: selectedFinishedGoodsItemId,
-      items: bomItems,
-    };
+    try {
+      const payload = {
+        ...(isEditMode && { bomId: Number(id) }),
+        bomName,
+        bomCode,
+        status: bomStatus,
+        finishedGoodsItemId: selectedFinishedGoodsItemId,
+        items: bomItems,
+      };
 
-    const response = isEditMode
-      ? await Put("master/bom/update", payload, false)
-      : await Post("master/bom/create", payload, false);
+      const response = isEditMode
+        ? await Put("master/bom/update", payload, false)
+        : await Post("master/bom/create", payload, false);
 
-    if (response.data?.success) {
-      toastsuccessmsg(
-        response.data?.message ||
-          `BOM ${isEditMode ? "updated" : "created"} successfully.`,
-      );
+      if (response.data?.success) {
+        toastsuccessmsg(
+          response.data?.message ||
+            `BOM ${isEditMode ? "updated" : "created"} successfully.`,
+        );
 
-      setIsBOMDirty(false);
-      setDirty(false);
+        setIsBOMDirty(false);
+        setDirty(false);
 
-      setTimeout(() => {
-        navigate("/master/item-master/bom");
-      }, 0);
-    } else {
+        setTimeout(() => {
+          navigate("/master/item-master/bom");
+        }, 0);
+      } else {
+        toasterrormsg(
+          response.data?.message ||
+            `Failed to ${isEditMode ? "update" : "create"} BOM.`,
+        );
+      }
+    } catch (error) {
+      console.error("BOM save error:", error);
+
       toasterrormsg(
-        response.data?.message ||
-          `Failed to ${isEditMode ? "update" : "create"} BOM.`,
+        isEditMode
+          ? "Something went wrong while updating BOM."
+          : "Something went wrong while creating BOM.",
       );
     }
-  } catch (error) {
-    console.error("BOM save error:", error);
-
-    toasterrormsg(
-      isEditMode
-        ? "Something went wrong while updating BOM."
-        : "Something went wrong while creating BOM.",
-    );
-  }
-};
+  };
 
   // Imported BOM that still has no BOM Name/Code: Active/Inactive is locked
   const isStatusLocked = wasPending && !bomCode;
@@ -1784,7 +1799,7 @@ const handleConfirmSaveBOM = async () => {
 
         <Card className="mb-6 p-3">
           <div className="dark:border-dark-500 mb-4 border-b border-gray-200 pb-4">
-                      <h3 className="dark:text-dark-100 flex items-center gap-3 text-lg font-medium text-gray-800">
+            <h3 className="dark:text-dark-100 flex items-center gap-3 text-lg font-medium text-gray-800">
               BOM Details
               {isEditMode && (
                 <span
@@ -1834,7 +1849,7 @@ const handleConfirmSaveBOM = async () => {
               placeholder="Auto generated "
               className="dark:bg-dark-700/50 cursor-not-allowed bg-gray-50"
             />
-                      <div>
+            <div>
               <Listbox
                 data={isStatusLocked ? [currentStatusOption] : statusOptions}
                 value={currentStatusOption}
