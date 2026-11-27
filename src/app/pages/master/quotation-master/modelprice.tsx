@@ -63,11 +63,16 @@ export default function ModelPrice() {
   const [groupOptions, setGroupOptions] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<any[]>([]);
+   const [referenceOptions, setReferenceOptions] = useState<any[]>([]);
+  const [selectedReference, setSelectedReference] = useState<any>([]);
 
   // form state
   const [selectedModel, setSelectedModel] = useState<any[]>([]);
   const [modelData, setModelData] = useState<any>({
     modelPriceId: null,
+     modelPriceNo: "",
+    referenceModelPriceId: null,
+    effectiveDate: null,
     finishedGoodsItemId: null,
     modelName: "",
     currentDate: dayjs().format("YYYY-MM-DD"),
@@ -108,6 +113,8 @@ export default function ModelPrice() {
           id: String(r.modelPriceId),
           modelPriceId: r.modelPriceId,
           modelName: r.modelName || r.itemName || "",
+              modelPriceNo: r.modelPriceNo || "",
+          effectiveDate: r.effectiveDate || null,
           itemCode: r.itemCode || "",
           currentDate: r.currentDate,
           totalValue: r.totalValue,
@@ -326,7 +333,6 @@ export default function ModelPrice() {
     setModelData((prev: any) => ({
       ...prev,
       finishedGoodsItemId: first ? (first.itemId ?? first.id ?? null) : null,
-      modelName: first ? first.name : "",
     }));
   }, [selectedModel]);
 
@@ -342,6 +348,14 @@ export default function ModelPrice() {
 
   const handleFinishedGoodsChange = (selectedVal: any) => {
     setSelectedModel(selectedVal ?? []);
+    setSelectedReference([]);
+    setModelData((prev: any) => ({
+      ...prev,
+      referenceModelPriceId: null,
+      modelName: "",
+      effectiveDate: null,
+      components: [],
+    }));
     setSelectedGroup([]);
     setCurrentRow((prev: any) => ({
       ...prev,
@@ -369,6 +383,11 @@ export default function ModelPrice() {
 
       setModelData({
         modelPriceId: d.modelPriceId,
+         modelPriceNo: d.modelPriceNo || "",
+        referenceModelPriceId: d.referenceModelPriceId || null,
+        effectiveDate: d.effectiveDate
+          ? dayjs(d.effectiveDate).format("YYYY-MM-DD")
+         : null,
         finishedGoodsItemId: d.finishedGoodsItemId,
         modelName: d.modelName || "",
         currentDate: dayjs(d.currentDate).format("YYYY-MM-DD"),
@@ -410,10 +429,84 @@ export default function ModelPrice() {
       totalValue: 0,
       status: "active",
     });
+;
     setSelectedModel([]);
     resetCurrentRow();
+     setSelectedReference([]);
+    fetchNextNo();
     setDrawerOpen(true);
   };
+
+
+  const fetchReferences = useCallback(async (fgId: number | null) => {
+  if (!fgId) return setReferenceOptions([]);
+  try {
+    const res = await Get(`${BASE}/references`, { finishedGoodsItemId: fgId }, false);
+    setReferenceOptions(
+      (res?.data?.data || []).map((r: any) => ({
+        id: r.modelPriceId,
+        name: r.label,
+        modelPriceId: r.modelPriceId,
+      })),
+    );
+  } catch {
+    setReferenceOptions([]);
+  }
+}, []);
+
+useEffect(() => {
+  fetchReferences(modelData.finishedGoodsItemId);
+}, [modelData.finishedGoodsItemId, fetchReferences]);
+
+useEffect(() => {
+  if (!modelData.modelPriceId || !modelData.referenceModelPriceId) return;
+  const ref = referenceOptions.find(
+    (o) => Number(o.modelPriceId) === Number(modelData.referenceModelPriceId),
+  );
+  if (ref) setSelectedReference(ref);
+}, [referenceOptions, modelData.modelPriceId, modelData.referenceModelPriceId]);
+
+const fetchNextNo = async () => {
+  const financialYearId = 1; // TODO: real source
+  try {
+    const res = await Get(`${BASE}/next-no`, { financialYearId }, false);
+    setModelData((p: any) => ({
+      ...p,
+      modelPriceNo: res?.data?.data?.modelPriceNo || "",
+    }));
+  } catch {}
+};
+
+const handleReferenceChange = async (val: any) => {
+  setSelectedReference(val ?? []);
+  const sel = pickFirst(val);
+  if (!sel) {
+    setModelData((p: any) => ({ ...p, referenceModelPriceId: null }));
+    return;
+  }
+  try {
+    const res = await Get(`${BASE}/${sel.modelPriceId}`, {}, false);
+    const comps = (res?.data?.data?.components || []).map((c: any, i: number) => ({
+      id: `ref-${Date.now()}-${i}`,
+      itemId: c.itemId,
+      item: c.itemDescription || c.itemCode || "",
+      type: c.type,
+      groupId: c.groupId,
+      subGroupId: c.subGroupId,
+      group: c.subGroupName || c.groupName || "",
+      weight: c.weight != null ? String(c.weight) : "",
+      rate: c.rate != null ? String(c.rate) : "",
+      value: c.value != null ? String(c.value) : "",
+    }));
+    setModelData((p: any) => ({
+      ...p,
+      referenceModelPriceId: sel.modelPriceId,
+      components: comps,
+    }));
+  } catch (e: any) {
+    toasterrormsg(e?.response?.data?.message || "Failed to load reference");
+  }
+};
 
   const resetCurrentRow = () => {
     setSelectedItem([]);
@@ -480,6 +573,17 @@ export default function ModelPrice() {
     if (!currentRow.weight) return toasterrormsg("Weight is required.");
     if (!currentRow.rate) return toasterrormsg("Rate is required.");
 
+
+    const dup = modelData.components.some(
+      (c: any) =>
+        Number(c.itemId) === Number(currentRow.itemId) &&
+        c.type === currentRow.type &&
+        Number(c.groupId || 0) === Number(currentRow.groupId || 0) &&
+        Number(c.subGroupId || 0) === Number(currentRow.subGroupId || 0),
+    );
+    if (dup)
+      return toasterrormsg("This item is already added with the same type and group.");
+
     const newComponent = {
       ...currentRow,
       id: Date.now().toString(),
@@ -514,10 +618,11 @@ export default function ModelPrice() {
     setSelectedItem(itemOpt);
     setSelectedGroup(groupOpt ?? []);
     setCurrentRow({ ...comp });
+    
 
     setModelData((prev: any) => ({
       ...prev,
-      components: prev.components.filter((c: any) => c.id !== comp.id),
+
     }));
   };
 
@@ -527,11 +632,25 @@ export default function ModelPrice() {
     if (modelData.components.length === 0)
       return toasterrormsg("Please add at least one component.");
 
+
+     // handleSaveModel, components check ke baad
+    if (secondMode) {
+      if (!modelData.referenceModelPriceId)
+        return toasterrormsg("Please select Reference.");
+      if (!String(modelData.modelName || "").trim())
+        return toasterrormsg("Please enter Model Price Name.");
+      if (!modelData.effectiveDate)
+        return toasterrormsg("Please select Effective Date.");
+    }
+
     setSaving(true);
     try {
       const payload = {
+          financialYearId: 1, // TODO: real source
         finishedGoodsItemId: modelData.finishedGoodsItemId,
         modelName: modelData.modelName,
+         referenceModelPriceId: modelData.referenceModelPriceId,
+       effectiveDate: modelData.effectiveDate,
         currentDate: modelData.currentDate,
         status: modelData.status || "active",
         items: modelData.components.map((c: any) => ({
@@ -639,6 +758,10 @@ export default function ModelPrice() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+    const secondMode = modelData.modelPriceId
+    ? !!modelData.referenceModelPriceId
+    : referenceOptions.length > 0;
+
   // ─── RENDER ──────────────────────────────────────────────────────────────
   return (
     <div className="transition-content w-full pb-5">
@@ -741,6 +864,66 @@ export default function ModelPrice() {
                     />
                   </div>
                 </div>
+
+
+                {secondMode && (
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-4">
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Model Price No
+      </label>
+      <Input
+        value={modelData.modelPriceNo}
+        readOnly
+        className="dark:bg-dark-900 w-full bg-gray-100 text-sm"
+      />
+    </div>
+
+    <div className={modelData.modelPriceId ? "pointer-events-none opacity-50" : ""}>
+      <Combobox
+        data={referenceOptions}
+        displayField="name"
+        value={selectedReference}
+        onChange={handleReferenceChange}
+        placeholder="Select Reference"
+        label="Reference"
+        searchFields={["name"]}
+      />
+    </div>
+
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Model Price Name <span className="text-red-500">*</span>
+      </label>
+      <Input
+        value={modelData.modelName}
+        placeholder="Enter Model Price Name"
+        onChange={(e) =>
+          setModelData({ ...modelData, modelName: e.target.value })
+        }
+        className="w-full text-sm"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Effective Date <span className="text-red-500">*</span>
+      </label>
+      <DatePicker
+        placeholder="DD-MM-YYYY"
+        options={{ dateFormat: "d-m-Y", minDate: "today" }}
+        value={modelData.effectiveDate ? [dayjs(modelData.effectiveDate).toDate()] : []}
+        onChange={(dates: any) =>
+          setModelData({
+            ...modelData,
+            effectiveDate: dates?.[0] ? dayjs(dates[0]).format("YYYY-MM-DD") : null,
+          })
+        }
+        className="w-full"
+      />
+    </div>
+  </div>
+)}
 
                 {/* Row entry */}
                 <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-14">

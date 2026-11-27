@@ -856,7 +856,7 @@ export function QuotationDrawer({
 
       discountType,
       discountValue: Number(discountValue) || 0,
-
+ 
       position: position || null,
 
       createdBy:
